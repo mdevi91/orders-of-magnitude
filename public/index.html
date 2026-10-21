@@ -94,11 +94,16 @@ button,.pal,#panel,.card,#toast,.tag{border-radius:0}
 .rot{display:flex;align-items:center;gap:6px;padding:3px 8px;background:var(--ink);color:var(--paper);border:var(--px) solid #34477e;font:inherit;cursor:pointer}
 .rot:hover{border-color:var(--line)}
 .rot:disabled{opacity:.4;cursor:not-allowed}
+.zoom{display:flex;gap:4px}
+.zoom .rot{min-width:34px;justify-content:center}
 #rot{color:var(--line);font-size:19px}
 .rot:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #rotArrow{color:var(--gold);display:inline-block;width:1ch;text-align:center}
 #stats .warn{color:var(--foe)}
 #stats .gold{color:var(--gold)}
+.bp{display:flex;gap:6px;align-items:center;margin-top:6px}
+.bp span{flex:1;color:var(--muted)}
+.bp .rot{padding:2px 8px}
 .new{color:var(--gold)}
 .upg{justify-content:center;color:var(--gold)}
 .hudbtn{pointer-events:auto;cursor:pointer;font:inherit;font-size:17px;color:var(--paper);min-width:34px;min-height:30px}
@@ -178,6 +183,7 @@ details li b{color:var(--paper);font-weight:400}
   <div class="hud-r">
     <div id="coreWrap" hidden><span class="lbl">Core</span><div class="bar"><i id="coreBar"></i></div><span class="lbl">Energy</span><div class="bar"><i id="enBar"></i></div></div>
     <span class="lbl">Credits</span><b id="hudCredits">0</b>
+    <button id="muteBtn" class="tag hudbtn" type="button" aria-label="Sound">♪ on</button>
     <button id="pauseBtn" class="tag hudbtn" type="button" aria-label="Pause" hidden>II</button>
   </div>
 </header>
@@ -192,7 +198,12 @@ details li b{color:var(--paper);font-weight:400}
     <button id="rot" class="rot" type="button">⟳ Rotate <span id="rotArrow">↑</span> <span id="rotName">fore</span> <kbd>R</kbd></button>
     <button id="mirror" class="rot" type="button">Mirror <span id="mirName">⇆ L/R</span> <kbd>M</kbd></button>
   </div>
+  <div class="tools">
+    <span class="zoom"><button id="zOut" class="rot" type="button" aria-label="Zoom out">−</button><button id="zIn" class="rot" type="button" aria-label="Zoom in">+</button><button id="zFit" class="rot" type="button">Fit</button></span>
+    <span class="zoom"><button id="undo" class="rot" type="button">↶ Undo</button></span>
+  </div>
   <details id="statsBox" open><summary>Ship stats</summary><dl id="stats"></dl></details>
+  <details id="bpBox"><summary>Blueprints</summary><div id="bps"></div></details>
   <button id="launch" type="button">Launch stage 1</button>
   <details id="help" open>
     <summary>Controls</summary>
@@ -205,7 +216,9 @@ details li b{color:var(--paper);font-weight:400}
       <li><b>Aim:</b> your ship turns its nose toward the cursor. Big ships turn slowly; gyros help. Guns fire on their own. <kbd>T</kbd> switches to auto-aim at the nearest ship.</li>
       <li><b>Energy:</b> weapons use energy to fire and shields use it to recharge. The core makes a little; Generators add more and Batteries store it. Both are safe deep inside the hull. When energy runs out, weapons wait. The gold Energy stat means full fire uses more than you make.</li>
       <li><b>Shields</b> each project a bubble that stops enemy shots from every side, protecting blocks up to 2 cells away (3 at Lv2, 4 at Lv3). Overlap them to cover a big hull. If it pops it is down for 5 s, and it recharges after 2.5 s without hits. A red dashed line means a sniper is about to fire.</li>
-      <li><b>Touch:</b> drag anywhere to fly; aim is automatic.</li>
+      <li><b>Touch:</b> left half of the screen is a move stick, right half aims. Without the aim stick the ship aims at the nearest enemy.</li>
+      <li><b>Drydock view:</b> mouse wheel, pinch, or the − + buttons zoom; middle-drag or two fingers pan; Fit resets. <kbd>Ctrl</kbd>+<kbd>Z</kbd> or Undo takes back a change. Blueprints keep up to three designs.</li>
+      <li><b>Enemies</b> grow shields (orange bubbles; railguns and lasers go straight through), generators that explode when hit and make them fire faster, and carrier bays that launch fighters.</li>
       <li><b>Damage</b> knocks blocks off. Anything cut off from the core drifts away. Lose the core and the stage is lost. Drydock repairs everything for free.</li>
       <li><kbd>P</kbd> pauses.</li>
     </ul>
@@ -281,12 +294,13 @@ const T = {
 const PARTS = {rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}};
 const HEAD_OF = {rail_b:'rail', laser_b:'laser'};
 const isPart = t => !!(t && (PARTS[t] || HEAD_OF[t]));
-const ET = {core:{hp:45}, hull:{hp:18}, armor:{hp:55}, gun:{hp:15}};
+const ET = {core:{hp:45}, hull:{hp:18}, armor:{hp:55}, gun:{hp:15}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}};
+const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
 const PAL = ['hull','armor','cannon','gatling','missile','laser','rail','engine','gyro','shield','pd','gen','battery','sell'];
 const COL = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', gatling:'#a8ecff', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a'},
-  e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', gun:'#ffc46b'},
+  e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', gun:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630'},
 };
 const BCOL = {shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a'};
 const locked = t => (T[t].unlock || 1) > G.stage;
@@ -300,7 +314,7 @@ const shRad = () => (1 + lvOf('shield') + .5)*BS;
 
 // ---------- state ----------
 const G = {
-  mode:'build', mir:1, stage:1, credits:140, design:new Map(), dirs:new Map(), lv:{}, sel:'hull', rot:0, mirror:true,
+  mode:'build', bz:1, bpx:0, bpy:0, mir:1, stage:1, credits:140, design:new Map(), dirs:new Map(), lv:{}, sel:'hull', rot:0, mirror:true,
   ships:[], player:null, pb:[], eb:[], fx:[], beams:[],
   waves:[], waveIdx:0, waveGap:0, time:0, S:1, SC:1, AW:0, AH:0, camX:0, camY:0, zoom:1, span:0, spanT:0, span0:0, spanAt:0, swarmT:0,
   paused:false, aimAuto:false, mouse:{x:0,y:0,has:false}, tdx:0, tdy:0, touchId:null,
@@ -354,7 +368,7 @@ function laneFwd(typeAt, i, j, o){
 
 // ---------- ships ----------
 function makeShip(design, team, x, y, hpMul=1, dirs=null){
-  const s = {team, x, y, vx:0, vy:0, a:0, c:1, sn:0, blocks:new Map(), alive:true};
+  const s = {team, x, y, vx:0, vy:0, a:0, c:1, sn:0, blocks:new Map(), alive:true, hpMul};
   for (const [k,t] of design){
     const hp = (team==='p' ? T[t].hp*LV(t) : ET[t].hp) * hpMul;
     const b = {t, i:KI(k), j:KJ(k), o:dirs ? dirs.get(k)||0 : 0, hp, max:hp, cd:Math.random()*.4, hit:-1};
@@ -366,7 +380,15 @@ function recalc(s){
   let r = 0; s.guns = []; s.pds = []; s.rails = []; s.lasers = []; s.shields = [];
   for (const b of s.blocks.values()) r = Math.max(r, Math.hypot(b.i,b.j)*BS + BS*.75);
   s.r = r;
-  if (s.team !== 'p'){ for (const b of s.blocks.values()) if (b.t==='gun') s.guns.push(b); return; }
+  if (s.team !== 'p'){
+    // enemies: guns, shield bubbles, carrier bays; each generator speeds up their fire
+    s.bays = []; let gens = 0;
+    for (const b of s.blocks.values()){
+      if (b.t==='gun') s.guns.push(b); else if (b.t==='bay') s.bays.push(b); else if (b.t==='gen') gens++;
+      else if (b.t==='shield'){ s.shields.push(b); if (!b.bub){ const max = ESH.hp*s.hpMul; b.bub = {hp:max, max, down:0, last:-9, flash:-9}; } }
+    }
+    s.fireMul = 1 + .3*gens; return;
+  }
   const typeAt = k => s.blocks.get(k)?.t;
   s.ph = physics(s.blocks.values(), typeAt);
   for (const b of s.blocks.values()){
@@ -401,6 +423,21 @@ function genDesign(n, boss, stage){
     if (i !== 0){ const mk = K(-i,j); if (!d.has(mk)){ d.set(mk,t); keys.push(mk); } }
   }
   if (![...d.values()].includes('gun')){ const k = keys[1] ?? null; if (k!==null) d.set(k,'gun'); else d.set(K(0,-1),'gun'); }
+  // later stages fit enemies with the player's systems: shields, generators (buried inside) and carrier bays (on the rim)
+  if (d.size >= 8){
+    const nbs = k => NB.filter(o => d.has(k+o)).length;
+    const conv = (t, count, inner) => {
+      for (let c=0; c<count; c++){
+        const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && (inner ? nbs(k)===4 : nbs(k) <= 2));
+        if (!pool.length) return;
+        const k = pool[(Math.random()*pool.length)|0], mk = K(-KI(k), KJ(k)); d.set(k,t);
+        if (d.get(mk)==='hull' || d.get(mk)==='armor') d.set(mk,t);
+      }
+    };
+    if (stage >= 3 && (boss || Math.random() < .6)) conv('shield', Math.floor(d.size/30) + (boss ? 1 : 0) || 1, false);
+    if (stage >= 4) conv('gen', Math.floor(d.size/35) + (boss ? 1 : 0), true);
+    if ((boss && stage >= 5) || (d.size >= 40 && stage >= 6 && Math.random() < .25)) conv('bay', boss ? 2 : 1, false);
+  }
   return d;
 }
 function wpos(s,b){ const lx=b.i*BS, ly=b.j*BS; return [s.x + lx*s.c - ly*s.sn, s.y + lx*s.sn + ly*s.c]; }
@@ -452,6 +489,12 @@ function damage(s,k,dmg){
 function destroyBlock(s,k,b){
   s.blocks.delete(k); debris(s,b,true);
   if (b.t==='core'){ killShip(s); return; }
+  // an enemy generator goes up and takes its neighbours with it
+  if (s.team==='e' && b.t==='gen'){
+    const [wx,wy] = wpos(s,b); boomAt(wx, wy, 18*G.SC, .45); sfx('boom', 1.2);
+    for (const [kk,bb] of [...s.blocks]) if (s.alive && s.blocks.has(kk) && Math.hypot(bb.i-b.i, bb.j-b.j) <= 1.6) damage(s, kk, 40*s.hpMul);
+    if (!s.alive) return;
+  }
   const seen = new Set([CORE]), q = [CORE];
   while (q.length){ const c = q.pop(); for (const d of NB){ const n = c+d; if (s.blocks.has(n) && !seen.has(n)){ seen.add(n); q.push(n); } } }
   for (const [kk,bb] of s.blocks) if (!seen.has(kk)){ s.blocks.delete(kk); debris(s,bb,false); }
@@ -463,9 +506,10 @@ function killShip(s){
   s.blocks.clear();
   G.fx.push({k:'ring', x:s.x, y:s.y, r:s.r*1.8 + 20*G.SC, life:.7, max:.7, col:s.team==='p' ? '#ffffff' : '#ff9a7a'});
   if (s.team==='e'){
+    sfx(s.boss ? 'big' : 'boom', Math.min(1.5, .4 + s.r/60));
     G.credits += s.value; G.earned += s.value;
     G.fx.push({k:'txt', x:s.x, y:s.y, vy:-30*G.SC, text:'+'+s.value, life:1.4, max:1.4});
-  } else { G.deadT = 1.6; }
+  } else { G.deadT = 1.6; sfx('die'); }
 }
 function debris(s,b,burst,kick=1){
   if (G.fx.length > 1800) return;
@@ -498,6 +542,7 @@ function pBullet(x,y,ang,gun,target,mul=1){
   G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, life:gun.homing ? 6 : 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, kind:gun.homing ? 'miss' : gun.fx || 'shot'});
 }
 function eBullet(x,y,ang,mul,kind,dmg=10,rMul=1){
+  sfx('eshot');
   if (G.eb.length > 1600) return;
   const sp = 110*G.SC*mul;
   G.eb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:3.4*G.SC*rMul, dmg, life:8, kind});
@@ -509,14 +554,14 @@ function leadAngle(wx,wy,sp,amount){
 }
 // A shield bubble stops an enemy shot heading inward once it is inside the bubble. Returns true when absorbed.
 function shieldBlock(p,b){
-  const SH = T.shield.sh;
+  const SH = p.team==='p' ? T.shield.sh : ESH, rad = p.team==='p' ? shRad() : ESH.rad;
   for (const s of p.shields){
     const B = s.bub; if (B.down > 0 || B.hp <= 0) continue;
     const [cx,cy] = wpos(p,s), dx = b.x-cx, dy = b.y-cy;
-    if (dx*dx + dy*dy > (shRad() + b.r)**2 || dx*b.vx + dy*b.vy > 0) continue;
-    B.hp -= b.dmg; B.last = B.flash = G.time;
+    if (dx*dx + dy*dy > (rad + b.r)**2 || dx*b.vx + dy*b.vy > 0) continue;
+    B.hp -= b.dmg; B.last = B.flash = G.time; sfx('shield', p.team==='p' ? 1 : .5);
     sparks(b.x, b.y, Math.atan2(dy,dx), 4, 120*G.SC, ['#5fd3ff','#ffffff']);
-    if (B.hp <= 0){ B.hp = 0; B.down = SH.down; G.fx.push({k:'ring', x:cx, y:cy, r:shRad()*1.1, life:.5, max:.5, col:'#5fd3ff'}); }
+    if (B.hp <= 0){ sfx('pop'); B.hp = 0; B.down = SH.down; G.fx.push({k:'ring', x:cx, y:cy, r:rad*1.1, life:.5, max:.5, col:p.team==='p' ? '#5fd3ff' : '#ff9a5a'}); }
     return true;
   }
   return false;
@@ -573,9 +618,13 @@ function spawnSwarm(){
   const ang = rand(0,TAU), dist = .5*Math.hypot(W,H)/G.zoom + 40;
   const cx = clamp(p.x + Math.cos(ang)*dist, 0, G.AW), cy = clamp(p.y + Math.sin(ang)*dist, 0, G.AH);
   const flight = 3 + ((Math.random()*3)|0);
-  for (let q=0; q<flight; q++){
+  for (let q=0; q<flight; q++) makeFighter(cx + rand(-40,40)*tS, cy + rand(-40,40)*tS, tier);
+}
+function makeFighter(x, y, tier){
+  const p = G.player, tS = Math.pow(scaleOf(tier),.8);
+  {
     const d = genDesign(Math.max(2, Math.round((3 + 1.6*Math.pow(tier,1.3))*rand(.6,1.1))), false, tier);
-    const e = makeShip(d,'e', clamp(cx + rand(-40,40)*tS, 0, G.AW), clamp(cy + rand(-40,40)*tS, 0, G.AH), 1);
+    const e = makeShip(d,'e', clamp(x, 0, G.AW), clamp(y, 0, G.AH), 1);
     e.pat = 'aimed'; e.fodder = true; e.sc = tS; e.ft = rand(2.5,4); e.vol = 0;
     e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);
     e.pref = p.r + rand(140,260)*tS + e.r;
@@ -586,6 +635,7 @@ function spawnSwarm(){
   }
 }
 function startStage(){
+  undoStack.length = 0;
   G.S = scaleOf(G.stage); G.SC = Math.pow(G.S,.8);
   G.player = makeShip(G.design,'p',0,0,1,G.dirs);
   // every stage opens on last stage's view and slowly pulls back to a wider one, even if the hull didn't grow
@@ -596,7 +646,7 @@ function startStage(){
   G.player.x = G.AW/2; G.player.y = G.AH*.72;
   G.ships = [G.player]; G.pb = []; G.eb = []; G.fx = []; G.beams = [];
   G.waves = planStage(G.stage); G.waveIdx = 0; G.waveGap = 3.5;
-  G.camX = G.player.x; G.camY = G.player.y; G.joy = null; G.deadT = 0; G.earned = 0; G.paused = false;
+  G.camX = G.player.x; G.camY = G.player.y; G.joy = null; G.aimJoy = null; G.deadT = 0; G.earned = 0; G.paused = false;
   G.banner = {text:`Stage ${G.stage}`, sub:`Scale ×${G.S.toFixed(2)}`, t:2};
   G.mode = 'combat'; hideOverlay(); syncUI();
 }
@@ -606,6 +656,7 @@ function toDrydock(advance){
   G.mode = 'build'; G.paused = false; hideOverlay();
   G.ships = []; G.pb = []; G.eb = []; G.fx = [];
   syncUI();
+  if (advance && PAL.some(t => T[t].unlock === G.stage)) setTimeout(() => sfx('unlock'), 300);
   if (advance) PAL.filter(t => T[t].unlock === G.stage).forEach((t,n) => {
     const b = $('pal-'+t); b.classList.remove('fresh'); void b.offsetWidth;
     b.style.setProperty('--d', (.3 + n*.25)+'s'); b.classList.add('fresh');
@@ -613,7 +664,7 @@ function toDrydock(advance){
   });
 }
 function stageClear(){
-  const bonus = 40 + 25*G.stage; G.credits += bonus;
+  const bonus = 40 + 25*G.stage; G.credits += bonus; sfx('clear');
   const nS = scaleOf(G.stage+1), un = unlocksAt(G.stage+1);
   G.mode = 'clear';
   showOverlay(`Stage ${G.stage} cleared`,
@@ -646,7 +697,9 @@ function update(dt){
 
   // aim
   let ax, ay;
-  if (!G.aimAuto && G.mouse.has){ ax = (G.mouse.x - W/2)/G.zoom + G.camX; ay = (G.mouse.y - H/2)/G.zoom + G.camY; }
+  const aj = G.aimJoy, ajl = aj ? Math.hypot(aj.x-aj.x0, aj.y-aj.y0) : 0;
+  if (aj && ajl > 4){ ax = p.x + (aj.x-aj.x0)/ajl*600*G.S; ay = p.y + (aj.y-aj.y0)/ajl*600*G.S; }
+  else if (!G.aimAuto && G.mouse.has){ ax = (G.mouse.x - W/2)/G.zoom + G.camX; ay = (G.mouse.y - H/2)/G.zoom + G.camY; }
   else {
     let best = null, bd = 1e18;
     for (const e of enemies){ const d = (e.x-p.x)**2 + (e.y-p.y)**2; if (d < bd){ bd = d; best = e; } }
@@ -713,9 +766,10 @@ function update(dt){
       const gun = T[g.t].gun, [wx,wy] = wpos(p,g), ang = Math.atan2(ay-wy, ax-wx);
       if (Math.abs(angDiff(ang, p.a + FA[g.o])) > gun.arc) continue;
       if (!gun.homing && !laneClear(p,g,ang)) continue;
-      if (!spend(gun.en || 0)) continue;
+      if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
       pBullet(wx, wy, ang + (Math.random()-.5)*2*gun.spread, gun, tgt, LV(g.t));
+      sfx(gun.homing ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='oval' ? 'cannon' : 'shot');
       if (gun.fx==='oval') boomAt(wx + Math.cos(ang)*6, wy + Math.sin(ang)*6, 5*SC, .07);
     }
     // railguns: fire when the aim point sits on their line
@@ -725,7 +779,7 @@ function update(dt){
       const [wx,wy] = wpos(p,h), face = p.a + FA[h.o];
       if (Math.abs(angDiff(Math.atan2(ay-wy, ax-wx), face)) > .1) continue;
       if (!spend(T.rail.rail.en)) continue;
-      h.cd = T.rail.rail.cd; fireRail(p, wx, wy, face);
+      h.cd = T.rail.rail.cd; fireRail(p, wx, wy, face); sfx('rail');
     }
   }
   // lasers: continuous beam on whatever is first along their line within range
@@ -735,6 +789,7 @@ function update(dt){
     const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
     if (hit && spend(L.en*dt)){
+      sfx('laser');
       damage(hit.e, hit.k, L.dps*LV('laser')*(1 - .75*hit.t/range)*dt);
       h.beam = [ox, oy, ox + dx*hit.t, oy + dy*hit.t];
       if (Math.random() < .35) sparks(h.beam[2], h.beam[3], face+Math.PI, 1, 140*SC, ['#9dff8a','#ffffff']);
@@ -746,7 +801,7 @@ function update(dt){
     const [wx,wy] = wpos(p,d), R = T.pd.pd.range*Math.sqrt(G.S);
     let best = null, bd = R*R;
     for (const b of G.eb){ if (b.dead) continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < bd){ bd = q; best = b; } }
-    if (best && spend(T.pd.pd.en)){ best.dead = true; d.cd = T.pd.pd.cd/LV('pd'); G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09}); }
+    if (best && spend(T.pd.pd.en)){ sfx('pd'); best.dead = true; d.cd = T.pd.pd.cd/LV('pd'); G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09}); }
     else d.cd = .05;
   }
 
@@ -763,9 +818,22 @@ function update(dt){
     // ramming: ships under a third of the player's size break up on the hull
     if (p.alive && e.r < p.r*.35 && Math.hypot(dx,dy) < p.r + e.r){
       const k = hitShip(p, e.x, e.y, e.r*.5);
-      if (k >= 0){ damage(p, k, 1 + e.blocks.size*.4); G.shake = Math.max(G.shake, 2); killShip(e); continue; }
+      if (k >= 0){ damage(p, k, 1 + e.blocks.size*.4); G.shake = Math.max(G.shake, 2); sfx('ram'); killShip(e); continue; }
     }
-    if (p.alive) enemyFire(e,dt);
+    if (p.alive) enemyFire(e, dt*e.fireMul);
+    for (const sb of e.shields){
+      const B = sb.bub;
+      if (B.down > 0) B.down -= dt; else if (G.time - B.last > ESH.delay) B.hp = Math.min(B.max, B.hp + ESH.regen*e.hpMul*dt);
+    }
+    // carriers launch fighters from their bays
+    if (e.bays.length && p.alive){
+      e.bayT = (e.bayT ?? 3) - dt;
+      if (e.bayT <= 0){
+        e.bayT = 8;
+        if (enemies.filter(x => x.alive && x.fodder).length < Math.min(40, 8 + 3*G.stage))
+          for (const b of e.bays.slice(0,3)){ const [wx,wy] = wpos(e,b); makeFighter(wx, wy, Math.max(1, G.stage-3)); }
+      }
+    }
   }
   for (let a=0; a<enemies.length; a++) for (let b=a+1; b<enemies.length; b++){
     const A = enemies[a], B = enemies[b], dx = B.x-A.x, dy = B.y-A.y, d = Math.hypot(dx,dy) || 1, min = (A.r+B.r)*.8;
@@ -792,6 +860,7 @@ function update(dt){
       b.x += b.vx*dt/steps; b.y += b.vy*dt/steps;
       for (const e of enemies){
         if (!e.alive) continue;
+        if (e.shields.length && shieldBlock(e,b)){ b.dead = true; break; }
         const k = hitShip(e,b.x,b.y,b.r);
         if (k >= 0){ damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }
@@ -807,7 +876,7 @@ function update(dt){
       if (!p.alive) continue;
       if (shieldBlock(p,b)){ b.dead = true; break; }
       const k = hitShip(p,b.x,b.y,b.r);
-      if (k >= 0){ damage(p,k,b.dmg); b.dead = true; G.fx.push({k:'spk', x:b.x, y:b.y, vx:0, vy:0, life:.2, max:.2, col:BCOL[b.kind]}); if (b.kind==='snipe') boomAt(b.x,b.y,8*SC,.2); }
+      if (k >= 0){ damage(p,k,b.dmg); sfx('hit'); b.dead = true; G.fx.push({k:'spk', x:b.x, y:b.y, vx:0, vy:0, life:.2, max:.2, col:BCOL[b.kind]}); if (b.kind==='snipe') boomAt(b.x,b.y,8*SC,.2); }
     }
     b.life -= dt;
     if (b.life <= 0 || b.x < -mX || b.y < -mX || b.x > G.AW+mX || b.y > G.AH+mX) b.dead = true;
@@ -999,6 +1068,12 @@ function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
       orb(X,x,y,3, ['#6a4a08','#e0a020', k > .5 ? '#fff0a0' : '#ffd04a']);
       X.fillStyle = '#ffd04a'; X.fillRect(x-4,y-.4,1.2,.8); X.fillRect(x+2.8,y-.4,1.2,.8); X.fillRect(x-.4,y-4,.8,1.2); X.fillRect(x-.4,y+2.8,.8,1.2); break;
     }
+    case 'bay': {
+      X.fillStyle = '#0a0b0e'; X.fillRect(x-3.6,y-3.6,7.2,7.2);
+      const on = Math.sin(G.time*6) > 0;
+      X.fillStyle = on ? '#ffd04a' : '#7a5a10'; for (let q=-3; q<4; q+=2.4){ X.fillRect(x-3.6,y+q,1.2,1.2); X.fillRect(x+2.4,y+q,1.2,1.2); }
+      break;
+    }
     case 'battery':
       X.fillStyle = '#142a14'; X.fillRect(x-3.6,y-3,7.2,6);
       for (let q=0; q<3; q++){ X.fillStyle = '#3ac84a'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,4.6); X.fillStyle = '#b8ffb0'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,.9); }
@@ -1089,6 +1164,18 @@ function renderCombat(){
   ctx.globalAlpha = 1;
 
   for (const s of G.ships) if (s.alive) drawShip(s);
+
+  // enemy shield bubbles
+  for (const e of G.ships){
+    if (!e.alive || e.team!=='e' || !e.shields || !e.shields.length) continue;
+    for (const sb of e.shields){
+      const B = sb.bub; if (B.down > 0 || B.hp <= 0) continue;
+      const [wx,wy] = wpos(e,sb), fl = G.time - B.flash < .08;
+      ctx.globalAlpha = fl ? 1 : .2 + .5*B.hp/B.max; ctx.strokeStyle = fl ? '#ffffff' : '#ff9a5a'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(sx(wx), sy(wy), ESH.rad*z, 0, TAU); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
 
   // lasers and shields of the player
   if (p && p.alive){
@@ -1191,12 +1278,13 @@ function renderCombat(){
   }
   ctx.globalAlpha = 1;
 
-  // touch joystick
-  if (G.joy){
-    const {x0,y0} = G.joy, jx = G.joy.x-x0, jy = G.joy.y-y0, jl = Math.hypot(jx,jy), k = jl > JOY_R ? JOY_R/jl : 1;
+  // touch sticks: cyan moves, gold aims
+  for (const [J,col] of [[G.joy,'#5fd8ff'],[G.aimJoy,'#ffc46b']]){
+    if (!J) continue;
+    const {x0,y0} = J, jx = J.x-x0, jy = J.y-y0, jl = Math.hypot(jx,jy), k = jl > JOY_R ? JOY_R/jl : 1;
     ctx.globalAlpha = .45; ctx.strokeStyle = '#e8ecf2'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(Math.round(x0), Math.round(y0), JOY_R, 0, TAU); ctx.stroke();
-    ctx.globalAlpha = .7; ctx.fillStyle = '#5fd8ff';
+    ctx.globalAlpha = .7; ctx.fillStyle = col;
     ctx.beginPath(); ctx.arc(Math.round(x0 + jx*k), Math.round(y0 + jy*k), 7, 0, TAU); ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -1227,8 +1315,10 @@ function layoutBuild(){
   let x0 = 0, y0 = top, x1 = W, y1 = H;
   if (pr.left/PX > W*.45) x1 = (pr.left - 8)/PX; else y1 = (pr.top - 8)/PX;
   const n = 2*buildR() + 1;
-  const cs = Math.max(2, Math.floor(Math.min(Math.min((x1-x0)*.92, (y1-y0)*.92)/n, 16)));
-  return {cx:Math.round((x0+x1)/2), cy:Math.round((y0+y1)/2), cs, n};
+  // fit-to-area cell size, times the player's zoom; whole pixels once cells are big enough to stay crisp
+  let cs = Math.min(Math.min((x1-x0)*.92, (y1-y0)*.92)/n, 16)*G.bz;
+  cs = cs >= 4 ? Math.round(cs) : Math.max(1, cs);
+  return {cx:Math.round((x0+x1)/2 + G.bpx), cy:Math.round((y0+y1)/2 + G.bpy), cs, n};
 }
 const designType = k => G.design.get(k);
 // Share of a design turret's firing arc that has a clear line out of the hull (same ray walk as laneClear).
@@ -1407,6 +1497,7 @@ function spinAt(i,j){
   return true;
 }
 function buildAction(i,j,mode,tap){
+  sfx('place');
   if (mode!=='sell' && tap && spinAt(i,j)){ G.drag = null; syncUI(); return; }
   if (mode==='sell'){ for (const [a,b] of mirrorSpots(i,j,0)) sellAt(a,b); }
   else {
@@ -1421,32 +1512,157 @@ function rotate(){ G.rot = PARTS[G.sel] ? ((G.rot & ~1) + 2) % 8 : (G.rot+1) % 8
 
 // ---------- input (pointer coordinates converted to canvas pixels) ----------
 cv.addEventListener('contextmenu', e => e.preventDefault());
+// ---------- sound: tiny WebAudio synth, no files ----------
+let AC = null, master = null, muted = false, noiseBuf = null;
+try { muted = localStorage.getItem('oom-mute') === '1'; } catch {}
+function audio(){
+  if (!AC){
+    try {
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      master = AC.createGain(); master.gain.value = .22; master.connect(AC.destination);
+      noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+      const ch = noiseBuf.getChannelData(0); for (let n=0; n<ch.length; n++) ch[n] = Math.random()*2 - 1;
+    } catch { AC = null; return null; }
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function tone(type, f0, f1, dur, vol, at=0){
+  const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20,f1), t+dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t+dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+.02);
+}
+function noise(dur, vol, f0, f1=f0, at=0){
+  const t = AC.currentTime + at, src = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain();
+  src.buffer = noiseBuf; fl.type = 'lowpass'; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(Math.max(40,f1), t+dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t+dur);
+  src.connect(fl); fl.connect(g); g.connect(master); src.start(t, Math.random()*.5); src.stop(t+dur+.02);
+}
+const SFX = {
+  shot:    v => tone('square', 900, 450, .05, .08*v),
+  cannon:  v => { tone('square', 200, 70, .12, .16*v); noise(.08, .12*v, 1400, 300); },
+  gatling: v => noise(.03, .07*v, 5000, 2000),
+  missile: v => noise(.35, .1*v, 900, 200),
+  laser:   v => tone('sawtooth', 1300, 1200, .07, .03*v),
+  rail:    v => { tone('sawtooth', 2400, 90, .4, .16*v); noise(.25, .15*v, 6000, 500); },
+  pd:      v => tone('square', 2200, 1600, .03, .04*v),
+  eshot:   v => tone('triangle', 520, 300, .06, .05*v),
+  hit:     v => tone('square', 260, 140, .04, .07*v),
+  shield:  v => tone('sine', 1500, 2100, .07, .08*v),
+  pop:     v => { tone('square', 900, 90, .35, .12*v); noise(.2, .08*v, 3000, 300); },
+  boom:    v => { noise(.45*v + .15, .22*Math.min(1.5,v), 1800, 90); tone('sine', 90, 35, .3, .14*v); },
+  big:     v => { noise(1.3, .4, 1200, 50); tone('sine', 70, 25, 1.1, .35); },
+  ram:     v => noise(.09, .14*v, 2500, 400),
+  lowEn:   v => tone('square', 180, 170, .09, .06*v),
+  place:   v => tone('square', 700, 700, .025, .05*v),
+  upgrade: v => [523,659,784].forEach((f,n) => tone('square', f, f, .09, .07, n*.07)),
+  unlock:  v => [784,988,1175,1568].forEach((f,n) => tone('square', f, f, .1, .07, n*.08)),
+  clear:   v => [523,659,784,1046].forEach((f,n) => tone('square', f, f*1.01, .16, .08, n*.12)),
+  die:     v => { tone('sawtooth', 420, 40, 1.2, .2); noise(1.2, .3, 1500, 60); },
+};
+const GAP = {gatling:.05, laser:.08, eshot:.07, hit:.04, shield:.05, boom:.05, lowEn:.7, place:.03, pd:.05, shot:.03};
+const lastSfx = {};
+function sfx(n, v=1){
+  if (muted || !AC || AC.state !== 'running') return;
+  const now = AC.currentTime; if (lastSfx[n] && now - lastSfx[n] < (GAP[n] ?? .02)) return;
+  lastSfx[n] = now; try { SFX[n](v); } catch {}
+}
+function setMute(m){ muted = m; try { localStorage.setItem('oom-mute', m ? '1' : '0'); } catch {} $('muteBtn').textContent = m ? '♪ off' : '♪ on'; }
+
+// Drydock zoom about a canvas point: the cell under (x,y) stays put.
+function zoomAt(x, y, f){
+  const L = layoutBuild(), u = (x-L.cx)/L.cs, v = (y-L.cy)/L.cs;
+  G.bz = clamp(G.bz*f, .3, 8);
+  const M = layoutBuild(); G.bpx += x - (M.cx + u*M.cs); G.bpy += y - (M.cy + v*M.cs);
+}
+// Undo: one entry per press-drag-release in the drydock (design, facings and credits).
+const undoStack = [];
+const snap = () => ({d:[...G.design], o:[...G.dirs], c:G.credits});
+const sameSnap = (a,b) => JSON.stringify([a.d,a.o]) === JSON.stringify([b.d,b.o]);
+function dropUndoMark(){ undoMark = null; }
+function commitUndoMark(){
+  if (undoMark && !sameSnap(undoMark, snap())){ undoStack.push(undoMark); if (undoStack.length > 60) undoStack.shift(); }
+  undoMark = null; syncUI();
+}
+function undo(){
+  const u = undoStack.pop(); if (!u){ toast('Nothing to undo'); return; }
+  G.design = new Map(u.d); G.dirs = new Map(u.o); G.credits = u.c; sfx('place'); syncUI();
+}
+const ptrs = new Map();
+let pinch = null, panning = null, pending = null, undoMark = null;
 cv.addEventListener('pointerdown', e => {
-  const x = e.clientX/PX, y = e.clientY/PX;
-  G.mouse = {x, y, has:true};
-  if (e.pointerType==='touch'){ G.aimAuto = true; G.touchId = e.pointerId; if (G.mode==='combat') G.joy = {x0:x, y0:y, x, y}; }
+  const x = e.clientX/PX, y = e.clientY/PX, touch = e.pointerType==='touch';
+  ptrs.set(e.pointerId, {x, y}); audio();
+  if (!touch) G.mouse = {x, y, has:true};
+  if (G.mode==='combat' && touch){
+    // twin-stick: left half moves, right half aims; with no aim stick the ship auto-aims
+    if (x < W/2 && !G.joy) G.joy = {id:e.pointerId, x0:x, y0:y, x, y};
+    else if (!G.aimJoy) G.aimJoy = {id:e.pointerId, x0:x, y0:y, x, y};
+    G.aimAuto = true;
+  }
   if (G.mode==='build'){
+    if (e.button===1){ panning = {x, y, bpx:G.bpx, bpy:G.bpy}; e.preventDefault(); return; }
+    if (touch && ptrs.size===2){
+      // second finger: drop the pending tap and pinch/pan instead
+      pending = null; G.drag = null; dropUndoMark();
+      const [p1,p2] = [...ptrs.values()]; pinch = {d:Math.hypot(p2.x-p1.x, p2.y-p1.y), mx:(p1.x+p2.x)/2, my:(p1.y+p2.y)/2};
+      return;
+    }
+    if (ptrs.size > 1) return;
     const c = cellAt(x,y);
     G.dragR = buildR(); G.drag = (e.button===2 || G.sel==='sell') ? 'sell' : 'place';
-    G.lastCell = c.i+','+c.j; G.hover = c;
-    buildAction(c.i,c.j,G.drag,true);
+    G.lastCell = c.i+','+c.j; G.hover = c; undoMark = snap();
+    if (touch) pending = c; else buildAction(c.i,c.j,G.drag,true);
   }
   try { cv.setPointerCapture(e.pointerId); } catch {}
 });
 cv.addEventListener('pointermove', e => {
-  const x = e.clientX/PX, y = e.clientY/PX;
-  if (e.pointerType!=='touch') G.mouse = {x, y, has:true};
-  if (G.mode==='build'){
-    const c = cellAt(x,y); G.hover = e.pointerType==='touch' && !G.drag ? null : c;
-    const id = c.i+','+c.j;
-    if (G.drag && id !== G.lastCell){ G.lastCell = id; buildAction(c.i,c.j,G.drag); }
-  } else if (G.mode==='combat' && e.pointerId===G.touchId && G.joy){ G.joy.x = x; G.joy.y = y; }
+  const x = e.clientX/PX, y = e.clientY/PX, touch = e.pointerType==='touch';
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, {x, y});
+  if (!touch) G.mouse = {x, y, has:true};
+  if (G.mode==='combat'){
+    if (G.joy && G.joy.id===e.pointerId){ G.joy.x = x; G.joy.y = y; }
+    if (G.aimJoy && G.aimJoy.id===e.pointerId){ G.aimJoy.x = x; G.aimJoy.y = y; }
+    return;
+  }
+  if (G.mode!=='build') return;
+  if (panning){ G.bpx = panning.bpx + x - panning.x; G.bpy = panning.bpy + y - panning.y; return; }
+  if (pinch && ptrs.size >= 2){
+    const [p1,p2] = [...ptrs.values()], d = Math.hypot(p2.x-p1.x, p2.y-p1.y), mx = (p1.x+p2.x)/2, my = (p1.y+p2.y)/2;
+    G.bpx += mx - pinch.mx; G.bpy += my - pinch.my;
+    if (pinch.d > 4 && d > 4) zoomAt(mx, my, d/pinch.d);
+    pinch = {d, mx, my}; return;
+  }
+  const c = cellAt(x,y); G.hover = touch && !G.drag ? null : c;
+  const id = c.i+','+c.j;
+  if (G.drag && id !== G.lastCell){
+    if (pending){ buildAction(pending.i, pending.j, G.drag, false); pending = null; }
+    G.lastCell = id; buildAction(c.i,c.j,G.drag);
+  }
 });
-const endPtr = e => { G.drag = null; if (e.pointerId===G.touchId){ G.touchId = null; G.joy = null; } if (e.pointerType==='touch') G.hover = null; };
+const endPtr = e => {
+  ptrs.delete(e.pointerId);
+  if (G.joy && G.joy.id===e.pointerId) G.joy = null;
+  if (G.aimJoy && G.aimJoy.id===e.pointerId) G.aimJoy = null;
+  if (G.mode==='build'){
+    if (pending && !pinch) buildAction(pending.i, pending.j, G.drag, true);
+    pending = null; panning = null;
+    if (pinch && ptrs.size < 2) pinch = null;
+    if (G.drag || undoMark) commitUndoMark();
+  }
+  G.drag = null;
+  if (e.pointerType==='touch') G.hover = null;
+};
 cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('wheel', e => {
+  if (G.mode!=='build') return;
+  e.preventDefault(); zoomAt(e.clientX/PX, e.clientY/PX, Math.exp(-e.deltaY*.0015));
+}, {passive:false});
 cv.addEventListener('pointerleave', e => { if (e.pointerType==='mouse' && !G.drag) G.hover = null; });
 
 addEventListener('keydown', e => {
+  audio();
   if (e.target instanceof HTMLInputElement && e.code==='Space') return;
   keys[e.code] = true;
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
@@ -1454,6 +1670,9 @@ addEventListener('keydown', e => {
     const key = e.key.toLowerCase(), t = PAL.find(t => T[t].key === key); if (t) select(t);
     if (e.code==='KeyR') rotate();
     if (e.code==='KeyU') upgrade();
+    if (e.code==='Equal' || e.code==='NumpadAdd') zoomBtn(1.25);
+    if (e.code==='Minus' || e.code==='NumpadSubtract') zoomBtn(.8);
+    if (e.code==='KeyZ' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); undo(); }
     if (e.code==='KeyM') cycleMirror();
     if (e.code==='Enter' && !(e.target instanceof HTMLButtonElement)) startStage();
   } else if (G.mode==='combat'){
@@ -1523,6 +1742,7 @@ function syncUI(){
   const rotOk = !!T[G.sel].rot;
   $('rot').disabled = !rotOk; drawIcons();
   $('mirName').textContent = MIRROR[G.mir];
+  $('undo').disabled = !undoStack.length; renderBps();
   $('rotArrow').textContent = ARROW[G.rot]; $('rotName').textContent = FACING[G.rot];
   $('rot').title = rotOk ? 'Facing for the next block. Tip: tap a placed block of this type to turn it.' : 'This block has no facing';
   $('selDesc').textContent = T[G.sel].desc + (rotOk && !PARTS[G.sel] ? ' Tap a placed one to turn it 45°.' : '');
@@ -1578,11 +1798,46 @@ function hideOverlay(){ $('overlay').hidden = true; }
 let toastTimer = 0;
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1600); }
 
+// Blueprints: three saved designs in this browser. Loading sells the current ship for a full refund and buys the blueprint,
+// leaving out blocks that are still locked (and anything that would no longer connect to the core).
+const BP = 'oom-bp-v1';
+const bpGet = () => { try { const v = JSON.parse(localStorage.getItem(BP) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+const bpPut = v => { try { localStorage.setItem(BP, JSON.stringify(v)); } catch {} };
+const designCost = d => { let c = 0; for (const t of d.values()) c += T[t].cost; return c; };
+function renderBps(){
+  const v = bpGet(), el = $('bps'); let h = '';
+  for (let n=0; n<3; n++){
+    const b = v[n];
+    h += `<div class="bp"><span>Slot ${n+1} · ${b ? b.d.length+' blocks' : 'empty'}</span><button class="rot" type="button" data-save="${n}">Save</button><button class="rot" type="button" data-load="${n}"${b ? '' : ' disabled'}>Load</button></div>`;
+  }
+  if (el.innerHTML !== h) el.innerHTML = h;
+}
+function bpSave(n){
+  const v = bpGet(); v[n] = {d:[...G.design], o:[...G.dirs]}; bpPut(v); toast(`Saved to slot ${n+1}`); renderBps();
+}
+function bpLoad(n){
+  const b = bpGet()[n]; if (!b) return;
+  const d = new Map(b.d.filter(([k,t]) => T[t] && !locked(HEAD_OF[t] || t)));
+  d.set(CORE,'core');
+  const seen = new Set([CORE]), q = [CORE];
+  while (q.length){ const c = q.pop(); for (const nb of NB){ const m = c+nb; if (d.has(m) && !seen.has(m)){ seen.add(m); q.push(m); } } }
+  for (const k of [...d.keys()]) if (!seen.has(k)) d.delete(k);
+  const need = designCost(d), have = G.credits + designCost(G.design);
+  if (need > have){ toast(`Need ${need - have} more credits for that blueprint`); return; }
+  undoStack.push(snap());
+  G.credits = have - need; G.design = d; G.dirs = new Map(b.o.filter(([k]) => d.has(k)));
+  sfx('upgrade'); toast(d.size < b.d.length ? `Loaded slot ${n+1} without ${b.d.length - d.size} locked blocks` : `Loaded slot ${n+1}`); syncUI();
+}
+$('bps').addEventListener('click', e => {
+  const s = e.target.closest('button'); if (!s) return;
+  if (s.dataset.save) bpSave(+s.dataset.save); else if (s.dataset.load) bpLoad(+s.dataset.load);
+});
 function upgrade(){
   const t = G.sel; if (t==='sell' || G.mode!=='build') return;
   const L = lvOf(t); if (L >= MAXLV) return;
   const c = upCost(t); if (c > G.credits){ toast(`Need ${c} credits`); return; }
-  G.credits -= c; G.lv[t] = L+1; toast(`${T[t].name} is now level ${L+1}`); syncUI();
+  // credits spent on a level can't come back through undo
+  G.credits -= c; G.lv[t] = L+1; undoStack.length = 0; sfx('upgrade'); toast(`${T[t].name} is now level ${L+1}`); syncUI();
 }
 // progress lives in this browser's localStorage; every read and write is guarded so a blocked store just means no saving
 const SAVE = 'oom-save-v1';
@@ -1602,7 +1857,14 @@ $('reset').addEventListener('click', () => {
   location.reload();
 });
 $('upg').addEventListener('click', upgrade);
+const zoomBtn = f => { const L = layoutBuild(); zoomAt(L.cx, L.cy, f); };
+$('zIn').addEventListener('click', () => zoomBtn(1.4));
+$('zOut').addEventListener('click', () => zoomBtn(1/1.4));
+$('undo').addEventListener('click', undo);
+$('zFit').addEventListener('click', () => { G.bz = 1; G.bpx = G.bpy = 0; });
 $('pauseBtn').addEventListener('click', togglePause);
+$('muteBtn').addEventListener('click', () => { audio(); setMute(!muted); });
+setMute(muted);
 function cycleMirror(){ G.mir = (G.mir + 1) % 4; syncUI(); }
 $('mirror').addEventListener('click', cycleMirror);
 $('rot').addEventListener('click', rotate);
