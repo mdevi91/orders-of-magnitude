@@ -218,6 +218,7 @@ details li b{color:var(--paper);font-weight:400}
       <li><b>Shields</b> each project a bubble that stops enemy shots from every side, protecting blocks up to 2 cells away (3 at Lv2, 4 at Lv3). Overlap them to cover a big hull. If it pops it is down for 5 s, and it recharges after 2.5 s without hits. A red dashed line means a sniper is about to fire.</li>
       <li><b>Touch:</b> left half of the screen is a move stick, right half aims. Without the aim stick the ship aims at the nearest enemy.</li>
       <li><b>Drydock view:</b> mouse wheel, pinch, or the − + buttons zoom; middle-drag or two fingers pan; Fit resets. <kbd>Ctrl</kbd>+<kbd>Z</kbd> or Undo takes back a change. Blueprints keep up to three designs.</li>
+      <li><b>Flak</b> shells burst near enemy ships: area damage, and the blast clears enemy bullets.</li>
       <li><b>Enemies</b> grow shields (orange bubbles; railguns and lasers go straight through), generators that explode when hit and make them fire faster, and carrier bays that launch fighters.</li>
       <li><b>Damage</b> knocks blocks off. Anything cut off from the core drifts away. Lose the core and the stage is lost. Drydock repairs everything for free.</li>
       <li><kbd>P</kbd> pauses.</li>
@@ -279,6 +280,7 @@ const T = {
   cannon: {name:'Cannon', key:'3', unlock:1, cost:33, hp:20, mass:1.5, rot:true, gun:{cd:.5, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 18 damage per second. Covers 50° either side of its facing.'},
   gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{cd:.09, en:.5, spd:760, dmg:2.2, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
   missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{cd:2.2, en:8, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight. Launch in any direction and fly over your own hull.'},
+  flak:   {name:'Flak', key:'f', unlock:3, cost:45, hp:18, mass:1.5, rot:true, gun:{cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', life:1.4, fuse:22, blast:26}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
   laser:  {name:'Laser', key:'6', unlock:4, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:70, range:150, en:10}, desc:'2 blocks long. Continuous beam along its facing. Short range, and hits hardest up close.'},
   rail:   {name:'Railgun', key:'7', unlock:5, cost:150, hp:28, mass:2, rot:true, rail:{cd:2.6, pool:130, en:25}, desc:'3 blocks long. Fires along its facing and pierces block after block. Line up the ship to shoot.'},
   engine: {name:'Engine', key:'8', unlock:1, cost:16, hp:14, mass:1, rot:true, thrust:6, desc:'Pushes toward its facing. Exhaust needs an open cell behind it.'},
@@ -296,13 +298,13 @@ const HEAD_OF = {rail_b:'rail', laser_b:'laser'};
 const isPart = t => !!(t && (PARTS[t] || HEAD_OF[t]));
 const ET = {core:{hp:45}, hull:{hp:18}, armor:{hp:55}, gun:{hp:15}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}};
 const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-const PAL = ['hull','armor','cannon','gatling','missile','laser','rail','engine','gyro','shield','pd','gen','battery','sell'];
+const PAL = ['hull','armor','cannon','gatling','missile','flak','laser','rail','engine','gyro','shield','pd','gen','battery','sell'];
 const COL = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', gatling:'#a8ecff', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a'},
   e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', gun:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630'},
 };
-const BCOL = {shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a'};
+const BCOL = {shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', flak:'#ff9a3a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a'};
 const locked = t => (T[t].unlock || 1) > G.stage;
 // block levels: bought per type in drydock, each level +35% to the block's main stat
 const MAXLV = 3;
@@ -537,9 +539,23 @@ function impact(b,e,k){
 }
 
 // ---------- bullets ----------
+// Flak burst: falls off from the centre, hits every enemy block in range and clears enemy bullets caught in it.
+function flakBurst(b){
+  b.dead = true; boomAt(b.x, b.y, b.blast*.55, .25); sfx('boom', .5);
+  sparks(b.x, b.y, 0, 8, 160*G.SC, ['#ff9a3a','#ffe08a','#ffffff']);
+  for (const e of G.ships){
+    if (!e.alive || e.team!=='e' || Math.hypot(e.x-b.x, e.y-b.y) > e.r + b.blast) continue;
+    for (const [k,bb] of [...e.blocks]){
+      if (!e.alive || !e.blocks.has(k)) continue;
+      const [wx,wy] = wpos(e,bb), d = Math.hypot(wx-b.x, wy-b.y);
+      if (d < b.blast) damage(e, k, b.dmg*(1 - .6*d/b.blast));
+    }
+  }
+  for (const x of G.eb) if (!x.dead && Math.hypot(x.x-b.x, x.y-b.y) < b.blast) x.dead = true;
+}
 function pBullet(x,y,ang,gun,target,mul=1){
   const sp = gun.spd*G.SC;
-  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, life:gun.homing ? 6 : 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, kind:gun.homing ? 'miss' : gun.fx || 'shot'});
+  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC, life:gun.homing ? 6 : gun.life || 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, kind:gun.homing ? 'miss' : gun.fx || 'shot'});
 }
 function eBullet(x,y,ang,mul,kind,dmg=10,rMul=1){
   sfx('eshot');
@@ -861,11 +877,13 @@ function update(dt){
       for (const e of enemies){
         if (!e.alive) continue;
         if (e.shields.length && shieldBlock(e,b)){ b.dead = true; break; }
-        const k = hitShip(e,b.x,b.y,b.r);
+        const k = hitShip(e,b.x,b.y,b.kind==='flak' ? b.fuse : b.r);
+        if (k >= 0 && b.kind==='flak'){ flakBurst(b); break; }
         if (k >= 0){ damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }
     }
     b.life -= dt;
+    if (b.kind==='flak' && !b.dead && b.life <= 0) flakBurst(b);
     if (b.life <= 0 || b.x < -mX || b.y < -mX || b.x > G.AW+mX || b.y > G.AH+mX) b.dead = true;
   }
   for (const b of G.eb){
@@ -1026,6 +1044,9 @@ function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
       X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill(); X.globalAlpha = 1; break;
     case 'cannon': case 'gun':
       barrel(X,x,y,ca,sa,7,2.4,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
+    case 'flak':
+      barrel(X,x-sa*1.4,y+ca*1.4,ca,sa,5,1.8,gun); barrel(X,x+sa*1.4,y-ca*1.4,ca,sa,5,1.8,gun);
+      orb(X,x,y,3, ['#4a2010','#c8783a','#ffb060']); break;
     case 'gatling':
       barrel(X,x-sa*1.2,y+ca*1.2,ca,sa,6.6,1.2,gun); barrel(X,x+sa*1.2,y-ca*1.2,ca,sa,6.6,1.2,gun);
       orb(X,x,y,2.6, [gun[2],'#5a6270',gun[1]]); break;
