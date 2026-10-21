@@ -4,13 +4,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
 <style>
-/* Layout: full-bleed blueprint battlefield canvas; thin HUD strip on top; drydock drawer on the right (bottom on phones). Single deliberate dark look. */
+/* Layout: full-bleed deep-space canvas; thin HUD strip on top; drydock drawer on the right (bottom on phones).
+   Look: 90s VGA shooter. Bevelled gunmetal panels (light top-left edge, dark bottom-right), recessed dark wells, gold and cyan readouts. */
 :root{
-  --ink:#0a1530;        /* blueprint ground */
-  --ink-2:#13224b;      /* raised panels */
-  --line:#8fb4ff;       /* drafting line */
-  --paper:#e2ecff;      /* text, player hull */
-  --muted:#8497c4;
+  --ink:#05060c;        /* space, recessed wells */
+  --ink-2:#2e333d;      /* gunmetal panel */
+  --line:#5fd8ff;       /* cyan readout */
+  --paper:#e8ecf2;      /* text */
+  --muted:#9aa3b2;
+  --hi:#8a93a3;         /* bevel highlight */
+  --lo:#101217;         /* bevel shadow */
+  --well:#0c0e13;
   --foe:#ff7a66;        /* hostile red */
   --gold:#ffc46b;       /* credits, warnings */
   --display:'Press Start 2P','Courier New',monospace;
@@ -71,16 +75,30 @@ button,.pal,#panel,.card,#toast,.tag{border-radius:0}
 .pal .ct{display:block;font-size:16px;line-height:1;color:var(--gold);font-variant-numeric:tabular-nums}
 .pal .ct.no{color:var(--foe)}
 .pal kbd{margin-left:auto;color:var(--muted)}
+/* freshly unlocked blocks pop into the palette with a gold pulse */
+.pal.fresh{position:relative;animation:palPop .5s steps(5) both,palGlow .6s steps(2) .5s 4 both;animation-delay:var(--d,0s),calc(var(--d,0s) + .5s)}
+.pal.fresh::after{content:'NEW';position:absolute;top:-7px;right:-4px;padding:1px 3px;font:8px/1 var(--display);color:var(--ink);background:var(--gold)}
+@keyframes palPop{0%{transform:scale(.2);opacity:0}70%{transform:scale(1.15);opacity:1}100%{transform:none}}
+@keyframes palGlow{0%{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}100%{box-shadow:none}}
+@media (prefers-reduced-motion:reduce){.pal.fresh{animation:none;border-color:var(--gold)}}
 .pal > span{min-width:0}
 .pal:disabled{opacity:.45;cursor:not-allowed}
 .pal:disabled .ct{color:var(--muted)}
 .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 .rot{display:flex;align-items:center;gap:6px;padding:3px 8px;background:var(--ink);color:var(--paper);border:var(--px) solid #34477e;font:inherit;cursor:pointer}
 .rot:hover{border-color:var(--line)}
+.rot:disabled{opacity:.4;cursor:not-allowed}
+#rot{color:var(--line);font-size:19px}
 .rot:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #rotArrow{color:var(--gold);display:inline-block;width:1ch;text-align:center}
 #stats .warn{color:var(--foe)}
+#stats .gold{color:var(--gold)}
 .new{color:var(--gold)}
+.upg{justify-content:center;color:var(--gold)}
+.hudbtn{pointer-events:auto;cursor:pointer;font:inherit;font-size:17px;color:var(--paper);min-width:34px;min-height:30px}
+button,.pal,label{touch-action:manipulation}
+.upg:disabled{color:var(--muted);cursor:not-allowed}
+#reset{background:none;border:0;padding:0;color:var(--muted);font:inherit;font-size:16px;text-decoration:underline;cursor:pointer;align-self:flex-start}
 #selDesc{margin:0;color:var(--muted);min-height:2.4em;line-height:1.15}
 .toggle{display:flex;gap:8px;align-items:center;cursor:pointer}
 kbd{font-family:var(--mono);font-size:16px;border:var(--px) solid #34477e;padding:0 4px;color:var(--line)}
@@ -112,6 +130,17 @@ details li b{color:var(--paper);font-weight:400}
 #toast{position:fixed;z-index:9;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translateX(-50%);
   background:var(--ink);border:var(--px) solid var(--foe);color:var(--paper);padding:4px 12px;font-size:18px;pointer-events:none;max-width:calc(100% - 32px)}
 
+/* bevels */
+#panel,.card{background:linear-gradient(to bottom,#3a404b,#262a32);border:var(--px) solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);box-shadow:inset 0 0 0 1px #4a505c,4px 4px 0 #000}
+.pal,.rot,.tag,kbd,.bar{background:var(--well);border-style:solid;border-color:var(--lo) #4a505c #4a505c var(--lo)}
+.pal[aria-pressed="true"]{background:#1e2a3a;border-color:var(--gold)}
+#hud{background:linear-gradient(to bottom,rgba(46,51,61,.96),rgba(30,34,41,.9));border-bottom:var(--px) solid var(--lo);box-shadow:inset 0 -1px 0 #4a505c;padding-bottom:8px}
+#launch,.ov-actions button:not(.ghost){background:linear-gradient(to bottom,#ffd88f,#e0a040);border:var(--px) solid;border-color:#fff0c0 #7a4a10 #7a4a10 #fff0c0;box-shadow:3px 3px 0 #000}
+#launch:hover{background:linear-gradient(to bottom,#ffe8b0,#f0b050)}
+.bar i{background:linear-gradient(to bottom,#9fffa0,#2ac83a)}
+#enBar{background:linear-gradient(to bottom,#fff0a0,#e0a020)}
+#crt{background:repeating-linear-gradient(to bottom,rgba(0,0,0,.18) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 65%,rgba(0,0,0,.5) 100%)}
+#stats{border-color:#4a505c}
 @media (max-width:760px){
   #panel{top:auto;left:max(16px,env(safe-area-inset-left,0px));width:auto;max-height:46vh;gap:10px;padding:10px}
   #palette{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -120,6 +149,10 @@ details li b{color:var(--paper);font-weight:400}
   .pal .nm{font-size:15px}
   .brand{font-size:10px}
   .bar{width:70px}
+  #selDesc{min-height:0;font-size:16px}
+  .upg,.rot{min-height:36px}
+  #launch{padding:10px}
+  #hudScale{display:none}
 }
 </style>
 
@@ -135,8 +168,9 @@ details li b{color:var(--paper);font-weight:400}
     <span id="hudWave" class="tag" hidden>Wave 1/2</span>
   </div>
   <div class="hud-r">
-    <div id="coreWrap" hidden><span class="lbl">Core</span><div class="bar"><i id="coreBar"></i></div></div>
+    <div id="coreWrap" hidden><span class="lbl">Core</span><div class="bar"><i id="coreBar"></i></div><span class="lbl">Energy</span><div class="bar"><i id="enBar"></i></div></div>
     <span class="lbl">Credits</span><b id="hudCredits">0</b>
+    <button id="pauseBtn" class="tag hudbtn" type="button" aria-label="Pause" hidden>II</button>
   </div>
 </header>
 
@@ -145,27 +179,30 @@ details li b{color:var(--paper);font-weight:400}
   <p class="sub" id="gridInfo"></p>
   <div id="palette"></div>
   <p id="selDesc"></p>
+  <button id="upg" class="rot upg" type="button"></button>
   <div class="tools">
-    <button id="rot" class="rot" type="button">Facing <span id="rotArrow">↑</span> <span id="rotName">fore</span> <kbd>R</kbd></button>
-    <label class="toggle"><input type="checkbox" id="mirror" checked> Mirror <kbd>M</kbd></label>
+    <button id="rot" class="rot" type="button">⟳ Rotate <span id="rotArrow">↑</span> <span id="rotName">fore</span> <kbd>R</kbd></button>
+    <button id="mirror" class="rot" type="button">Mirror <span id="mirName">⇆ L/R</span> <kbd>M</kbd></button>
   </div>
-  <dl id="stats"></dl>
+  <details id="statsBox" open><summary>Ship stats</summary><dl id="stats"></dl></details>
   <button id="launch" type="button">Launch stage 1</button>
   <details id="help" open>
     <summary>Controls</summary>
     <ul>
       <li><b>Build:</b> click or drag to place. Right-click or the Sell tool removes a block for a full refund. Blocks must touch your ship. New blocks unlock as you clear stages.</li>
-      <li><b>Facing:</b> <kbd>R</kbd> turns the next turret, engine, shield, laser or railgun. Turrets cover an arc around their facing. Lasers and railguns fire straight along it.</li>
+      <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button turns the next turret or engine in 45° steps, and lasers and railguns in 90° steps. Tap a placed block of the selected type to turn it in place. Turrets cover an arc around their facing. Lasers and railguns fire straight along it.</li>
       <li><b>Engines</b> push away from their exhaust, which must be open. Most of your speed comes from the direction your engines face. Off-centre engines also help the ship turn.</li>
-      <li><b>Line of fire:</b> guns can't shoot through your own hull, so put them where they can see out.</li>
+      <li><b>Line of fire:</b> guns can't shoot through your own hull, so put them where they can see out. A red ✕ marks a block that can't fire or thrust; a gold mark means a turret is mostly boxed in.</li>
       <li><b>Fly:</b> WASD or arrows. Hold Shift to slow down.</li>
       <li><b>Aim:</b> your ship turns its nose toward the cursor. Big ships turn slowly; gyros help. Guns fire on their own. <kbd>T</kbd> switches to auto-aim at the nearest ship.</li>
-      <li><b>Shields</b> stop bullets arriving from the side they face, until they break. A red dashed line means a sniper is about to fire.</li>
+      <li><b>Energy:</b> weapons use energy to fire and shields use it to recharge. The core makes a little; Generators add more and Batteries store it. Both are safe deep inside the hull. When energy runs out, weapons wait. The gold Energy stat means full fire uses more than you make.</li>
+      <li><b>Shields</b> each project a bubble that stops enemy shots from every side, protecting blocks up to 2 cells away (3 at Lv2, 4 at Lv3). Overlap them to cover a big hull. If it pops it is down for 5 s, and it recharges after 2.5 s without hits. A red dashed line means a sniper is about to fire.</li>
       <li><b>Touch:</b> drag anywhere to fly; aim is automatic.</li>
       <li><b>Damage</b> knocks blocks off. Anything cut off from the core drifts away. Lose the core and the stage is lost. Drydock repairs everything for free.</li>
       <li><kbd>P</kbd> pauses.</li>
     </ul>
   </details>
+  <button id="reset" type="button">Reset progress</button>
 </aside>
 
 <div id="overlay" hidden><div class="card" role="dialog" aria-live="polite"><h1 id="ovTitle"></h1><p id="ovText"></p><div class="ov-actions" id="ovActions"></div></div></div>
@@ -196,26 +233,39 @@ const rand = (a,b) => a + Math.random()*(b-a);
 const clamp = (v,a,b) => v<a ? a : v>b ? b : v;
 const angDiff = (a,b) => { let d = (a-b) % (2*Math.PI); if (d > Math.PI) d -= 2*Math.PI; if (d < -Math.PI) d += 2*Math.PI; return d; };
 const TAU = Math.PI*2;
-// facing o: 0 fore, 1 starboard, 2 aft, 3 port (clockwise). FACE is the unit cell step, FA the ship-local angle.
-const FACE = [[0,-1],[1,0],[0,1],[-1,0]];
-const FA = [-Math.PI/2, 0, Math.PI/2, Math.PI];
-const ARROW = ['↑','→','↓','←'], FACING = ['fore','starboard','aft','port'];
-const mirrorO = o => o===1 ? 3 : o===3 ? 1 : o;
+// facing o: 0..7 in 45° steps clockwise from fore (0 fore, 2 starboard, 4 aft, 6 port; odd values are diagonals).
+// FA is the ship-local angle, DIR its unit vector, FACE the neighbouring cell it points at. Railguns and lasers use even facings only.
+const FA = Array.from({length:8}, (_,o) => -Math.PI/2 + o*Math.PI/4);
+const DIR = FA.map(a => [Math.cos(a), Math.sin(a)]);
+const FACE = DIR.map(([x,y]) => [Math.round(x), Math.round(y)]);
+const ARROW = ['↑','↗','→','↘','↓','↙','←','↖'], FACING = ['fore','fore-stbd','starboard','aft-stbd','aft','aft-port','port','fore-port'];
+const mirrorO = o => (8-o) % 8, flipO = o => (12-o) % 8;
+// mirror modes: 0 off, 1 left/right, 2 fore/aft, 3 four-way. Returns every cell (with facing) a placement at (i,j,o) also covers.
+const MIRROR = ['Off','⇆ L/R','⇅ F/A','✣ 4-way'];
+function mirrorSpots(i,j,o){
+  const m = G.mir, out = [[i,j,o]];
+  if (m===1 || m===3) out.push([-i,j,mirrorO(o)]);
+  if (m===2 || m===3) out.push([i,-j,flipO(o)]);
+  if (m===3) out.push([-i,-j,flipO(mirrorO(o))]);
+  const seen = new Set(); return out.filter(([a,b]) => { const k = a+','+b; if (seen.has(k)) return false; seen.add(k); return true; });
+}
 
 // ---------- block catalogue ----------
 const T = {
   core:   {name:'Core', cost:0, hp:80, mass:3, thrust:4, torque:12, gun:{cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI}, desc:'Your heart. Lose it and the stage is lost. Gives a little thrust in every direction.'},
   hull:   {name:'Hull', key:'1', unlock:1, cost:4, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
   armor:  {name:'Armor', key:'2', unlock:1, cost:10, hp:70, mass:3, desc:'Three times the toughness of hull. Heavy.'},
-  cannon: {name:'Cannon', key:'3', unlock:1, cost:33, hp:20, mass:1.5, rot:true, gun:{cd:.5, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 18 damage per second. Covers 50° either side of its facing.'},
-  gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{cd:.09, spd:760, dmg:2.2, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
-  missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{cd:1.5, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow homing warheads. Launch in any direction and fly over your own hull.'},
-  laser:  {name:'Laser', key:'6', unlock:4, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:70, range:150}, desc:'2 blocks long. Continuous beam along its facing. Short range, and hits hardest up close.'},
-  rail:   {name:'Railgun', key:'7', unlock:5, cost:150, hp:28, mass:2, rot:true, rail:{cd:2.6, pool:130}, desc:'3 blocks long. Fires along its facing and pierces block after block. Line up the ship to shoot.'},
+  cannon: {name:'Cannon', key:'3', unlock:1, cost:33, hp:20, mass:1.5, rot:true, gun:{cd:.5, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 18 damage per second. Covers 50° either side of its facing.'},
+  gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{cd:.09, en:.5, spd:760, dmg:2.2, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
+  missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{cd:2.2, en:8, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight. Launch in any direction and fly over your own hull.'},
+  laser:  {name:'Laser', key:'6', unlock:4, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:70, range:150, en:10}, desc:'2 blocks long. Continuous beam along its facing. Short range, and hits hardest up close.'},
+  rail:   {name:'Railgun', key:'7', unlock:5, cost:150, hp:28, mass:2, rot:true, rail:{cd:2.6, pool:130, en:25}, desc:'3 blocks long. Fires along its facing and pierces block after block. Line up the ship to shoot.'},
   engine: {name:'Engine', key:'8', unlock:1, cost:16, hp:14, mass:1, rot:true, thrust:6, desc:'Pushes toward its facing. Exhaust needs an open cell behind it.'},
   gyro:   {name:'Gyro', key:'9', unlock:2, cost:30, hp:18, mass:1.5, torque:25, desc:'Turns the ship faster. Blocks far from the core make turning slower.'},
-  shield: {name:'Shield', key:'0', unlock:3, cost:60, hp:18, mass:1.5, rot:true, sh:{hp:60, regen:15, delay:2.5, down:5, radius:32, arc:.95}, desc:'Projects a 110° arc 3 m out on its facing side. Stops 60 damage, then breaks for 5 s.'},
-  pd:     {name:'Point defense', key:'q', unlock:4, cost:40, hp:16, mass:1.5, pd:{cd:.32, range:85}, desc:'Shoots down enemy bullets that come close.'},
+  shield: {name:'Shield', key:'0', unlock:3, cost:60, hp:18, mass:1.5, sh:{hp:60, regen:15, delay:2.5, down:5, en:.4}, desc:'Projects a bubble that stops shots from any side, covering blocks up to 2 cells away (+1 per level). Stops 60 damage, then pops for 5 s.'},
+  pd:     {name:'Point defense', key:'q', unlock:4, cost:40, hp:16, mass:1.5, pd:{cd:.32, range:85, en:1}, desc:'Shoots down enemy bullets that come close.'},
+  gen:    {name:'Generator', key:'g', unlock:1, cost:25, hp:14, mass:2, en:{regen:8}, desc:'Makes 8 energy per second. Weapons and shields run on energy. Safe deep inside the hull.'},
+  battery:{name:'Battery', key:'b', unlock:2, cost:15, hp:12, mass:1.5, en:{cap:60}, desc:'Stores 60 energy for bursts of fire. Safe deep inside the hull.'},
   sell:   {name:'Sell', key:'x', cost:0, desc:'Remove a block for a full refund. Right-click does the same.'},
   rail_b: {name:'Railgun', cost:0, hp:28, mass:2, rot:true},
   laser_b:{name:'Laser', cost:0, hp:24, mass:1.5, rot:true},
@@ -224,29 +274,43 @@ const PARTS = {rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}};
 const HEAD_OF = {rail_b:'rail', laser_b:'laser'};
 const isPart = t => !!(t && (PARTS[t] || HEAD_OF[t]));
 const ET = {core:{hp:45}, hull:{hp:18}, armor:{hp:55}, gun:{hp:15}};
-const PAL = ['hull','armor','cannon','gatling','missile','laser','rail','engine','gyro','shield','pd','sell'];
+const PAL = ['hull','armor','cannon','gatling','missile','laser','rail','engine','gyro','shield','pd','gen','battery','sell'];
 const COL = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', gatling:'#a8ecff', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', gyro:'#8ff0c8',
-     laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff'},
+     laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a'},
   e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', gun:'#ffc46b'},
 };
-const BCOL = {shot:'#a8ecff', oval:'#a8ecff', line:'#7ff6ff', miss:'#ffe08a', aim:'#ffb347', ring:'#ff5fa8', snipe:'#ff3d3d'};
+const BCOL = {shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a'};
 const locked = t => (T[t].unlock || 1) > G.stage;
+// block levels: bought per type in drydock, each level +35% to the block's main stat
+const MAXLV = 3;
+const lvOf = t => G.lv[t.replace('_b','')] || 1;
+const LV = t => 1 + .35*(lvOf(t)-1);
+const upCost = t => T[t].cost*5*lvOf(t);
+// shield bubble radius: covers blocks up to 1 + level cells away (2 at Lv1, 4 at Lv3)
+const shRad = () => (1 + lvOf('shield') + .5)*BS;
 
 // ---------- state ----------
 const G = {
-  mode:'build', stage:1, credits:140, design:new Map(), dirs:new Map(), sel:'hull', rot:0, mirror:true,
+  mode:'build', mir:1, stage:1, credits:140, design:new Map(), dirs:new Map(), lv:{}, sel:'hull', rot:0, mirror:true,
   ships:[], player:null, pb:[], eb:[], fx:[], beams:[],
-  waves:[], waveIdx:0, waveGap:0, time:0, S:1, SC:1, AW:0, AH:0, camX:0, camY:0, zoom:1,
+  waves:[], waveIdx:0, waveGap:0, time:0, S:1, SC:1, AW:0, AH:0, camX:0, camY:0, zoom:1, span:0, spanT:0, span0:0, spanAt:0, swarmT:0,
   paused:false, aimAuto:false, mouse:{x:0,y:0,has:false}, tdx:0, tdy:0, touchId:null,
   banner:null, deadT:0, earned:0, shake:0, hover:null, drag:null, lastCell:null, aim:{x:0,y:0},
 };
 [[0,0,'core'],[0,-1,'cannon'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']].forEach(([i,j,t]) => G.design.set(K(i,j),t));
 G.dirs.set(K(0,-1),0); G.dirs.set(K(0,1),0);
-const gridR = s => 2 + s;
+// Build area: no fixed limit, it always reaches two cells past the furthest block. Frozen while dragging so cells don't slide under the pointer.
+const buildR = () => {
+  if (G.drag && G.dragR) return G.dragR;
+  let m = 0; for (const k of G.design.keys()) m = Math.max(m, Math.abs(KI(k)), Math.abs(KJ(k)));
+  return Math.max(3, m + 2);
+};
 const scaleOf = s => Math.pow(1.22, s-1);
+// World units across the short side of the screen: the camera backs off as the player's hull grows.
+const spanFor = (r,S) => Math.max(300 + 8*r, 300*Math.pow(S,.6));
 const speedOf = (thrust,mass) => 60 + 260*Math.min(1.3, Math.sqrt(thrust/Math.max(1,mass)));
-const turnOf = (torque,inertia) => Math.min(4, 2.2*Math.sqrt(torque/Math.max(1,inertia)));
+const turnOf = (torque,inertia,mass) => Math.min(3.5, 2.2*Math.sqrt(torque/Math.max(1,inertia))/Math.sqrt(1 + mass/60));
 
 // ---------- ship physics ----------
 // cells: iterable of {t,i,j,o}; typeAt(k) answers what occupies a cell. Engines only count when their exhaust cell is open.
@@ -254,10 +318,10 @@ function physics(cells, typeAt){
   let mass=0, inertia=0, torque=0, coreT=0, jetCW=0, jetCCW=0;
   const F = {px:0, nx:0, py:0, ny:0}, engines = [];
   for (const c of cells){
-    const d = T[c.t]; mass += d.mass; inertia += d.mass*(c.i*c.i + c.j*c.j + .17); torque += d.torque||0;
+    const d = T[c.t]; mass += d.mass; inertia += d.mass*(c.i*c.i + c.j*c.j + .17); torque += (d.torque||0)*LV(c.t);
     if (c.t==='engine'){
-      const [fx,fy] = FACE[c.o||0], active = !typeAt(K(c.i-fx, c.j-fy));
-      const tx = fx*d.thrust, ty = fy*d.thrust, tau = c.i*ty - c.j*tx;
+      const [fx,fy] = FACE[c.o||0], [ux,uy] = DIR[c.o||0], active = !typeAt(K(c.i-fx, c.j-fy));
+      const tx = ux*d.thrust*LV('engine'), ty = uy*d.thrust*LV('engine'), tau = c.i*ty - c.j*tx;
       engines.push({c, active, tx, ty, tau});
       if (active){
         if (tx > 0) F.px += tx; else F.nx -= tx;
@@ -284,9 +348,8 @@ function laneFwd(typeAt, i, j, o){
 function makeShip(design, team, x, y, hpMul=1, dirs=null){
   const s = {team, x, y, vx:0, vy:0, a:0, c:1, sn:0, blocks:new Map(), alive:true};
   for (const [k,t] of design){
-    const hp = (team==='p' ? T[t].hp : ET[t].hp) * hpMul;
+    const hp = (team==='p' ? T[t].hp*LV(t) : ET[t].hp) * hpMul;
     const b = {t, i:KI(k), j:KJ(k), o:dirs ? dirs.get(k)||0 : 0, hp, max:hp, cd:Math.random()*.4, hit:-1};
-    if (t==='shield'){ b.shp = T.shield.sh.hp; b.down = 0; b.last = -9; b.flash = -9; }
     s.blocks.set(k, b);
   }
   recalc(s); return s;
@@ -308,6 +371,12 @@ function recalc(s){
       (b.t==='rail' ? s.rails : s.lasers).push(b);
     }
   }
+  // energy: the core gives a little; generators add recharge, batteries add storage
+  let cap = 40, regen = 6;
+  for (const b of s.blocks.values()){ if (b.t==='gen') regen += T.gen.en.regen*LV('gen'); if (b.t==='battery') cap += T.battery.en.cap*LV('battery'); }
+  s.enMax = cap; s.enRegen = regen; s.en = Math.min(s.en ?? cap, cap);
+  // each shield block keeps its own bubble state
+  for (const b of s.shields) if (!b.bub){ const max = T.shield.sh.hp*LV('shield'); b.bub = {hp:max, max, down:0, last:-9, flash:-9}; }
 }
 function genDesign(n, boss, stage){
   const d = new Map([[CORE,'core']]), keys = [CORE];
@@ -416,9 +485,9 @@ function impact(b,e,k){
 }
 
 // ---------- bullets ----------
-function pBullet(x,y,ang,gun,target){
+function pBullet(x,y,ang,gun,target,mul=1){
   const sp = gun.spd*G.SC;
-  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg, life:gun.homing ? 6 : 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, kind:gun.homing ? 'miss' : gun.fx || 'shot'});
+  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, life:gun.homing ? 6 : 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, kind:gun.homing ? 'miss' : gun.fx || 'shot'});
 }
 function eBullet(x,y,ang,mul,kind,dmg=10,rMul=1){
   if (G.eb.length > 1600) return;
@@ -430,18 +499,16 @@ function leadAngle(wx,wy,sp,amount){
   const p = G.player, d = Math.hypot(p.x-wx, p.y-wy), t = d/sp*amount;
   return Math.atan2(p.y + p.vy*t - wy, p.x + p.vx*t - wx);
 }
-// A shield stops a bullet crossing its arc from outside. Returns true when the bullet is absorbed.
+// A shield bubble stops an enemy shot heading inward once it is inside the bubble. Returns true when absorbed.
 function shieldBlock(p,b){
   const SH = T.shield.sh;
   for (const s of p.shields){
-    if (s.down > 0 || s.shp <= 0) continue;
-    const [cx,cy] = wpos(p,s), dx = b.x-cx, dy = b.y-cy, d = Math.hypot(dx,dy);
-    if (Math.abs(d - SH.radius) > b.r + 3) continue;
-    if (Math.abs(angDiff(Math.atan2(dy,dx), p.a + FA[s.o])) > SH.arc) continue;
-    if (dx*b.vx + dy*b.vy > 0) continue;
-    s.shp -= b.dmg; s.last = s.flash = G.time;
+    const B = s.bub; if (B.down > 0 || B.hp <= 0) continue;
+    const [cx,cy] = wpos(p,s), dx = b.x-cx, dy = b.y-cy;
+    if (dx*dx + dy*dy > (shRad() + b.r)**2 || dx*b.vx + dy*b.vy > 0) continue;
+    B.hp -= b.dmg; B.last = B.flash = G.time;
     sparks(b.x, b.y, Math.atan2(dy,dx), 4, 120*G.SC, ['#5fd3ff','#ffffff']);
-    if (s.shp <= 0){ s.shp = 0; s.down = SH.down; G.fx.push({k:'ring', x:cx, y:cy, r:SH.radius*1.2, life:.4, max:.4, col:'#5fd3ff'}); }
+    if (B.hp <= 0){ B.hp = 0; B.down = SH.down; G.fx.push({k:'ring', x:cx, y:cy, r:shRad()*1.1, life:.5, max:.5, col:'#5fd3ff'}); }
     return true;
   }
   return false;
@@ -481,7 +548,7 @@ function spawnWave(list){
     const d = genDesign(spec.n, spec.boss, G.stage), pos = spawnPos();
     const e = makeShip(d,'e',pos.x,pos.y,hpMul);
     e.pat = spec.boss ? 'boss' : spec.pat; e.boss = !!spec.boss; boss ||= e.boss;
-    e.ft = rand(1.5,3); e.ft2 = 3; e.ft3 = 5; e.phase = rand(0,TAU); e.spin = Math.random()<.5 ? 1 : -1; e.vol = 0;
+    e.sc = G.SC; e.ft = rand(1.5,3); e.ft2 = 3; e.ft3 = 5; e.phase = rand(0,TAU); e.spin = Math.random()<.5 ? 1 : -1; e.vol = 0;
     e.orb = rand(0,TAU); e.orbSpd = rand(.12,.35)*(Math.random()<.5 ? 1 : -1);
     e.pref = (spec.boss ? 360 : e.pat==='sniper' ? rand(420,520) : rand(220,380))*G.SC + e.r;
     e.vmax = 150/Math.sqrt(1 + d.size/30); e.turn = 1.6/Math.sqrt(1 + d.size/20);
@@ -491,13 +558,37 @@ function spawnWave(list){
   }
   G.banner = {text:`Wave ${G.waveIdx}/${G.waves.length}`, sub: boss ? 'Capital ship inbound' : `${list.length} hostiles`, t:2.4};
 }
+// Swarm: flights of ships sized like earlier stages keep arriving all stage, so a grown hull towers over them.
+function spawnSwarm(){
+  const p = G.player, s = G.stage;
+  const tier = 1 + Math.floor(Math.random()**2 * (s-1)), tS = Math.pow(scaleOf(tier),.8);
+  const ang = rand(0,TAU), dist = .5*Math.hypot(W,H)/G.zoom + 40;
+  const cx = clamp(p.x + Math.cos(ang)*dist, 0, G.AW), cy = clamp(p.y + Math.sin(ang)*dist, 0, G.AH);
+  const flight = 3 + ((Math.random()*3)|0);
+  for (let q=0; q<flight; q++){
+    const d = genDesign(Math.max(2, Math.round((3 + 1.6*Math.pow(tier,1.3))*rand(.6,1.1))), false, tier);
+    const e = makeShip(d,'e', clamp(cx + rand(-40,40)*tS, 0, G.AW), clamp(cy + rand(-40,40)*tS, 0, G.AH), 1);
+    e.pat = 'aimed'; e.fodder = true; e.sc = tS; e.ft = rand(2.5,4); e.vol = 0;
+    e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);
+    e.pref = p.r + rand(140,260)*tS + e.r;
+    e.vmax = 190/Math.sqrt(1 + d.size/30); e.turn = 2.4;
+    e.value = Math.round(d.size*1.2 + e.guns.length);
+    e.a = Math.atan2(p.x-e.x, -(p.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
+    G.ships.push(e);
+  }
+}
 function startStage(){
   G.S = scaleOf(G.stage); G.SC = Math.pow(G.S,.8);
-  G.AW = 1300*G.S; G.AH = 900*G.S;
-  G.player = makeShip(G.design,'p',G.AW/2,G.AH*.72,1,G.dirs);
+  G.player = makeShip(G.design,'p',0,0,1,G.dirs);
+  // every stage opens on last stage's view and slowly pulls back to a wider one, even if the hull didn't grow
+  // a retry of the same stage replays the same zoom instead of widening again
+  if (G.spanStage !== G.stage){ G.span0 = G.spanT ? G.spanT : spanFor(G.player.r, G.S)*.6; G.spanStage = G.stage; }
+  G.spanT = Math.max(spanFor(G.player.r, G.S), G.span0*1.15); G.span = G.span0; G.spanAt = 0; G.swarmT = 4;
+  G.AW = Math.max(1300*G.S, G.spanT*3); G.AH = Math.max(900*G.S, G.spanT*2.2);
+  G.player.x = G.AW/2; G.player.y = G.AH*.72;
   G.ships = [G.player]; G.pb = []; G.eb = []; G.fx = []; G.beams = [];
-  G.waves = planStage(G.stage); G.waveIdx = 0; G.waveGap = 1.2;
-  G.camX = G.player.x; G.camY = G.player.y; G.tdx = G.tdy = 0; G.deadT = 0; G.earned = 0; G.paused = false;
+  G.waves = planStage(G.stage); G.waveIdx = 0; G.waveGap = 3.5;
+  G.camX = G.player.x; G.camY = G.player.y; G.joy = null; G.deadT = 0; G.earned = 0; G.paused = false;
   G.banner = {text:`Stage ${G.stage}`, sub:`Scale ×${G.S.toFixed(2)}`, t:2};
   G.mode = 'combat'; hideOverlay(); syncUI();
 }
@@ -507,13 +598,18 @@ function toDrydock(advance){
   G.mode = 'build'; G.paused = false; hideOverlay();
   G.ships = []; G.pb = []; G.eb = []; G.fx = [];
   syncUI();
+  if (advance) PAL.filter(t => T[t].unlock === G.stage).forEach((t,n) => {
+    const b = $('pal-'+t); b.classList.remove('fresh'); void b.offsetWidth;
+    b.style.setProperty('--d', (.3 + n*.25)+'s'); b.classList.add('fresh');
+    b.addEventListener('click', () => b.classList.remove('fresh'), {once:true});
+  });
 }
 function stageClear(){
   const bonus = 40 + 25*G.stage; G.credits += bonus;
-  const nS = scaleOf(G.stage+1), nR = gridR(G.stage+1)*2+1, un = unlocksAt(G.stage+1);
+  const nS = scaleOf(G.stage+1), un = unlocksAt(G.stage+1);
   G.mode = 'clear';
   showOverlay(`Stage ${G.stage} cleared`,
-    `Salvage <b class="gold">+${G.earned}</b>, clear bonus <b class="gold">+${bonus}</b>. Next is scale <b>×${nS.toFixed(2)}</b>: bigger fleets, faster ships, and your build grid grows to <b>${nR} × ${nR}</b>.` +
+    `Salvage <b class="gold">+${G.earned}</b>, clear bonus <b class="gold">+${bonus}</b>. Next is scale <b>×${nS.toFixed(2)}</b>: bigger fleets and faster ships.` +
     (un.length ? ` Unlocked: <b class="gold">${un.join(', ')}</b>.` : ''),
     [['Enter drydock', () => toDrydock(true)]]);
 }
@@ -533,6 +629,7 @@ function togglePause(){
 
 // ---------- update ----------
 const keys = {};
+const JOY_R = 26;
 function update(dt){
   G.time += dt;
   const p = G.player, SC = G.SC;
@@ -549,22 +646,27 @@ function update(dt){
   }
   G.aim = {x:ax, y:ay};
 
+  const spend = c => { if (p.en < c) return false; p.en -= c; return true; };
   if (p.alive){
+    p.en = Math.min(p.enMax, p.en + p.enRegen*dt);
     const ph = p.ph;
     for (const e of ph.engines) e.c.firing = false;
     // movement: top speed depends on how much engine thrust points the way you want to go
     let mx = 0, my = 0;
     if (keys.KeyA || keys.ArrowLeft) mx--; if (keys.KeyD || keys.ArrowRight) mx++;
     if (keys.KeyW || keys.ArrowUp) my--; if (keys.KeyS || keys.ArrowDown) my++;
-    const tl = Math.hypot(G.tdx,G.tdy);
-    if (!mx && !my && tl > .5){ mx = G.tdx/tl; my = G.tdy/tl; }
+    // touch: virtual joystick around where the thumb landed, analog up to JOY_R canvas pixels
+    let analog = 1;
+    if (!mx && !my && G.joy){
+      const jx = G.joy.x - G.joy.x0, jy = G.joy.y - G.joy.y0, jl = Math.hypot(jx,jy);
+      if (jl > 2){ mx = jx/jl; my = jy/jl; analog = Math.min(1, jl/JOY_R); }
+    }
     const ml = Math.hypot(mx,my), ux = ml ? mx/ml : 0, uy = ml ? my/ml : 0;
     const lx = ux*p.c + uy*p.sn, ly = -ux*p.sn + uy*p.c;
-    const spd = ml ? dirSpeed(ph,lx,ly)*SC*((keys.ShiftLeft || keys.ShiftRight) ? .45 : 1) : 0;
+    const spd = ml ? dirSpeed(ph,lx,ly)*SC*analog*((keys.ShiftLeft || keys.ShiftRight) ? .45 : 1) : 0;
     p.vx += (ux*spd - p.vx)*Math.min(1,dt*(ml ? 5 : 3));
     p.vy += (uy*spd - p.vy)*Math.min(1,dt*(ml ? 5 : 3));
     p.x += p.vx*dt; p.y += p.vy*dt;
-    if (tl > .5){ const m = Math.min(tl, Math.hypot(p.vx,p.vy)*dt); G.tdx -= G.tdx/tl*m; G.tdy -= G.tdy/tl*m; }
     p.x = clamp(p.x, 0, G.AW); p.y = clamp(p.y, 0, G.AH);
     // engines pushing the way we go light up; off-centre ones twist the hull
     let drift = 0;
@@ -575,16 +677,22 @@ function update(dt){
     p.a += drift/ph.inertia*dt;
     // nose swings toward the aim point; engines whose push helps the turn act as jets
     const want = Math.atan2(ax-p.x, -(ay-p.y)), da = angDiff(want,p.a), cw = da > 0;
-    const rate = turnOf(ph.torque + (cw ? ph.jetCW : ph.jetCCW), ph.inertia);
-    p.a += clamp(da, -rate*dt, rate*dt);
+    const rate = turnOf(ph.torque + (cw ? ph.jetCW : ph.jetCCW), ph.inertia, ph.mass);
+    // angular momentum: heavy hulls take time to start and stop a turn
+    const wWant = clamp(da*4, -rate, rate), acc = rate*2.5;
+    p.w = (p.w||0) + clamp(wWant - (p.w||0), -acc*dt, acc*dt);
+    p.a += p.w*dt;
     if (Math.abs(da) > .06) for (const e of ph.engines) if (e.active && (cw ? e.tau > 0 : e.tau < 0)) e.c.firing = true;
     p.c = Math.cos(p.a); p.sn = Math.sin(p.a);
 
     // shields recharge after a quiet spell
-    const SH = T.shield.sh;
     for (const s of p.shields){
-      if (s.down > 0){ s.down -= dt; continue; }
-      if (G.time - s.last > SH.delay) s.shp = Math.min(SH.hp, s.shp + SH.regen*dt);
+      const B = s.bub;
+      if (B.down > 0) B.down -= dt;
+      else if (G.time - B.last > T.shield.sh.delay && B.hp < B.max){
+        const amt = Math.min(B.max - B.hp, T.shield.sh.regen*LV('shield')*dt, p.en/T.shield.sh.en);
+        B.hp += amt; p.en -= amt*T.shield.sh.en;
+      }
     }
   }
 
@@ -597,8 +705,9 @@ function update(dt){
       const gun = T[g.t].gun, [wx,wy] = wpos(p,g), ang = Math.atan2(ay-wy, ax-wx);
       if (Math.abs(angDiff(ang, p.a + FA[g.o])) > gun.arc) continue;
       if (!gun.homing && !laneClear(p,g,ang)) continue;
+      if (!spend(gun.en || 0)) continue;
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
-      pBullet(wx, wy, ang + (Math.random()-.5)*2*gun.spread, gun, tgt);
+      pBullet(wx, wy, ang + (Math.random()-.5)*2*gun.spread, gun, tgt, LV(g.t));
       if (gun.fx==='oval') boomAt(wx + Math.cos(ang)*6, wy + Math.sin(ang)*6, 5*SC, .07);
     }
     // railguns: fire when the aim point sits on their line
@@ -607,6 +716,7 @@ function update(dt){
       if (!h.lane) continue;
       const [wx,wy] = wpos(p,h), face = p.a + FA[h.o];
       if (Math.abs(angDiff(Math.atan2(ay-wy, ax-wx), face)) > .1) continue;
+      if (!spend(T.rail.rail.en)) continue;
       h.cd = T.rail.rail.cd; fireRail(p, wx, wy, face);
     }
   }
@@ -616,8 +726,8 @@ function update(dt){
     const L = T.laser.laser, [wx,wy] = wpos(p,h), face = p.a + FA[h.o], dx = Math.cos(face), dy = Math.sin(face);
     const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
-    if (hit){
-      damage(hit.e, hit.k, L.dps*(1 - .75*hit.t/range)*dt);
+    if (hit && spend(L.en*dt)){
+      damage(hit.e, hit.k, L.dps*LV('laser')*(1 - .75*hit.t/range)*dt);
       h.beam = [ox, oy, ox + dx*hit.t, oy + dy*hit.t];
       if (Math.random() < .35) sparks(h.beam[2], h.beam[3], face+Math.PI, 1, 140*SC, ['#9dff8a','#ffffff']);
     }
@@ -628,7 +738,7 @@ function update(dt){
     const [wx,wy] = wpos(p,d), R = T.pd.pd.range*Math.sqrt(G.S);
     let best = null, bd = R*R;
     for (const b of G.eb){ if (b.dead) continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < bd){ bd = q; best = b; } }
-    if (best){ best.dead = true; d.cd = T.pd.pd.cd; G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09}); }
+    if (best && spend(T.pd.pd.en)){ best.dead = true; d.cd = T.pd.pd.cd/LV('pd'); G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09}); }
     else d.cd = .05;
   }
 
@@ -639,9 +749,14 @@ function update(dt){
     e.a += clamp(angDiff(want,e.a), -e.turn*dt, e.turn*dt);
     e.orb += e.orbSpd*dt;
     const tx = clamp(p.x + Math.cos(e.orb)*e.pref, 0, G.AW), ty = clamp(p.y + Math.sin(e.orb)*e.pref, 0, G.AH);
-    const ex = tx-e.x, ey = ty-e.y, el = Math.hypot(ex,ey) || 1, v = Math.min(e.vmax*SC, el*1.2);
+    const ex = tx-e.x, ey = ty-e.y, el = Math.hypot(ex,ey) || 1, v = Math.min(e.vmax*e.sc, el*1.2);
     e.vx += (ex/el*v - e.vx)*Math.min(1,dt*1.4); e.vy += (ey/el*v - e.vy)*Math.min(1,dt*1.4);
     e.x += e.vx*dt; e.y += e.vy*dt;
+    // ramming: ships under a third of the player's size break up on the hull
+    if (p.alive && e.r < p.r*.35 && Math.hypot(dx,dy) < p.r + e.r){
+      const k = hitShip(p, e.x, e.y, e.r*.5);
+      if (k >= 0){ damage(p, k, 1 + e.blocks.size*.4); G.shake = Math.max(G.shake, 2); killShip(e); continue; }
+    }
     if (p.alive) enemyFire(e,dt);
   }
   for (let a=0; a<enemies.length; a++) for (let b=a+1; b<enemies.length; b++){
@@ -655,7 +770,8 @@ function update(dt){
     if (b.dead) continue;
     if (b.homing){
       if (!b.target || !b.target.alive){ let bd = 1e18; b.target = null; for (const e of enemies){ const d = (e.x-b.x)**2 + (e.y-b.y)**2; if (d < bd){ bd = d; b.target = e; } } }
-      if (b.target){
+      // guidance burns out after 2 s; after that the warhead flies straight
+      if (b.target && b.life > 4){
         const cur = Math.atan2(b.vy,b.vx), want = Math.atan2(b.target.y-b.y, b.target.x-b.x);
         const na = cur + clamp(angDiff(want,cur), -1.5*dt, 1.5*dt);
         b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp;
@@ -681,7 +797,7 @@ function update(dt){
     for (let s=0; s<steps && !b.dead; s++){
       b.x += b.vx*dt/steps; b.y += b.vy*dt/steps;
       if (!p.alive) continue;
-      if (p.shields.length && shieldBlock(p,b)){ b.dead = true; break; }
+      if (shieldBlock(p,b)){ b.dead = true; break; }
       const k = hitShip(p,b.x,b.y,b.r);
       if (k >= 0){ damage(p,k,b.dmg); b.dead = true; G.fx.push({k:'spk', x:b.x, y:b.y, vx:0, vy:0, life:.2, max:.2, col:BCOL[b.kind]}); if (b.kind==='snipe') boomAt(b.x,b.y,8*SC,.2); }
     }
@@ -696,9 +812,19 @@ function update(dt){
   // camera
   G.camX += (p.x - G.camX)*Math.min(1,dt*4); G.camY += (p.y - G.camY)*Math.min(1,dt*4);
 
+  // zoom-out animation: ease in and out over 4 s
+  if (G.spanAt < 1){ G.spanAt = Math.min(1, G.spanAt + dt/4); const k = G.spanAt*G.spanAt*(3 - 2*G.spanAt); G.span = G.span0 + (G.spanT - G.span0)*k; }
+
+  // swarm keeps coming between and during waves; it never holds up a stage clear
+  if (p.alive && G.stage > 1 && G.waveIdx > 0){
+    G.swarmT -= dt;
+    const cap = Math.min(36, 6 + 3*G.stage);
+    if (G.swarmT <= 0){ G.swarmT = rand(3,6); if (enemies.filter(e => e.alive && e.fodder).length < cap) spawnSwarm(); }
+  }
+
   // waves
   if (!p.alive){ G.deadT -= dt; if (G.deadT <= 0) playerDied(); }
-  else if (!enemies.some(e => e.alive)){
+  else if (!enemies.some(e => e.alive && !e.fodder)){
     G.waveGap -= dt;
     if (G.waveGap <= 0){
       if (G.waveIdx < G.waves.length){ G.waveIdx++; spawnWave(G.waves[G.waveIdx-1]); G.waveGap = 1.6; }
@@ -708,7 +834,7 @@ function update(dt){
 }
 function fireRail(p, wx, wy, face){
   const SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = 3000*G.S;
-  let pool = T.rail.rail.pool, end = len;
+  let pool = T.rail.rail.pool*LV('rail'), end = len;
   for (const h of rayHits(ox, oy, dx, dy, len, false)){
     if (!h.e.alive) continue;
     const b = h.e.blocks.get(h.k); if (!b) continue;
@@ -729,11 +855,11 @@ function enemyFire(e,dt){
     // aimed volleys lead the player's movement
     if (isBoss) e.ft2 -= dt; else e.ft -= dt;
     if ((isBoss ? e.ft2 : e.ft) <= 0){
-      if (isBoss) e.ft2 = 2.6; else e.ft = rand(2,3);
+      if (isBoss) e.ft2 = 2.6; else e.ft = e.fodder ? rand(2.5,4) : rand(2,3);
       const n = Math.min(isBoss ? 10 : 6, e.guns.length);
       for (let q=0; q<n; q++){
         const g = e.guns[(q*7 + e.vol) % e.guns.length], [wx,wy] = wpos(e,g);
-        eBullet(wx, wy, leadAngle(wx,wy,115*G.SC,.8) + (Math.random()-.5)*.12, 1.05, 'aim');
+        eBullet(wx, wy, leadAngle(wx,wy,115*e.sc,.8) + (Math.random()-.5)*.12, 1.05*e.sc/G.SC, 'aim', e.fodder ? 4 : 10, e.sc/G.SC);
       }
       e.vol++;
     }
@@ -777,66 +903,110 @@ function updateFx(dt){
 }
 
 // ---------- drawing ----------
-// Draws one block in ship-local units. Rotatable blocks are drawn facing fore (-y) inside a rotated frame.
-// aim is the ship-local angle turrets should point at; firing lights engine flames.
+// VGA-style metal sprites: each block is a bevelled plate (light top-left, shadow bottom-right) with its part drawn on top.
+// Palettes are [highlight, base, shadow].
+const MET = {
+  p:{hull:['#d4dbe6','#8590a1','#454c5a'], armor:['#b4bcc8','#5f6878','#2b3039'], dark:['#7d8796','#3d4350','#1c1f26']},
+  e:{hull:['#e08a62','#9a4630','#4a1c12'], armor:['#b8705a','#6a3024','#30120c'], dark:['#8a4a3a','#4a2018','#200a06']},
+};
+function plate(X,x,y,m){
+  X.fillStyle = m[1]; X.fillRect(x-5,y-5,10,10);
+  X.fillStyle = m[0]; X.fillRect(x-5,y-5,10,1.3); X.fillRect(x-5,y-5,1.3,10);
+  X.fillStyle = m[2]; X.fillRect(x-5,y+3.7,10,1.3); X.fillRect(x+3.7,y-5,1.3,10);
+}
+function orb(X,x,y,r,cols){ for (let n=0; n<cols.length; n++){ X.fillStyle = cols[n]; X.beginPath(); X.arc(x - n*r*.12, y - n*r*.12, r*(1 - n/cols.length), 0, TAU); X.fill(); } }
+function barrel(X,x,y,ca,sa,len,w,m){
+  const px = -sa*w/2, py = ca*w/2;
+  X.fillStyle = m[2]; X.beginPath(); X.moveTo(x+px,y+py); X.lineTo(x+px+ca*len,y+py+sa*len); X.lineTo(x-px+ca*len,y-py+sa*len); X.lineTo(x-px,y-py); X.closePath(); X.fill();
+  X.fillStyle = m[0]; X.beginPath(); X.moveTo(x+px*.3,y+py*.3); X.lineTo(x+px*.3+ca*len,y+py*.3+sa*len); X.lineTo(x-px*.4+ca*len,y-py*.4+sa*len); X.lineTo(x-px*.4,y-py*.4); X.closePath(); X.fill();
+}
 function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
-  const col = hit ? '#ffffff' : COL[team][t];
-  if (!detail){ X.globalAlpha = .55 + .45*ratio; X.fillStyle = col; X.fillRect(x-4.7,y-4.7,9.4,9.4); X.globalAlpha = 1; return; }
-  X.fillStyle = col; X.strokeStyle = col;
-  X.globalAlpha = .14 + .16*ratio; X.fillRect(x-4.5,y-4.5,9,9);
-  X.globalAlpha = .3 + .7*ratio; X.strokeRect(x-4.5,y-4.5,9,9);
-  const d = T[t], rot = o ? o*Math.PI/2 : 0;
+  const M = MET[team==='p' ? 'p' : 'e'], bx = x, by = y;
+  if (t==='sell'){
+    X.fillStyle = '#ff3d2a'; X.save(); X.translate(x,y); X.rotate(Math.PI/4); X.fillRect(-5,-1.2,10,2.4); X.fillRect(-1.2,-5,2.4,10); X.restore(); return;
+  }
+  if (!detail){
+    X.fillStyle = hit ? '#ffffff' : t==='core' ? (team==='p' ? '#7fe0ff' : '#ff8a5a') : t==='armor' ? M.armor[1] : M.hull[1];
+    X.fillRect(x-5,y-5,10,10); return;
+  }
+  const base = t==='armor' ? M.armor : t==='hull' ? M.hull : M.dark;
+  plate(X,x,y,base);
+  if (hit){ X.fillStyle = '#ffffff'; X.globalAlpha = .85; X.fillRect(x-5,y-5,10,10); X.globalAlpha = 1; return; }
+  const d = T[t], rot = o ? o*Math.PI/4 : 0;
   if (rot){ X.save(); X.translate(x,y); X.rotate(rot); x = 0; y = 0; }
   let ang = aim - rot;
   const arc = team==='p' && d && d.gun ? d.gun.arc : 0;
   if (arc) ang = -Math.PI/2 + clamp(angDiff(ang,-Math.PI/2), -arc, arc);
-  const lw = X.lineWidth, ca = Math.cos(ang), sa = Math.sin(ang);
+  const ca = Math.cos(ang), sa = Math.sin(ang), gun = team==='p' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
   switch (t){
-    case 'gyro': {
-      X.beginPath(); X.arc(x,y,3.2,0,TAU); X.stroke();
-      const r = G.time*5, c = Math.cos(r)*3.2, s = Math.sin(r)*3.2;
-      X.beginPath(); X.moveTo(x-c,y-s); X.lineTo(x+c,y+s); X.stroke(); break;
-    }
+    case 'hull':
+      X.fillStyle = base[2]; X.fillRect(x-.5,y-3,1,6); break;
     case 'armor':
-      X.strokeRect(x-2.4,y-2.4,4.8,4.8);
-      X.beginPath(); X.moveTo(x-4.5,y-4.5); X.lineTo(x-2.4,y-2.4); X.moveTo(x+4.5,y-4.5); X.lineTo(x+2.4,y-2.4);
-      X.moveTo(x-4.5,y+4.5); X.lineTo(x-2.4,y+2.4); X.moveTo(x+4.5,y+4.5); X.lineTo(x+2.4,y+2.4); X.stroke(); break;
+      X.fillStyle = base[2]; X.fillRect(x-3,y-3,6,6); X.fillStyle = base[0]; X.fillRect(x-3,y-3,5,1); X.fillRect(x-3,y-3,1,5);
+      X.fillStyle = base[0]; for (const [a,b] of [[-3.4,-3.4],[2.6,-3.4],[-3.4,2.6],[2.6,2.6]]) X.fillRect(x+a,y+b,.9,.9); break;
     case 'core':
-      X.beginPath(); X.moveTo(x,y-3.6); X.lineTo(x+3.6,y); X.lineTo(x,y+3.6); X.lineTo(x-3.6,y); X.closePath(); X.fill(); break;
+      orb(X,x,y,4.2, team==='p' ? ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff'] : ['#5a1008','#c0301a','#ff8a5a','#fff0d0']);
+      X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill(); X.globalAlpha = 1; break;
     case 'cannon': case 'gun':
-      X.beginPath(); X.arc(x,y,2.5,0,TAU); X.fill();
-      X.lineWidth = lw*2.4; X.beginPath(); X.moveTo(x,y); X.lineTo(x+ca*6.8,y+sa*6.8); X.stroke(); X.lineWidth = lw; break;
+      barrel(X,x,y,ca,sa,7,2.4,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
     case 'gatling':
-      X.beginPath(); X.arc(x,y,2,0,TAU); X.fill();
-      X.lineWidth = lw*1.6; X.beginPath();
-      X.moveTo(x-sa*1.3,y+ca*1.3); X.lineTo(x-sa*1.3+ca*6.5,y+ca*1.3+sa*6.5);
-      X.moveTo(x+sa*1.3,y-ca*1.3); X.lineTo(x+sa*1.3+ca*6.5,y-ca*1.3+sa*6.5); X.stroke(); X.lineWidth = lw; break;
+      barrel(X,x-sa*1.2,y+ca*1.2,ca,sa,6.6,1.2,gun); barrel(X,x+sa*1.2,y-ca*1.2,ca,sa,6.6,1.2,gun);
+      orb(X,x,y,2.6, [gun[2],'#5a6270',gun[1]]); break;
     case 'missile':
-      X.beginPath(); X.moveTo(x+ca*3.8,y+sa*3.8); X.lineTo(x-ca*2.6-sa*2.6,y-sa*2.6+ca*2.6); X.lineTo(x-ca*2.6+sa*2.6,y-sa*2.6-ca*2.6); X.closePath(); X.fill(); break;
-    case 'engine':
-      X.fillRect(x-3,y+.5,6,3.4);
-      if (firing){ X.fillStyle = '#ffb27a'; X.globalAlpha = .9; X.beginPath(); X.moveTo(x-2.6,y+4.5); X.lineTo(x+2.6,y+4.5); X.lineTo(x,y+4.5+rand(4,9)); X.closePath(); X.fill(); }
+      X.fillStyle = '#20242c'; X.fillRect(x-3.5,y-3.5,7,7);
+      for (const dx of [-1.7,1.7]){ X.fillStyle = '#d8dde6'; X.fillRect(x+dx-.8,y-2.6,1.6,5); X.fillStyle = '#ff3d2a'; X.fillRect(x+dx-.8,y-3.2,1.6,1.4); }
       break;
-    case 'rail':
-      X.fillRect(x-3,y-4.5,1.4,9); X.fillRect(x+1.6,y-4.5,1.4,9);
-      X.fillStyle = '#ffffff'; X.fillRect(x-1,y-5,2,2); break;
-    case 'rail_b':
-      X.fillRect(x-3,y-4.5,1.4,9); X.fillRect(x+1.6,y-4.5,1.4,9); X.strokeRect(x-1,y-2,2,4); break;
+    case 'engine':
+      X.fillStyle = '#20242c'; X.fillRect(x-3.6,y-1,7.2,5.2); X.fillStyle = '#5a6270'; X.fillRect(x-3.6,y-1,7.2,1.2);
+      X.fillStyle = '#ff7a2a'; X.fillRect(x-2.4,y+3,4.8,1.4);
+      if (firing){
+        const L = rand(5,10);
+        X.fillStyle = '#ff4a1a'; X.beginPath(); X.moveTo(x-3,y+4.6); X.lineTo(x+3,y+4.6); X.lineTo(x,y+4.6+L); X.closePath(); X.fill();
+        X.fillStyle = '#ffd04a'; X.beginPath(); X.moveTo(x-1.9,y+4.6); X.lineTo(x+1.9,y+4.6); X.lineTo(x,y+4.6+L*.65); X.closePath(); X.fill();
+        X.fillStyle = '#ffffff'; X.beginPath(); X.moveTo(x-.9,y+4.6); X.lineTo(x+.9,y+4.6); X.lineTo(x,y+4.6+L*.3); X.closePath(); X.fill();
+      }
+      break;
+    case 'gyro': {
+      orb(X,x,y,3.6, ['#4a3a10','#a8822a','#e8c860']);
+      const r = G.time*5, c = Math.cos(r)*3, s = Math.sin(r)*3;
+      X.fillStyle = '#fff0b0'; X.fillRect(x+c-.8,y+s-.8,1.6,1.6); X.fillRect(x-c-.8,y-s-.8,1.6,1.6); break;
+    }
+    case 'rail': case 'rail_b':
+      X.fillStyle = '#3a2a5a'; X.fillRect(x-3.4,y-5,2,10); X.fillRect(x+1.4,y-5,2,10);
+      X.fillStyle = '#b89aff'; X.fillRect(x-3.4,y-5,.8,10); X.fillRect(x+1.4,y-5,.8,10);
+      X.fillStyle = '#7a5aff'; for (let q=-4; q<5; q+=3) X.fillRect(x-1.4,y+q,2.8,1);
+      if (t==='rail'){ X.fillStyle = '#ffffff'; X.fillRect(x-1,y-5,2,1.6); }
+      break;
     case 'laser':
-      X.beginPath(); X.arc(x,y,2.4,0,TAU); X.fill();
-      X.lineWidth = lw*2; X.beginPath(); X.moveTo(x,y); X.lineTo(x,y-5); X.stroke(); X.lineWidth = lw; break;
+      barrel(X,x,y,0,-1,5.2,2.2,['#c8ffc0','#3a8a3a','#143a14']); orb(X,x,y,2.8, ['#0a3a0a','#2ac83a','#b8ffb0']); break;
     case 'laser_b':
-      X.strokeRect(x-2.5,y-2.5,5,5); X.beginPath(); X.moveTo(x-2.5,y); X.lineTo(x+2.5,y); X.stroke(); break;
+      X.fillStyle = '#143a14'; X.fillRect(x-3,y-3,6,6); X.fillStyle = '#2ac83a'; X.fillRect(x-2,y-.6,4,1.2); X.fillRect(x-.6,y-2,1.2,4); break;
     case 'shield':
-      X.beginPath(); X.arc(x,y+3.5,5.5,Math.PI*1.22,Math.PI*1.78); X.stroke();
-      X.beginPath(); X.arc(x,y+1,1.3,0,TAU); X.fill(); break;
+      X.fillStyle = '#0a2a4a'; X.beginPath(); X.arc(x,y+1.5,4,Math.PI,0); X.fill();
+      X.fillStyle = '#3fb8ff'; X.beginPath(); X.arc(x,y+1.5,3,Math.PI,0); X.fill();
+      X.fillStyle = '#e0f8ff'; X.fillRect(x-.8,y-.2,1.6,1.6); break;
+    case 'gen': {
+      const k = .5 + .5*Math.sin(G.time*5 + x);
+      X.fillStyle = '#3a3010'; X.fillRect(x-3.6,y-3.6,7.2,7.2);
+      orb(X,x,y,3, ['#6a4a08','#e0a020', k > .5 ? '#fff0a0' : '#ffd04a']);
+      X.fillStyle = '#ffd04a'; X.fillRect(x-4,y-.4,1.2,.8); X.fillRect(x+2.8,y-.4,1.2,.8); X.fillRect(x-.4,y-4,.8,1.2); X.fillRect(x-.4,y+2.8,.8,1.2); break;
+    }
+    case 'battery':
+      X.fillStyle = '#142a14'; X.fillRect(x-3.6,y-3,7.2,6);
+      for (let q=0; q<3; q++){ X.fillStyle = '#3ac84a'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,4.6); X.fillStyle = '#b8ffb0'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,.9); }
+      X.fillStyle = '#9aa4b4'; X.fillRect(x-1,y-4,2,1); break;
     case 'pd':
-      X.beginPath(); X.arc(x,y,3,0,TAU); X.stroke(); X.beginPath(); X.arc(x,y,1,0,TAU); X.fill(); break;
-    case 'sell':
-      X.strokeStyle = '#ff7a66'; X.lineWidth = lw*2; X.beginPath(); X.moveTo(x-3,y-3); X.lineTo(x+3,y+3); X.moveTo(x+3,y-3); X.lineTo(x-3,y+3); X.stroke(); X.lineWidth = lw; break;
+      orb(X,x,y,3.2, ['#2a1a4a','#7a4ad0','#d8c0ff']); X.fillStyle = '#ffffff'; X.fillRect(x-.5,y-.5,1,1); break;
   }
   if (rot) X.restore();
-  X.globalAlpha = 1;
+  // battle damage: scorch the plate as it loses hit points
+  if (ratio < .7){ X.globalAlpha = (1-ratio)*.6; X.fillStyle = '#000000'; X.fillRect(bx-5,by-5,10,10); X.globalAlpha = 1; }
+  // level pips: one gold chevron per level above 1, plus a gold trim at max level
+  if (team==='p' && T[t]){
+    const L = lvOf(t);
+    X.fillStyle = '#ffc46b'; for (let q=1; q<L; q++) X.fillRect(bx-3.8+(q-1)*2.4, by+1.8, 1.8, 1.4);
+    if (L >= MAXLV){ X.globalAlpha = .7; X.fillRect(bx-5,by-5,10,.8); X.globalAlpha = 1; }
+  }
 }
 function drawShip(s){
   const z = G.zoom, p = G.player;
@@ -849,10 +1019,28 @@ function drawShip(s){
     drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, detail, b.firing);
   ctx.restore();
 }
+// deep-space backdrop: three parallax star layers and a few nebula clouds, all in screen space
+const STARS = [[.04,240,'#4a5270'],[.12,110,'#9aa8d0'],[.3,45,'#ffffff']].map(([f,n,c]) =>
+  Array.from({length:n}, () => ({x:Math.random(), y:Math.random(), f, c, tw:Math.random()*TAU})));
+const NEB = [[.2,.3,'60,20,110'],[.75,.6,'10,60,120'],[.5,.95,'110,20,60'],[.95,.1,'20,90,90']];
+function drawSpace(cx, cy, z){
+  const wrap = (v,m) => ((v % m) + m) % m, NW = W*1.6, NH = H*1.6;
+  for (const [nx,ny,rgb] of NEB){
+    const X = wrap(nx*NW - cx*z*.02, NW) - W*.3, Y = wrap(ny*NH - cy*z*.02, NH) - H*.3, R = Math.max(W,H)*.45;
+    const g = ctx.createRadialGradient(X,Y,0,X,Y,R);
+    g.addColorStop(0,`rgba(${rgb},.38)`); g.addColorStop(.5,`rgba(${rgb},.14)`); g.addColorStop(1,`rgba(${rgb},0)`);
+    ctx.fillStyle = g; ctx.fillRect(X-R,Y-R,2*R,2*R);
+  }
+  for (const L of STARS) for (const st of L){
+    const X = Math.round(wrap(st.x*W - cx*z*st.f, W)), Y = Math.round(wrap(st.y*H - cy*z*st.f, H));
+    ctx.fillStyle = st.c; ctx.fillRect(X,Y,1,1);
+    if (st.f > .2 && Math.sin(G.time*2 + st.tw) > .7){ ctx.globalAlpha = .5; ctx.fillRect(X-1,Y,3,1); ctx.fillRect(X,Y-1,1,3); ctx.globalAlpha = 1; }
+  }
+}
 function niceStep(z){ let sp = 10; if (!(z > 0)) return sp; while (sp*z < 12) sp *= 10; return sp; }
 function renderCombat(){
   const S = G.S, p = G.player;
-  G.zoom = Math.min(W,H)/(440*Math.pow(S,.85));
+  G.zoom = Math.min(W,H)/(G.span || spanFor(p.r, S));
   const z = G.zoom, hw = W/2/z, hh = H/2/z;
   let cx = G.camX, cy = G.camY;
   cx = G.AW < 2*hw ? G.AW/2 : clamp(cx, hw, G.AW-hw);
@@ -862,19 +1050,10 @@ function renderCombat(){
   const sx = x => (x-cx)*z + W/2 + ox, sy = y => (y-cy)*z + H/2 + oy;
   G.camOX = ox; G.camOY = oy;
 
-  // blueprint grid: minor lines fade in as the next order of magnitude shrinks
-  const major = niceStep(z), minor = major/10;
-  const x0 = Math.max(0, cx-hw), x1 = Math.min(G.AW, cx+hw), y0 = Math.max(0, cy-hh), y1 = Math.min(G.AH, cy+hh);
-  const gridPass = (sp, alpha) => {
-    if (alpha <= .005) return;
-    ctx.strokeStyle = `rgba(143,180,255,${alpha})`; ctx.lineWidth = 1; ctx.beginPath();
-    for (let x = Math.ceil(x0/sp)*sp; x <= x1; x += sp){ const X = Math.round(sx(x))+.5; ctx.moveTo(X,sy(y0)); ctx.lineTo(X,sy(y1)); }
-    for (let y = Math.ceil(y0/sp)*sp; y <= y1; y += sp){ const Y = Math.round(sy(y))+.5; ctx.moveTo(sx(x0),Y); ctx.lineTo(sx(x1),Y); }
-    ctx.stroke();
-  };
-  gridPass(minor, clamp((minor*z-2)/16, 0, .07));
-  gridPass(major, .14);
-  ctx.setLineDash([6,6]); ctx.strokeStyle = 'rgba(143,180,255,.45)'; ctx.lineWidth = 1;
+  drawSpace(cx, cy, z);
+  const major = niceStep(z);
+  // arena edge: faint warning line
+  ctx.setLineDash([6,6]); ctx.strokeStyle = 'rgba(255,110,60,.3)'; ctx.lineWidth = 1;
   ctx.strokeRect(sx(0), sy(0), G.AW*z, G.AH*z); ctx.setLineDash([]);
 
   // sniper sight lines
@@ -912,13 +1091,17 @@ function renderCombat(){
       ctx.beginPath(); ctx.moveTo(sx(a1),sy(b1)); ctx.lineTo(sx(a2),sy(b2)); ctx.stroke();
       ctx.globalAlpha = .7 + .3*Math.random(); ctx.strokeStyle = '#eaffe4'; ctx.lineWidth = 1; ctx.stroke();
     }
-    const SH = T.shield.sh;
     for (const s of p.shields){
-      if (s.down > 0) continue;
-      const [wx,wy] = wpos(p,s), fa = p.a + FA[s.o], fl = G.time - s.flash < .08;
-      ctx.globalAlpha = fl ? 1 : .25 + .6*s.shp/SH.hp; ctx.strokeStyle = fl ? '#ffffff' : '#5fd3ff'; ctx.lineWidth = fl ? 2 : 1;
-      ctx.beginPath(); ctx.arc(sx(wx), sy(wy), SH.radius*z, fa - SH.arc, fa + SH.arc); ctx.stroke();
+      const B = s.bub; if (B.down > 0 || B.hp <= 0) continue;
+      const [wx,wy] = wpos(p,s), fl = G.time - B.flash < .08, X = sx(wx), Y = sy(wy), r = shRad()*z, k = B.hp/B.max;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = fl ? .16 : .04 + .05*k; ctx.fillStyle = '#5fd3ff'; ctx.beginPath(); ctx.arc(X, Y, r, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = fl ? 1 : .25 + .55*k; ctx.strokeStyle = fl ? '#ffffff' : '#5fd3ff'; ctx.lineWidth = fl ? 2 : 1;
+      ctx.setLineDash([4,3]); ctx.lineDashOffset = -G.time*12;
+      ctx.beginPath(); ctx.arc(X, Y, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
     }
+    ctx.globalAlpha = 1;
     ctx.globalAlpha = 1;
   }
 
@@ -927,16 +1110,19 @@ function renderCombat(){
     const a = clamp(f.life/f.max, 0, 1);
     if (f.k==='deb'){
       const X = sx(f.x), Y = sy(f.y), h = Math.max(1, 4.5*z); if (X < -20 || Y < -20 || X > W+20 || Y > H+20) continue;
-      ctx.save(); ctx.translate(X,Y); ctx.rotate(f.a); ctx.globalAlpha = a*.8; ctx.strokeStyle = f.col; ctx.lineWidth = 1; ctx.strokeRect(-h,-h,2*h,2*h); ctx.restore();
+      ctx.save(); ctx.translate(X,Y); ctx.rotate(f.a); ctx.globalAlpha = a; ctx.fillStyle = '#2a2e36'; ctx.fillRect(-h,-h,2*h,2*h); ctx.fillStyle = f.col; ctx.fillRect(-h,-h,2*h-1,2*h-1); ctx.restore();
     } else if (f.k==='smoke'){
       ctx.globalAlpha = a*.35; ctx.fillStyle = '#5a6488';
       ctx.beginPath(); ctx.arc(Math.round(sx(f.x)), Math.round(sy(f.y)), Math.max(1, f.r*z*(1.6-a*.6)), 0, TAU); ctx.fill();
     } else if (f.k==='boom'){
       // fireball: white core first, then orange, then a fading red rim
       const X = Math.round(sx(f.x)), Y = Math.round(sy(f.y)), r = Math.max(1, f.r*z*(1.25-a*.5));
-      ctx.globalAlpha = 1; ctx.fillStyle = a > .6 ? '#ffffff' : a > .3 ? '#ffb347' : '#d0504a';
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = a*.5; ctx.fillStyle = '#c8300a'; ctx.beginPath(); ctx.arc(X, Y, r*1.6, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1; ctx.fillStyle = a > .6 ? '#ffd04a' : a > .3 ? '#ff7a1a' : '#8a1a08';
       ctx.beginPath(); ctx.arc(X, Y, r, 0, TAU); ctx.fill();
-      if (a > .3){ ctx.fillStyle = '#fff6d8'; ctx.beginPath(); ctx.arc(X, Y, r*.5, 0, TAU); ctx.fill(); }
+      if (a > .3){ ctx.fillStyle = a > .7 ? '#ffffff' : '#fff0a0'; ctx.beginPath(); ctx.arc(X - r*.15, Y - r*.15, r*.55, 0, TAU); ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over';
     } else if (f.k==='ring'){
       ctx.globalAlpha = a; ctx.strokeStyle = f.col; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(sx(f.x), sy(f.y), Math.max(1, f.r*z*(1.15-a)), 0, TAU); ctx.stroke();
@@ -954,6 +1140,7 @@ function renderCombat(){
     for (const b of arr){
       const X = Math.round(sx(b.x)), Y = Math.round(sy(b.y)), s = Math.max(1, Math.round(b.r*z));
       if (X < -s*4 || Y < -s*4 || X > W+s*4 || Y > H+s*4) continue;
+      if (b.kind!=='line'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3; ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.arc(X, Y, s*2.6+1, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
       if (b.tr && b.tr.length > 2){
         // exhaust trail: fades from hot yellow at the missile to dim orange at the tail
         const n = b.tr.length/2; ctx.lineWidth = 1;
@@ -987,7 +1174,7 @@ function renderCombat(){
   // off-screen hostiles
   ctx.fillStyle = '#ff7a66';
   for (const s of G.ships){
-    if (!s.alive || s.team!=='e') continue;
+    if (!s.alive || s.team!=='e' || s.fodder) continue;
     const X = sx(s.x), Y = sy(s.y), m = 8, top = Math.ceil(60/PX);
     if (X > m && Y > top && X < W-m && Y < H-m) continue;
     const ex = clamp(X, m, W-m), ey = clamp(Y, top, H-m), a = Math.atan2(Y-H/2, X-W/2);
@@ -995,6 +1182,16 @@ function renderCombat(){
     ctx.beginPath(); const k = s.boss ? 5 : 3; ctx.moveTo(k,0); ctx.lineTo(-k*.8,k*.8); ctx.lineTo(-k*.8,-k*.8); ctx.closePath(); ctx.fill(); ctx.restore();
   }
   ctx.globalAlpha = 1;
+
+  // touch joystick
+  if (G.joy){
+    const {x0,y0} = G.joy, jx = G.joy.x-x0, jy = G.joy.y-y0, jl = Math.hypot(jx,jy), k = jl > JOY_R ? JOY_R/jl : 1;
+    ctx.globalAlpha = .45; ctx.strokeStyle = '#e8ecf2'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(Math.round(x0), Math.round(y0), JOY_R, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = .7; ctx.fillStyle = '#5fd8ff';
+    ctx.beginPath(); ctx.arc(Math.round(x0 + jx*k), Math.round(y0 + jy*k), 7, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
 
   // scale bar: one major grid square
   const barPx = Math.round(major*z), bx = 8, by = H - 10;
@@ -1011,7 +1208,7 @@ function renderCombat(){
     const big = W > 260 ? 16 : 8;
     ctx.font = FONT(big); ctx.fillStyle = '#7a2a20'; ctx.fillText(b.text.toUpperCase(), Math.round(W/2)+2, y+2);
     ctx.fillStyle = '#ffc46b'; ctx.fillText(b.text.toUpperCase(), Math.round(W/2), y);
-    ctx.font = FONT(8); ctx.fillStyle = b.sub.startsWith('Capital') ? '#ff7a66' : '#8fb4ff';
+    ctx.font = FONT(8); ctx.fillStyle = b.sub.startsWith('Capital') ? '#ff7a66' : '#9aa8d0';
     ctx.fillText(b.sub.toUpperCase(), Math.round(W/2), y + big + 6); ctx.globalAlpha = 1;
   }
 }
@@ -1021,26 +1218,71 @@ function layoutBuild(){
   const pr = $('panel').getBoundingClientRect(), top = ($('hud').getBoundingClientRect().bottom + 6)/PX;
   let x0 = 0, y0 = top, x1 = W, y1 = H;
   if (pr.left/PX > W*.45) x1 = (pr.left - 8)/PX; else y1 = (pr.top - 8)/PX;
-  const n = 2*gridR(G.stage) + 1;
-  const cs = Math.max(4, Math.floor(Math.min(Math.min((x1-x0)*.92, (y1-y0)*.92)/n, 16)));
+  const n = 2*buildR() + 1;
+  const cs = Math.max(2, Math.floor(Math.min(Math.min((x1-x0)*.92, (y1-y0)*.92)/n, 16)));
   return {cx:Math.round((x0+x1)/2), cy:Math.round((y0+y1)/2), cs, n};
 }
 const designType = k => G.design.get(k);
+// Share of a design turret's firing arc that has a clear line out of the hull (same ray walk as laneClear).
+const aimsOut = t => T[t].gun && !T[t].gun.homing && t!=='core';
+const designR = () => { let R = 0; for (const k of G.design.keys()) R = Math.max(R, Math.hypot(KI(k),KJ(k))); return R; };
+// Cells a ray from (i,j) travels before meeting another design block, or Infinity if it gets out.
+function rayOut(i,j,a,R){
+  const dx = Math.cos(a), dy = Math.sin(a);
+  for (let s=.7; s<R+1.75; s+=.45){
+    const ci = Math.round(i + dx*s), cj = Math.round(j + dy*s);
+    if ((ci!==i || cj!==j) && G.design.has(K(ci,cj))) return s;
+  }
+  return Infinity;
+}
+const ARC_N = 16, arcRays = (o,t) => Array.from({length:ARC_N}, (_,n) => FA[o] - T[t].gun.arc + 2*T[t].gun.arc*n/(ARC_N-1));
+function arcClear(i,j,o,t){
+  const R = designR(); let ok = 0;
+  for (const a of arcRays(o,t)) if (rayOut(i,j,a,R) === Infinity) ok++;
+  return ok/ARC_N;
+}
+// Drydock overlay: a turret's arc as rays (cyan clear, red stopped by own hull); lasers and railguns as a line along their facing.
+function drawArc(i,j,o,t,alpha,R,len){
+  const x = i*BS, y = j*BS;
+  ctx.globalAlpha = alpha; ctx.lineWidth = ctx.lineWidth || 1;
+  if (aimsOut(t)){
+    for (const a of arcRays(o,t)){
+      const h = rayOut(i,j,a,R), L = Math.min(h, len)*BS;
+      ctx.strokeStyle = h === Infinity ? '#5fd8ff' : '#ff5a3a';
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); ctx.stroke();
+    }
+    ctx.strokeStyle = '#5fd8ff'; ctx.beginPath(); ctx.arc(x, y, len*BS, FA[o] - T[t].gun.arc, FA[o] + T[t].gun.arc); ctx.stroke();
+  } else if (PARTS[t]){
+    const a = FA[o], h = rayOut(i,j,a,R), L = Math.min(h, t==='laser' ? T.laser.laser.range/BS : len*1.6)*BS;
+    ctx.strokeStyle = h === Infinity ? (t==='laser' ? '#2ac83a' : '#b89aff') : '#ff5a3a';
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
 function renderBuild(){
-  const {cx, cy, cs} = layoutBuild(), R = gridR(G.stage);
-  // drafting-table backdrop
-  ctx.strokeStyle = 'rgba(143,180,255,.05)'; ctx.lineWidth = 1; ctx.beginPath();
-  for (let x = (cx % cs) - cs/2; x < W; x += cs){ ctx.moveTo(Math.round(x)+.5,0); ctx.lineTo(Math.round(x)+.5,H); }
-  for (let y = (cy % cs) - cs/2; y < H; y += cs){ ctx.moveTo(0,Math.round(y)+.5); ctx.lineTo(W,Math.round(y)+.5); }
-  ctx.stroke();
+  const {cx, cy, cs} = layoutBuild(), R = buildR();
+  // hangar floor: big bevelled deck plates
+  ctx.fillStyle = '#1a1d24'; ctx.fillRect(0,0,W,H);
+  const ps = cs*4;
+  for (let x = (cx % ps) - ps/2 - ps; x < W; x += ps) for (let y = (cy % ps) - ps/2 - ps; y < H; y += ps){
+    const X = Math.round(x), Y = Math.round(y), P = Math.round(ps);
+    ctx.fillStyle = '#2a2e37'; ctx.fillRect(X,Y,P,1); ctx.fillRect(X,Y,1,P);
+    ctx.fillStyle = '#0d0f13'; ctx.fillRect(X,Y+P-1,P,1); ctx.fillRect(X+P-1,Y,1,P);
+    ctx.fillStyle = '#3a3f4a'; ctx.fillRect(X+3,Y+3,1,1); ctx.fillRect(X+P-4,Y+3,1,1); ctx.fillRect(X+3,Y+P-4,1,1); ctx.fillRect(X+P-4,Y+P-4,1,1);
+  }
   // grid
   const L = cx - (R+.5)*cs, Tp = cy - (R+.5)*cs, size = (2*R+1)*cs;
-  ctx.fillStyle = 'rgba(19,34,75,.65)'; ctx.fillRect(L,Tp,size,size);
-  ctx.strokeStyle = 'rgba(143,180,255,.16)'; ctx.beginPath();
+  ctx.fillStyle = '#0b0c10'; ctx.fillRect(L,Tp,size,size);
+  ctx.strokeStyle = 'rgba(120,130,150,.18)'; ctx.beginPath();
   for (let n=0; n<=2*R+1; n++){ const v = Math.round(L + n*cs)+.5, w = Math.round(Tp + n*cs)+.5; ctx.moveTo(v,Tp); ctx.lineTo(v,Tp+size); ctx.moveTo(L,w); ctx.lineTo(L+size,w); }
   ctx.stroke();
-  ctx.strokeStyle = 'rgba(143,180,255,.55)'; ctx.strokeRect(Math.round(L)+.5, Math.round(Tp)+.5, Math.round(size), Math.round(size));
-  if (G.mirror){ ctx.setLineDash([4,4]); ctx.strokeStyle = 'rgba(143,180,255,.35)'; ctx.beginPath(); ctx.moveTo(cx,Tp-8); ctx.lineTo(cx,Tp+size+8); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.strokeStyle = '#ffc46b'; ctx.strokeRect(Math.round(L)+.5, Math.round(Tp)+.5, Math.round(size), Math.round(size));
+  if (G.mir){
+    ctx.setLineDash([4,4]); ctx.strokeStyle = 'rgba(255,196,107,.35)'; ctx.beginPath();
+    if (G.mir & 1){ ctx.moveTo(cx,Tp-8); ctx.lineTo(cx,Tp+size+8); }
+    if (G.mir & 2){ ctx.moveTo(L-8,cy); ctx.lineTo(L+size+8,cy); }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
   // labels
   ctx.fillStyle = '#8497c4'; ctx.font = FONT(8); ctx.textAlign = 'center';
   ctx.fillText('FORE', cx, Tp - 5);
@@ -1048,23 +1290,30 @@ function renderBuild(){
 
   const sc = cs/BS;
   ctx.save(); ctx.translate(cx,cy); ctx.scale(sc,sc); ctx.lineWidth = 1/sc;
-  const detail = cs >= 6;
+  const detail = cs >= 6, aR = designR(), aLen = R + 1.5;
+  ctx.globalAlpha = .35; ctx.strokeStyle = '#5fd3ff'; ctx.setLineDash([4/sc,3/sc]);
+  for (const [k,t] of G.design) if (t==='shield'){ ctx.beginPath(); ctx.arc(KI(k)*BS, KJ(k)*BS, shRad(), 0, TAU); ctx.stroke(); }
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+  for (const [k,t] of G.design) if (aimsOut(t) || PARTS[t]) drawArc(KI(k), KJ(k), G.dirs.get(k) || 0, t, t===G.sel ? .35 : .14, aR, aLen);
   for (const [k,t] of G.design){
     const i = KI(k), j = KJ(k), o = G.dirs.get(k) || 0;
     drawBlock(ctx, t, o, 'p', i*BS, j*BS, FA[o], false, 1, detail, false);
     // warnings: engine exhaust covered, or a beam weapon looking into its own hull
     const bad = (t==='engine' && designType(K(i-FACE[o][0], j-FACE[o][1]))) || (PARTS[t] && !laneFwd(designType, i, j, o));
-    if (bad){ ctx.strokeStyle = '#ff7a66'; ctx.beginPath(); ctx.moveTo(i*BS-4,j*BS-4); ctx.lineTo(i*BS+4,j*BS+4); ctx.moveTo(i*BS+4,j*BS-4); ctx.lineTo(i*BS-4,j*BS+4); ctx.stroke(); }
+    const fc = aimsOut(t) ? arcClear(i, j, o, t) : 1;
+    if (!bad && fc < .4 && fc > 0){ ctx.fillStyle = '#ffc46b'; ctx.fillRect(i*BS+1.5, j*BS-4.5, 3, 3); }
+    if (bad || fc === 0){ ctx.strokeStyle = '#ff7a66'; ctx.beginPath(); ctx.moveTo(i*BS-4,j*BS-4); ctx.lineTo(i*BS+4,j*BS+4); ctx.moveTo(i*BS+4,j*BS-4); ctx.lineTo(i*BS-4,j*BS+4); ctx.stroke(); }
   }
   // ghost
   const h = G.hover;
   if (h && Math.max(Math.abs(h.i),Math.abs(h.j)) <= R){
-    const spots = [[h.i,h.j,G.rot]]; if (G.mirror && h.i !== 0) spots.push([-h.i,h.j,mirrorO(G.rot)]);
+    const spots = mirrorSpots(h.i,h.j,G.rot);
     for (const [i,j,o] of spots){
       if (G.sel==='sell'){ ctx.globalAlpha = .9; drawBlock(ctx,'sell',0,'p',i*BS,j*BS,0,false,1,true,false); continue; }
       const ok = placeCheck(i,j,G.sel,o) === true, oo = T[G.sel].rot ? o : 0;
       for (const [ci,cj,ct] of cellsFor(i,j,G.sel,oo)){
         ctx.globalAlpha = .55; drawBlock(ctx,ct,oo,'p',ci*BS,cj*BS,FA[oo],false,1,true,false);
+        if (ct===G.sel && (aimsOut(ct) || PARTS[ct])) drawArc(ci, cj, oo, ct, .75, aR, aLen);
         if (!ok){ ctx.globalAlpha = .8; ctx.strokeStyle = '#ff7a66'; ctx.strokeRect(ci*BS-5,cj*BS-5,10,10); }
       }
       ctx.globalAlpha = 1;
@@ -1082,7 +1331,7 @@ function frame(now){
     else if (G.mode==='clear' || G.mode==='dead') { G.time += dt; updateFx(dt); }
     else G.time += dt;
     ctx.setTransform(1,0,0,1,0,0); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#0a1530'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#05060c'; ctx.fillRect(0,0,W,H);
     if (G.mode==='build'){ hctx.setTransform(1,0,0,1,0,0); hctx.clearRect(0,0,hi.width,hi.height); renderBuild(); } else renderCombat();
     syncHud();
   } catch (err) { console.error(err); }
@@ -1097,7 +1346,7 @@ function cellsFor(i,j,t,o){
 }
 function placeCheck(i,j,t,o){
   if (locked(t)) return `${T[t].name} unlocks at stage ${T[t].unlock}`;
-  const R = gridR(G.stage), oo = T[t].rot ? o : 0, cells = cellsFor(i,j,t,oo);
+  const R = buildR(), oo = T[t].rot ? o : 0, cells = cellsFor(i,j,t,oo);
   for (const [a,b] of cells) if (Math.max(Math.abs(a),Math.abs(b)) > R) return 'Outside the build grid';
   const k = K(i,j), cur = G.design.get(k);
   if (cur==='core') return 'The core stays where it is';
@@ -1141,29 +1390,38 @@ function sellAt(i,j){
   while (q.length){ const c = q.pop(); for (const d of NB){ const n = c+d; if (G.design.has(n) && !seen.has(n)){ seen.add(n); q.push(n); } } }
   for (const kk of [...G.design.keys()]) if (!seen.has(kk)) removeCell(kk);
 }
-function buildAction(i,j,mode){
-  if (mode==='sell'){ sellAt(i,j); if (G.mirror && i !== 0) sellAt(-i,j); }
+// Tapping a placed turret or engine of the selected type turns it 45° (and its mirror twin).
+function spinAt(i,j){
+  const k = K(i,j), t = G.design.get(k);
+  if (!t || t!==G.sel || !T[t].rot || PARTS[t]) return false;
+  const o = ((G.dirs.get(k)||0) + 1) % 8; G.dirs.set(k,o); G.rot = o;
+  for (const [a,b,mo] of mirrorSpots(i,j,o).slice(1)) if (G.design.get(K(a,b))===t) G.dirs.set(K(a,b), mo);
+  return true;
+}
+function buildAction(i,j,mode,tap){
+  if (mode!=='sell' && tap && spinAt(i,j)){ G.drag = null; syncUI(); return; }
+  if (mode==='sell'){ for (const [a,b] of mirrorSpots(i,j,0)) sellAt(a,b); }
   else {
-    const r = tryPlace(i,j,G.sel,G.rot);
-    if (G.mirror && i !== 0) tryPlace(-i,j,G.sel,mirrorO(G.rot));
+    const [first, ...rest] = mirrorSpots(i,j,G.rot), r = tryPlace(first[0],first[1],G.sel,first[2]);
+    for (const [a,b,mo] of rest) tryPlace(a,b,G.sel,mo);
     if (r !== true && r !== 'Already placed') toast(r);
   }
   syncUI();
 }
 function cellAt(x,y){ const {cx,cy,cs} = layoutBuild(); return {i:Math.round((x-cx)/cs), j:Math.round((y-cy)/cs)}; }
-function rotate(){ G.rot = (G.rot+1) % 4; syncUI(); }
+function rotate(){ G.rot = PARTS[G.sel] ? ((G.rot & ~1) + 2) % 8 : (G.rot+1) % 8; syncUI(); }
 
 // ---------- input (pointer coordinates converted to canvas pixels) ----------
 cv.addEventListener('contextmenu', e => e.preventDefault());
 cv.addEventListener('pointerdown', e => {
   const x = e.clientX/PX, y = e.clientY/PX;
   G.mouse = {x, y, has:true};
-  if (e.pointerType==='touch'){ G.aimAuto = true; G.touchId = e.pointerId; G.tlast = {x, y}; }
+  if (e.pointerType==='touch'){ G.aimAuto = true; G.touchId = e.pointerId; if (G.mode==='combat') G.joy = {x0:x, y0:y, x, y}; }
   if (G.mode==='build'){
     const c = cellAt(x,y);
-    G.drag = (e.button===2 || G.sel==='sell') ? 'sell' : 'place';
+    G.dragR = buildR(); G.drag = (e.button===2 || G.sel==='sell') ? 'sell' : 'place';
     G.lastCell = c.i+','+c.j; G.hover = c;
-    buildAction(c.i,c.j,G.drag);
+    buildAction(c.i,c.j,G.drag,true);
   }
   try { cv.setPointerCapture(e.pointerId); } catch {}
 });
@@ -1174,12 +1432,9 @@ cv.addEventListener('pointermove', e => {
     const c = cellAt(x,y); G.hover = e.pointerType==='touch' && !G.drag ? null : c;
     const id = c.i+','+c.j;
     if (G.drag && id !== G.lastCell){ G.lastCell = id; buildAction(c.i,c.j,G.drag); }
-  } else if (G.mode==='combat' && e.pointerId===G.touchId && G.tlast){
-    G.tdx += (x-G.tlast.x)/G.zoom*1.4; G.tdy += (y-G.tlast.y)/G.zoom*1.4;
-    G.tlast = {x, y};
-  }
+  } else if (G.mode==='combat' && e.pointerId===G.touchId && G.joy){ G.joy.x = x; G.joy.y = y; }
 });
-const endPtr = e => { G.drag = null; if (e.pointerId===G.touchId){ G.touchId = null; G.tlast = null; } if (e.pointerType==='touch') G.hover = null; };
+const endPtr = e => { G.drag = null; if (e.pointerId===G.touchId){ G.touchId = null; G.joy = null; } if (e.pointerType==='touch') G.hover = null; };
 cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
 cv.addEventListener('pointerleave', e => { if (e.pointerType==='mouse' && !G.drag) G.hover = null; });
 
@@ -1190,7 +1445,8 @@ addEventListener('keydown', e => {
   if (G.mode==='build'){
     const key = e.key.toLowerCase(), t = PAL.find(t => T[t].key === key); if (t) select(t);
     if (e.code==='KeyR') rotate();
-    if (e.code==='KeyM'){ G.mirror = !G.mirror; $('mirror').checked = G.mirror; }
+    if (e.code==='KeyU') upgrade();
+    if (e.code==='KeyM') cycleMirror();
     if (e.code==='Enter' && !(e.target instanceof HTMLButtonElement)) startStage();
   } else if (G.mode==='combat'){
     if (e.code==='KeyP' || e.code==='Escape') togglePause();
@@ -1205,9 +1461,7 @@ function buildPalette(){
   const el = $('palette');
   for (const t of PAL){
     const b = document.createElement('button'); b.type = 'button'; b.className = 'pal'; b.id = 'pal-'+t; b.title = T[t].desc;
-    const ic = document.createElement('canvas'); ic.width = ic.height = 14;
-    const g = ic.getContext('2d'); g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
-    drawBlock(g, t, 0, 'p', 0, 0, -Math.PI/2, false, 1, true, t==='engine');
+    const ic = document.createElement('canvas'); ic.width = ic.height = 14; ic.id = 'ic-'+t;
     const sp = document.createElement('span');
     sp.innerHTML = `<span class="nm">${T[t].name}</span><span class="ct" id="ct-${t}"></span>`;
     const kb = document.createElement('kbd'); kb.textContent = T[t].key.toUpperCase();
@@ -1216,55 +1470,78 @@ function buildPalette(){
     el.append(b);
   }
 }
+function drawIcons(){
+  for (const t of PAL){
+    const ic = $('ic-'+t), g = ic.getContext('2d'), o = T[t].rot ? G.rot : 0;
+    g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,14,14);
+    g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
+    drawBlock(g, t, o, 'p', 0, 0, FA[o], false, 1, true, t==='engine');
+  }
+}
 function select(t){
-  if (locked(t)){ toast(`${T[t].name} unlocks at stage ${T[t].unlock}`); return; }
-  G.sel = t; syncUI();
+  if (locked(t)) return; // locked blocks stay secret until they unlock
+  G.sel = t; if (PARTS[t]) G.rot &= ~1; syncUI();
 }
 function designStats(){
   const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), o:G.dirs.get(k)||0}));
   const ph = physics(cells, designType);
-  let dps = 0, hp = 0, pd = 0, sh = 0, badW = 0;
+  let dps = 0, hp = 0, pd = 0, sh = 0, badW = 0, badT = 0, weakT = 0, eGen = 6, eCap = 40, eUse = 0;
   for (const c of cells){
-    const d = T[c.t]; hp += d.hp;
-    if (d.gun) dps += d.gun.dmg/d.gun.cd;
+    const d = T[c.t], m = LV(c.t); hp += d.hp*m;
+    if (aimsOut(c.t)){ const fc = arcClear(c.i, c.j, c.o, c.t); if (fc === 0) badT++; else if (fc < .4) weakT++; }
+    if (d.gun) dps += d.gun.dmg*m/d.gun.cd;
+    if (d.gun && d.gun.en) eUse += d.gun.en/d.gun.cd;
+    if (c.t==='laser') eUse += d.laser.en; if (c.t==='rail') eUse += d.rail.en/d.rail.cd; if (c.t==='pd') eUse += d.pd.en/d.pd.cd*m;
+    if (c.t==='gen') eGen += d.en.regen*m; if (c.t==='battery') eCap += d.en.cap*m;
     if (d.pd) pd++;
     if (c.t==='shield') sh++;
     if (PARTS[c.t]){
       if (!laneFwd(designType, c.i, c.j, c.o)) badW++;
-      else dps += c.t==='rail' ? d.rail.pool/d.rail.cd : d.laser.dps*.6;
+      else dps += (c.t==='rail' ? d.rail.pool/d.rail.cd : d.laser.dps*.6)*m;
     }
   }
-  return {n:cells.length, hp, dps, pd, sh, badW, badE:ph.engines.filter(e => !e.active).length,
+  return {n:cells.length, hp, dps, pd, sh, badW, badT, weakT, eGen, eCap, eUse, badE:ph.engines.filter(e => !e.active).length,
     fore:dirSpeed(ph,0,-1), side:Math.max(dirSpeed(ph,1,0), dirSpeed(ph,-1,0)), aft:dirSpeed(ph,0,1),
-    turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia)};
+    turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia, ph.mass)};
 }
 function syncUI(){
-  const s = G.stage, R = gridR(s), S = scaleOf(s);
+  const s = G.stage, R = buildR(), S = scaleOf(s);
   for (const t of PAL){
     const btn = $('pal-'+t), ct = $('ct-'+t), lk = t!=='sell' && locked(t);
-    btn.setAttribute('aria-pressed', String(G.sel===t)); btn.disabled = lk;
-    ct.textContent = t==='sell' ? 'refund' : lk ? `stage ${T[t].unlock}` : T[t].cost+' cr';
+    btn.setAttribute('aria-pressed', String(G.sel===t)); btn.hidden = lk;
+    ct.textContent = t==='sell' ? 'refund' : lk ? `stage ${T[t].unlock}` : T[t].cost+' cr' + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '');
     ct.classList.toggle('no', !lk && t!=='sell' && T[t].cost > G.credits);
   }
   const rotOk = !!T[G.sel].rot;
+  $('rot').disabled = !rotOk; drawIcons();
+  $('mirName').textContent = MIRROR[G.mir];
   $('rotArrow').textContent = ARROW[G.rot]; $('rotName').textContent = FACING[G.rot];
-  $('rot').title = rotOk ? 'Facing for the next block' : 'This block has no facing';
-  $('selDesc').textContent = T[G.sel].desc;
+  $('rot').title = rotOk ? 'Facing for the next block. Tip: tap a placed block of this type to turn it.' : 'This block has no facing';
+  $('selDesc').textContent = T[G.sel].desc + (rotOk && !PARTS[G.sel] ? ' Tap a placed one to turn it 45°.' : '');
+  const up = $('upg'), L = G.sel==='sell' ? 0 : lvOf(G.sel);
+  up.hidden = !L;
+  if (L){
+    up.disabled = L >= MAXLV || upCost(G.sel) > G.credits;
+    up.innerHTML = L >= MAXLV ? `${T[G.sel].name} Lv${L} · max` : `Upgrade ${T[G.sel].name} Lv${L}→${L+1} · ${upCost(G.sel)} cr <kbd>U</kbd>`;
+  }
   const un = unlocksAt(s);
-  $('gridInfo').innerHTML = `Stage <b>${s}</b> at scale <b>×${S.toFixed(2)}</b>. Grid <b>${2*R+1} × ${2*R+1}</b>. Expect <b>${2+Math.floor(s/3)} waves</b> and a capital ship of about <b>${Math.round(14*Math.pow(s,1.45))} blocks</b>.` +
+  $('gridInfo').innerHTML = `Stage <b>${s}</b> at scale <b>×${S.toFixed(2)}</b>. Build area <b>${2*R+1} × ${2*R+1} m</b>, grows as you build. Expect <b>${2+Math.floor(s/3)} waves</b> and a capital ship of about <b>${Math.round(14*Math.pow(s,1.45))} blocks</b>.` +
     (s > 1 && un.length ? ` <span class="new">New: ${un.join(', ')}.</span>` : '');
   const st = designStats(), ms = v => (v/BS).toFixed(1);
-  const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : ''].filter(Boolean).join(', ');
+  const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
   $('stats').innerHTML =
     `<dt>Blocks</dt><dd>${st.n}</dd><dt>Structure</dt><dd>${st.hp} hp</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
     `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Speed side / aft</dt><dd>${ms(st.side)} / ${ms(st.aft)}</dd>` +
+    `<dt>Energy</dt><dd class="${st.eUse > st.eGen ? 'gold' : ''}">+${Math.round(st.eGen)}/s · uses ${Math.round(st.eUse)}/s · ${Math.round(st.eCap)}</dd>` +
     `<dt>Turn rate</dt><dd>${Math.round(st.turn*180/Math.PI)}°/s</dd><dt>Shields / PD</dt><dd>${st.sh} / ${st.pd}</dd>` +
-    (warn ? `<dt class="warn">Blocked</dt><dd class="warn">${warn}</dd>` : '');
+    (warn ? `<dt class="warn">Blocked</dt><dd class="warn">${warn}</dd>` : '') +
+    (st.weakT ? `<dt class="gold">Boxed in</dt><dd class="gold">${st.weakT} turret${st.weakT>1?'s':''}</dd>` : '');
   $('launch').textContent = `Launch stage ${s}`;
   const inBuild = G.mode==='build';
   $('panel').hidden = !inBuild;
-  $('hudWave').hidden = inBuild; $('coreWrap').hidden = inBuild;
+  $('hudWave').hidden = inBuild; $('coreWrap').hidden = inBuild; $('pauseBtn').hidden = inBuild;
   hudCache = {};
+  if (inBuild) save();
 }
 let hudCache = {};
 function setTxt(id, v){ if (hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
@@ -1274,11 +1551,13 @@ function syncHud(){
   setTxt('hudScale', `Scale ×${S.toFixed(2)}`);
   setTxt('hudCredits', String(Math.round(G.credits)));
   if (G.mode!=='build' && G.player){
-    const alive = G.ships.filter(s => s.alive && s.team==='e').length;
+    const alive = G.ships.filter(s => s.alive && s.team==='e' && !s.fodder).length;
     setTxt('hudWave', `Wave ${G.waveIdx}/${G.waves.length} · ${alive} hostile${alive===1 ? '' : 's'}`);
     const core = G.player.blocks.get(CORE), pct = core ? Math.max(0, core.hp/core.max) : 0;
     const w = (pct*100).toFixed(0)+'%';
-    if (hudCache.core !== w){ hudCache.core = w; const bar = $('coreBar'); bar.style.width = w; bar.style.background = pct < .35 ? 'var(--foe)' : 'var(--paper)'; }
+    const ew = (Math.max(0, G.player.en/G.player.enMax)*100).toFixed(0)+'%';
+    if (hudCache.en !== ew){ hudCache.en = ew; $('enBar').style.width = ew; }
+    if (hudCache.core !== w){ hudCache.core = w; const bar = $('coreBar'); bar.style.width = w; bar.style.background = pct < .35 ? 'var(--foe)' : ''; }
   }
 }
 function showOverlay(title, html, actions){
@@ -1291,12 +1570,42 @@ function hideOverlay(){ $('overlay').hidden = true; }
 let toastTimer = 0;
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1600); }
 
-$('mirror').addEventListener('change', e => { G.mirror = e.target.checked; });
+function upgrade(){
+  const t = G.sel; if (t==='sell' || G.mode!=='build') return;
+  const L = lvOf(t); if (L >= MAXLV) return;
+  const c = upCost(t); if (c > G.credits){ toast(`Need ${c} credits`); return; }
+  G.credits -= c; G.lv[t] = L+1; toast(`${T[t].name} is now level ${L+1}`); syncUI();
+}
+// progress lives in this browser's localStorage; every read and write is guarded so a blocked store just means no saving
+const SAVE = 'oom-save-v1';
+function save(){
+  try { localStorage.setItem(SAVE, JSON.stringify({stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, v:2, mir:G.mir, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage})); } catch {}
+}
+function load(){
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!d || !d.design) return;
+    G.stage = d.stage; G.credits = d.credits; G.design = new Map(d.design); G.dirs = new Map(d.v === 2 ? d.dirs : d.dirs.map(([k,o]) => [k,o*2])); G.lv = d.lv || {};
+    G.mir = d.mir ?? (d.mirror === false ? 0 : 1); G.spanT = d.spanT || 0; G.span0 = d.span0 || 0; G.spanStage = d.spanStage;
+  } catch {}
+}
+$('reset').addEventListener('click', () => {
+  if (!confirm('Erase your saved progress and start again from stage 1?')) return;
+  try { localStorage.removeItem(SAVE); } catch {}
+  location.reload();
+});
+$('upg').addEventListener('click', upgrade);
+$('pauseBtn').addEventListener('click', togglePause);
+function cycleMirror(){ G.mir = (G.mir + 1) % 4; syncUI(); }
+$('mirror').addEventListener('click', cycleMirror);
 $('rot').addEventListener('click', rotate);
-$('launch').addEventListener('click', startStage);
-if (innerWidth < 760) $('help').open = false;
+$('launch').addEventListener('click', () => {
+  const st = designStats(), n = st.badT + st.badW + st.badE;
+  startStage();
+  if (n) toast(`${n} block${n>1?'s':''} can't fire or thrust: marked ✕ in drydock`);
+});
+if (innerWidth < 760){ $('help').open = false; $('statsBox').open = false; }
 
-buildPalette(); syncUI();
+load(); buildPalette(); syncUI();
 requestAnimationFrame(frame);
 })();
 </script>
