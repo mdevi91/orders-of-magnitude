@@ -152,6 +152,20 @@ details li b{color:var(--paper);font-weight:400}
 #enBar{background:linear-gradient(to bottom,#fff0a0,#e0a020)}
 #crt{background:repeating-linear-gradient(to bottom,rgba(0,0,0,.18) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 65%,rgba(0,0,0,.5) 100%)}
 #stats{border-color:#4a505c}
+/* Devigili Studios splash: logo fades up, gold rule sweeps out, then the whole card fades away. Any key or tap skips. */
+#splash{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:var(--ink);cursor:pointer;
+  animation:splashOut .5s steps(5) 2.9s both}
+#splash .logo{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:0 16px}
+#splash .mark{width:64px;height:64px;image-rendering:pixelated;animation:splashIn .6s steps(6) .1s both}
+#splash .name{margin:0;font-family:var(--display);font-size:clamp(18px,5vw,34px);letter-spacing:.08em;color:var(--gold);text-shadow:3px 3px 0 #7a2a20;animation:splashIn .6s steps(6) .4s both}
+#splash .rule{width:min(360px,70vw);height:4px;background:var(--gold);box-shadow:3px 3px 0 #7a2a20;transform-origin:left;animation:splashRule .5s steps(10) .9s both}
+#splash .studio{margin:0;font-family:var(--display);font-size:clamp(10px,2.4vw,14px);letter-spacing:.5em;padding-left:.5em;color:var(--line);animation:splashIn .5s steps(5) 1.3s both}
+#splash .pres{margin:0;font-size:18px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);animation:splashIn .5s steps(5) 1.8s both}
+@keyframes splashIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes splashRule{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes splashOut{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important}#splash{animation-delay:2s}}
+#saveBox p{margin:6px 0 0;color:var(--muted)}
 @media (max-width:760px){
   #panel{top:auto;left:max(16px,env(safe-area-inset-left,0px));width:auto;max-height:46vh;gap:10px;padding:10px}
   #palette{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -204,13 +218,18 @@ details li b{color:var(--paper);font-weight:400}
     <span class="zoom"><button id="undo" class="rot" type="button">↶ Undo</button></span>
   </div>
   <details id="statsBox" open><summary>Ship stats</summary><dl id="stats"></dl></details>
+  <details id="saveBox"><summary>Save game</summary>
+    <p>Progress saves on its own whenever you are in drydock. Export a save file to keep a copy or move it to another browser.</p>
+    <div class="bp"><button id="saveNow" class="rot" type="button">Save now</button><button id="saveExp" class="rot" type="button">Export</button><button id="saveImp" class="rot" type="button">Import</button></div>
+    <input id="saveFile" type="file" accept=".json,application/json" hidden>
+  </details>
   <details id="bpBox"><summary>Blueprints</summary><div id="bps"></div></details>
   <button id="launch" type="button">Launch stage 1</button>
   <details id="help" open>
     <summary>Controls</summary>
     <ul>
       <li><b>Build:</b> click or drag to place. Right-click or the Sell tool removes a block for a full refund. Blocks must touch your ship. New blocks unlock as you clear stages.</li>
-      <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button turns the next turret or engine in 45° steps, and lasers and railguns in 90° steps. Tap a placed block of the selected type to turn it in place. Turrets cover an arc around their facing. Lasers and railguns fire straight along it.</li>
+      <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button turns the next turret or engine in 45° steps, and lasers and railguns in 90° steps. Tap a placed block of the selected type to turn it in place. Turrets cover an arc around their facing. Lasers and railguns fire along it and can swing up to 5° either side to aim.</li>
       <li><b>Engines</b> push away from their exhaust, which must be open. Most of your speed comes from the direction your engines face. Off-centre engines also help the ship turn.</li>
       <li><b>Line of fire:</b> guns can't shoot through your own hull, so put them where they can see out. A red ✕ marks a block that can't fire or thrust; a gold mark means a turret is mostly boxed in.</li>
       <li><b>Fly:</b> WASD or arrows. Hold Shift to slow down.</li>
@@ -228,6 +247,20 @@ details li b{color:var(--paper);font-weight:400}
   <button id="reset" type="button">Reset progress</button>
 </aside>
 
+<div id="splash" role="img" aria-label="Devigili Studios">
+  <div class="logo">
+    <svg class="mark" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
+      <rect x="1" y="1" width="14" height="14" fill="#7a2a20"/><rect x="0" y="0" width="14" height="14" fill="#ffc46b"/>
+      <rect x="1" y="1" width="12" height="12" fill="#05060c"/>
+      <path d="M3 3h5v1h1v1h1v4h-1v1h-1v1H3zM5 5v4h2V5z" fill="#ffc46b"/>
+      <rect x="10" y="10" width="2" height="2" fill="#5fd8ff"/>
+    </svg>
+    <p class="name">DEVIGILI</p>
+    <div class="rule"></div>
+    <p class="studio">STUDIOS</p>
+    <p class="pres">presents</p>
+  </div>
+</div>
 <div id="overlay" hidden><div class="card" role="dialog" aria-live="polite"><h1 id="ovTitle"></h1><p id="ovText"></p><div class="ov-actions" id="ovActions"></div></div></div>
 <div id="toast" hidden></div>
 
@@ -254,6 +287,8 @@ const KI = k => Math.floor(k/1024) - 512, KJ = k => k%1024 - 512;
 const CORE = K(0,0), NB = [1024,-1024,1,-1];
 const rand = (a,b) => a + Math.random()*(b-a);
 const clamp = (v,a,b) => v<a ? a : v>b ? b : v;
+// railguns and lasers swing up to 5° off their facing toward the aim point
+const SWING = 5*Math.PI/180;
 const angDiff = (a,b) => { let d = (a-b) % (2*Math.PI); if (d > Math.PI) d -= 2*Math.PI; if (d < -Math.PI) d += 2*Math.PI; return d; };
 const TAU = Math.PI*2;
 // facing o: 0..7 in 45° steps clockwise from fore (0 fore, 2 starboard, 4 aft, 6 port; odd values are diagonals).
@@ -282,8 +317,8 @@ const T = {
   gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{cd:.09, en:.5, spd:760, dmg:2.2, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
   missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{cd:2.2, en:8, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight. Launch in any direction and fly over your own hull.'},
   flak:   {name:'Flak', key:'f', unlock:3, cost:45, hp:18, mass:1.5, rot:true, gun:{cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', life:1.4, fuse:22, blast:26}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
-  laser:  {name:'Laser', key:'6', unlock:4, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:70, range:150, en:10}, desc:'2 blocks long. Continuous beam along its facing. Short range, and hits hardest up close.'},
-  rail:   {name:'Railgun', key:'7', unlock:5, cost:150, hp:28, mass:2, rot:true, rail:{cd:2.6, pool:130, en:25}, desc:'3 blocks long. Fires along its facing and pierces block after block. Line up the ship to shoot.'},
+  laser:  {name:'Laser', key:'6', unlock:4, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:70, range:150, en:10}, desc:'2 blocks long. Continuous beam along its facing, swinging 5° to aim. Short range, and hits hardest up close.'},
+  rail:   {name:'Railgun', key:'7', unlock:5, cost:150, hp:28, mass:2, rot:true, rail:{cd:2.6, pool:130, en:25}, desc:'3 blocks long. Fires along its facing and pierces block after block. Swings 5° to aim; line up the ship to shoot.'},
   engine: {name:'Engine', key:'8', unlock:1, cost:16, hp:14, mass:1, rot:true, thrust:6, desc:'Pushes toward its facing. Exhaust needs an open cell behind it.'},
   gyro:   {name:'Gyro', key:'9', unlock:2, cost:30, hp:18, mass:1.5, torque:25, desc:'Turns the ship faster. Blocks far from the core make turning slower.'},
   shield: {name:'Shield', key:'0', unlock:3, cost:60, hp:18, mass:1.5, sh:{hp:60, regen:15, delay:2.5, down:5, en:.4}, desc:'Projects a bubble that stops shots from any side, covering blocks up to 2 cells away (+1 per level). Stops 60 damage, then pops for 5 s.'},
@@ -798,16 +833,17 @@ function update(dt){
     for (const h of p.rails){
       if (h.cd > 0){ h.cd -= dt; if (h.cd > 0) continue; }
       if (!h.lane) continue;
-      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o];
-      if (Math.abs(angDiff(Math.atan2(ay-wy, ax-wx), face)) > .1) continue;
+      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], off = angDiff(Math.atan2(ay-wy, ax-wx), face);
+      if (Math.abs(off) > SWING + .02) continue;
       if (!spend(T.rail.rail.en)) continue;
-      h.cd = T.rail.rail.cd; fireRail(p, wx, wy, face); sfx('rail');
+      h.cd = T.rail.rail.cd; fireRail(p, wx, wy, face + clamp(off, -SWING, SWING)); sfx('rail');
     }
   }
   // lasers: continuous beam on whatever is first along their line within range
   if (p.alive) for (const h of p.lasers){
     h.beam = null; if (!h.lane || !enemies.length || !fire) continue;
-    const L = T.laser.laser, [wx,wy] = wpos(p,h), face = p.a + FA[h.o], dx = Math.cos(face), dy = Math.sin(face);
+    const L = T.laser.laser, [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
+    const face = base + clamp(angDiff(Math.atan2(ay-wy, ax-wx), base), -SWING, SWING), dx = Math.cos(face), dy = Math.sin(face);
     const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
     if (hit && spend(L.en*dt)){
@@ -1871,15 +1907,37 @@ function upgrade(){
 // progress lives in this browser's localStorage; every read and write is guarded so a blocked store just means no saving
 const SAVE = 'oom-save-v1';
 function save(){
-  try { localStorage.setItem(SAVE, JSON.stringify({stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, v:2, mir:G.mir, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage})); } catch {}
+  try { localStorage.setItem(SAVE, JSON.stringify(saveData())); } catch {}
 }
-function load(){
+function load(d){
   try {
-    const d = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!d || !d.design) return;
+    d = d || JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!d || !Array.isArray(d.design) || !(d.stage >= 1)) return false;
     G.stage = d.stage; G.credits = d.credits; G.design = new Map(d.design); G.dirs = new Map(d.v === 2 ? d.dirs : d.dirs.map(([k,o]) => [k,o*2])); G.lv = d.lv || {};
     G.mir = d.mir ?? (d.mirror === false ? 0 : 1); G.spanT = d.spanT || 0; G.span0 = d.span0 || 0; G.spanStage = d.spanStage;
-  } catch {}
+    return true;
+  } catch { return false; }
 }
+const saveData = () => ({stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, v:2, mir:G.mir, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage});
+$('saveNow').addEventListener('click', () => {
+  try { localStorage.setItem(SAVE, JSON.stringify(saveData())); toast('Game saved'); } catch { toast('This browser blocks saving: use Export'); }
+});
+// a save file carries the progress and the blueprints
+$('saveExp').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({game:'orders-of-magnitude', save:saveData(), bp:bpGet()})], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `orders-of-magnitude-stage${G.stage}.json`;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Save file exported');
+});
+$('saveImp').addEventListener('click', () => $('saveFile').click());
+$('saveFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  let d; try { d = JSON.parse(await f.text()); } catch {}
+  if (!d || d.game !== 'orders-of-magnitude' || !d.save){ toast('Not an Orders of Magnitude save file'); return; }
+  if (!confirm(`Load the stage ${d.save.stage} save? It replaces your current progress.`)) return;
+  if (!load(d.save)){ toast('That save file is damaged'); return; }
+  if (Array.isArray(d.bp)) bpPut(d.bp);
+  undoStack.length = 0; sfx('upgrade'); toast(`Loaded stage ${G.stage} save`); syncUI();
+});
 $('reset').addEventListener('click', () => {
   if (!confirm('Erase your saved progress and start again from stage 1?')) return;
   try { localStorage.removeItem(SAVE); } catch {}
@@ -1909,6 +1967,12 @@ $('launch').addEventListener('click', () => {
   startStage();
   if (n) toast(`${n} block${n>1?'s':''} can't fire or thrust: marked ✕ in drydock`);
 });
+const splash = $('splash');
+function endSplash(){ if (!splash.isConnected) return; splash.remove(); removeEventListener('keydown', skipKey, true); }
+function skipKey(e){ e.stopImmediatePropagation(); e.preventDefault(); endSplash(); }
+addEventListener('keydown', skipKey, true);
+splash.addEventListener('pointerdown', e => { e.stopPropagation(); endSplash(); });
+splash.addEventListener('animationend', e => { if (e.target === splash) endSplash(); });
 if (innerWidth < 760){ $('help').open = false; $('statsBox').open = false; }
 
 load(); buildPalette(); syncUI();
