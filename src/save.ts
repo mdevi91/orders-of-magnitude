@@ -9,11 +9,12 @@ import { $ } from './view';
 
 // The run lives in this browser's localStorage, apart from the hangar's data and upgrades, which outlive every run.
 // Every read and write is guarded so a blocked store just means no saving.
-export const RUN = 'oom-run-v1', METAK = 'oom-meta-v1';
+// runs from the flat game (v3) don't load into the 3D one
+export const RUN = 'oom-run-3d', METAK = 'oom-meta-v1';
 /** What a run looks like in localStorage and in exported save files. */
 export interface SaveData {
-  v: 3; stage: number; credits: number; design: [Key, BlockType][]; dirs: [Key, Facing][]; lv: typeof G.lv; mir: number;
-  spanT: number; span0: number; spanStage: number | null; inv: typeof G.inv; dmg?: typeof G.dmg; grp?: typeof G.grp; auto?: boolean[];
+  v: 4; stage: number; credits: number; design: [Key, BlockType][]; dirs: [Key, Facing][]; lv: typeof G.lv; mir: number;
+  inv: typeof G.inv; dmg?: typeof G.dmg; grp?: typeof G.grp; auto?: boolean[];
   broken?: Key[]; map: StarMap; stats: RunStats;
 }
 export function save(){
@@ -23,14 +24,14 @@ export function save(){
 export function load(from?: SaveData){
   try {
     const d: SaveData | null = from || JSON.parse(localStorage.getItem(RUN) || 'null');
-    if (!d || d.v !== 3 || !Array.isArray(d.design) || !d.map || !d.stats) return false;
+    if (!d || d.v !== 4 || !Array.isArray(d.design) || !d.map || !d.stats) return false;
     G.stage = d.stage; G.credits = d.credits; G.design = new Map(d.design); G.dirs = new Map(d.dirs); G.lv = d.lv || {};
-    G.mir = d.mir ?? 1; G.spanT = d.spanT || 0; G.span0 = d.span0 || 0; G.spanStage = d.spanStage;
+    G.mir = d.mir ?? 1;
     G.inv = d.inv || {}; G.dmg = d.dmg || {}; G.grp = d.grp || {}; G.auto = d.auto || [false,false,false,true,false]; G.broken = new Set(d.broken || []); G.map = d.map; G.stats = d.stats; G.node = curNode();
     return true;
   } catch { return false; }
 }
-export const saveData = (): SaveData => ({v:3, stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, mir:G.mir, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage,
+export const saveData = (): SaveData => ({v:4, stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, mir:G.mir,
   inv:G.inv, dmg:G.dmg, grp:G.grp, auto:G.auto, broken:[...G.broken], map:G.map!, stats:G.stats!});
 export function clearRun(){ G.stats = null; try { localStorage.removeItem(RUN); } catch {} }
 export function saveMeta(){ try { localStorage.setItem(METAK, JSON.stringify(G.meta)); } catch {} }
@@ -53,7 +54,7 @@ export function init(){
     const input = e.target as HTMLInputElement, f = input.files?.[0]; input.value = ''; if (!f) return;
     let d; try { d = JSON.parse(await f.text()); } catch {}
     if (!d || d.game !== 'orders-of-magnitude' || !d.save){ toast('Not an Orders of Magnitude save file'); return; }
-    if (d.save.v !== 3){ toast('That save is from before the roguelite update'); return; }
+    if (d.save.v !== 4){ toast(d.save.v === 3 ? 'That save is from the flat (2D) version' : 'That save is from before the roguelite update'); return; }
     if (!confirm(`Load the sector ${d.save.stage} save? It replaces your current run.`)) return;
     if (!load(d.save)){ toast('That save file is damaged'); return; }
     if (d.meta && typeof d.meta.data==='number'){ G.meta = {data:d.meta.data, lv:d.meta.lv || {}}; saveMeta(); }

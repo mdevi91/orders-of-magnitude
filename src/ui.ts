@@ -1,8 +1,10 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
 import { BEAM, CRAFT, LV, PAL, PARTS, PLATE, T, isCraft, lvOf, owned } from './catalog';
-import { aimsOut, arcClear, designType, drawBlock } from './draw';
-import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
+import { drawBlock } from './draw';
+import { aimsOut, arcClear, designType } from './inspect';
+import { Vector3 } from 'three';
+import { ARROW, BS, CORE, FACING, KI, KJ, KL, MIRROR } from './grid';
 import { renderGroups } from './groups';
 import { undoStack } from './input';
 import { dmgOf, repTotal } from './loot';
@@ -30,23 +32,24 @@ export function buildPalette(){
 }
 export function drawIcons(){
   for (const t of PAL){
-    const ic = $<HTMLCanvasElement>('ic-'+t), g = ic.getContext('2d')!, o = T[t].rot ? G.rot : 0;
+    // the flat icons turn to the facing seen from above (up and down show as fore)
+    const ic = $<HTMLCanvasElement>('ic-'+t), g = ic.getContext('2d')!, o = T[t].rot ? [0,2,4,6,0,0][G.rot] : 0;
     g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,14,14);
     g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
-    drawBlock(g, t, o, 'p', 0, 0, FA[o], false, 1, true, t==='engine');
+    drawBlock(g, t, o, 'p', 0, 0, -Math.PI/2 + o*Math.PI/4, false, 1, true, t==='engine');
   }
 }
 export function select(t: BlockType){
   if (!owned(t)) return; // blocks you have never found stay secret
-  G.sel = t; G.grpBrush = 0; if (PARTS[t]) G.rot &= ~1; syncUI();
+  G.sel = t; G.grpBrush = 0; syncUI();
 }
 export function designStats(){
-  const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), o:G.dirs.get(k)||0}));
+  const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), l:KL(k), o:G.dirs.get(k)||0}));
   const ph = physics(cells, designType);
   let dps = 0, hp = 0, pd = 0, sh = 0, fb = 0, bb = 0, badW = 0, badT = 0, weakT = 0, eGen = 6, eCap = 40, eUse = 0;
   for (const c of cells){
     const d = T[c.t], m = LV(c.t); hp += (d.hp || 0)*m;
-    if (aimsOut(c.t)){ const fc = arcClear(c.i, c.j, c.o, c.t); if (fc === 0) badT++; else if (fc < .4) weakT++; }
+    if (aimsOut(c.t)){ const fc = arcClear(c.i, c.j, c.l, c.o, c.t); if (fc === 0) badT++; else if (fc < .4) weakT++; }
     if (d.gun) dps += d.gun.dmg*(d.gun.mirv || 1)*(d.gun.pellets || 1)*m/d.gun.cd;
     if (d.tesla){ dps += d.tesla.dmg*d.tesla.jumps*m/d.tesla.cd; eUse += d.tesla.en/d.tesla.cd; }
     if (d.gun && d.gun.en) eUse += d.gun.en/d.gun.cd;
@@ -56,13 +59,14 @@ export function designStats(){
     if (c.t==='shield') sh++;
     if (isCraft(c.t)){ dps += CRAFT[c.t].gun.dmg/CRAFT[c.t].gun.cd*m; if (c.t==='fbay') fb++; else bb++; }
     if (BEAM(c.t)){
-      if (!laneFwd(designType, c.i, c.j, c.o)) badW++;
+      if (!laneFwd(designType, c.i, c.j, c.l, c.o)) badW++;
       else dps += (d.rail ? d.rail.pool/d.rail.cd : d.laser ? d.laser.dps*.6 : 0)*m;
     }
   }
   return {n:cells.length, hp, dps, pd, sh, fb, bb, badW, badT, weakT, eGen, eCap, eUse, badE:ph.engines.filter(e => !e.active).length,
-    fore:dirSpeed(ph,0,-1), side:Math.max(dirSpeed(ph,1,0), dirSpeed(ph,-1,0)), aft:dirSpeed(ph,0,1),
-    turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia, ph.mass)};
+    fore:dirSpeed(ph,new Vector3(0,0,-1)), side:Math.max(dirSpeed(ph,new Vector3(1,0,0)), dirSpeed(ph,new Vector3(-1,0,0))), aft:dirSpeed(ph,new Vector3(0,0,1)),
+    vert:Math.max(dirSpeed(ph,new Vector3(0,1,0)), dirSpeed(ph,new Vector3(0,-1,0))), mass:ph.mass,
+    turn:turnOf(ph.torque, ph.inertia, ph.mass)};
 }
 export function syncUI(){
   const s = G.stage, R = buildR(), S = scaleOf(s);
@@ -80,7 +84,7 @@ export function syncUI(){
   $('rotArrow').textContent = ARROW[G.rot]; $('rotName').textContent = FACING[G.rot];
   $('rot').title = rotOk ? 'Facing for the next block. Tip: tap a placed block of this type to turn it.' : 'This block has no facing';
   const rg = rangeOf(G.sel);
-  $('selDesc').textContent = (T[G.sel].desc || '') + (rg ? ` Range ${Math.round(rg*Math.pow(S,.8)/BS)} m.` : '') + (rotOk && !PARTS[G.sel] ? ' Tap a placed one to turn it 45°.' : '');
+  $('selDesc').textContent = (T[G.sel].desc || '') + (rg ? ` Range ${Math.round(rg*Math.pow(S,.8)/BS)} m.` : '') + (rotOk && !PARTS[G.sel] ? ' Click a placed one to turn it.' : '');
   const rb = $<HTMLButtonElement>('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
   rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;
@@ -89,7 +93,7 @@ export function syncUI(){
   const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
   $('stats').innerHTML =
     `<dt>Blocks</dt><dd>${blockCount()} / ${blockLimit()}</dd><dt>Structure</dt><dd>${st.hp} hp</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
-    `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Speed side / aft</dt><dd>${ms(st.side)} / ${ms(st.aft)}</dd>` +
+    `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Side / aft / up</dt><dd>${ms(st.side)} / ${ms(st.aft)} / ${ms(st.vert)}</dd><dt>Mass</dt><dd>${Math.round(st.mass)} t</dd>` +
     `<dt>Energy</dt><dd class="${st.eUse > st.eGen ? 'gold' : ''}">+${Math.round(st.eGen)}/s · uses ${Math.round(st.eUse)}/s · ${Math.round(st.eCap)}</dd>` +
     `<dt>Turn rate</dt><dd>${Math.round(st.turn*180/Math.PI)}°/s</dd><dt>Shields / PD</dt><dd>${st.sh} / ${st.pd}</dd>` +
     (st.fb || st.bb ? `<dt>Fighters / bombers</dt><dd>${st.fb} / ${st.bb}</dd>` : '') +

@@ -20,8 +20,8 @@ export function toggleGroup(n: number){ G.auto[n-1] = !G.auto[n-1]; toast(`Group
 export const shipWeapons = () => [...G.design].filter(([k,t]) => isWeapon(t));
 // the group brush: pick a group in the panel, then click or drag over weapons on the ship
 export function setBrush(n: number){ G.grpBrush = n; syncUI(); }
-export function assignAt(i: number, j: number){
-  const [hi,hj] = headOf(i,j), k = K(hi,hj), t = G.design.get(k);
+export function assignAt(i: number, j: number, l: number){
+  const [hi,hj,hl] = headOf(i,j,l), k = K(hi,hj,hl), t = G.design.get(k);
   if (!t || !isWeapon(t) || grpOf(k,t)===G.grpBrush) return;
   G.grp[k] = G.grpBrush; sfx('place'); save();
 }

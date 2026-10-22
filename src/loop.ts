@@ -1,6 +1,7 @@
 import { updateFx } from './craft';
-import { drawSpace, renderBuild, renderCombat } from './draw';
+import { renderBuildOverlay, renderCombatOverlay } from './draw';
 import { renderMap } from './mapdraw';
+import { render3d } from './render3d';
 import { G } from './state';
 import { syncHud } from './ui';
 import { update } from './update';
@@ -15,13 +16,14 @@ export function frame(now: number){
     if (G.mode==='combat' && !G.paused) update(dt);
     else if (G.mode==='clear' || G.mode==='dead') { G.time += dt; updateFx(dt); }
     else G.time += dt;
+    // the 3D view underneath, then the 2D overlay: HUD markers in a fight, block markers in the drydock, the whole star map
+    render3d(dt);
     ctx.setTransform(1,0,0,1,0,0); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#05060c'; ctx.fillRect(0,0,W,H);
-    const clearHi = () => { hctx.setTransform(1,0,0,1,0,0); hctx.clearRect(0,0,hi.width,hi.height); };
-    if (G.mode==='build'){ clearHi(); renderBuild(); }
-    else if (G.mode==='map'){ clearHi(); renderMap(); }
-    else if (G.mode==='title' || !G.player){ clearHi(); drawSpace(G.time*14, 0, 1); }
-    else renderCombat();
+    ctx.clearRect(0,0,W,H);
+    hctx.setTransform(1,0,0,1,0,0); hctx.clearRect(0,0,hi.width,hi.height);
+    if (G.mode==='build') renderBuildOverlay();
+    else if (G.mode==='map') renderMap();
+    else if (G.mode!=='title' && G.player) renderCombatOverlay();
     syncHud();
   } catch (err) { console.error(err); }
 }

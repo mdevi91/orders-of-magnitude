@@ -29,7 +29,7 @@ for (; jumps < 80 && G.stats && G.stage <= 4; jumps++){
   if (!G.stats) break;
   if (G.stats !== was) runs++;
   best = Math.max(best, G.stage);
-  toDrydock(); renderBuild(); syncUI();
+  toDrydock(); renderBuildOverlay(); syncUI();
 }
 log(`${jumps} jumps, ${fights} fights, ${runs} run${runs > 1 ? 's' : ''}, furthest sector ${best}, ended in sector ${G.stage} (${G.stats ? 'alive' : 'run over'})`);
 ok('never stuck on the map', !stuck, stuck);

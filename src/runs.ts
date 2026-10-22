@@ -30,7 +30,7 @@ export function showTitle(){
   showOverlay('Orders of Magnitude', h, G.stats ? [['Continue run', toMap], ['New run', () => { if (confirm('Abandon the saved run? You keep the data you already have.')) newRun(); }, 'ghost']] : [['New run', newRun]], true);
 }
 export function newRun(){
-  G.stage = 1; G.pendingNode = null; G.bounty = 0; G.lv = {}; G.broken = new Set(); G.fresh = new Set(); G.spanT = G.span0 = 0; G.spanStage = null;
+  G.stage = 1; G.pendingNode = null; G.bounty = 0; G.lv = {}; G.broken = new Set(); G.fresh = new Set();
   G.design = new Map(); G.dirs = new Map();
   ([[0,0,'core'],[0,-1,'cannon'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']] as const).forEach(([i,j,t]) => G.design.set(K(i,j),t));
   G.dirs.set(K(0,-1),0); G.dirs.set(K(0,1),0);

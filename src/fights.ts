@@ -1,18 +1,17 @@
 import { sfx } from './audio';
 import { ewOf, pickWeapon, tierOf } from './catalog';
-import { CORE, K, KI, KJ, NB, TAU, clamp, rand } from './grid';
+import { Matrix4, Quaternion, Vector3 } from 'three';
+import { CORE, K, KI, KJ, KL, NB, TAU, clamp, rand } from './grid';
 import { undoStack } from './input';
 import { chooseLoot, inc, lootText } from './loot';
 import { runOver } from './runs';
 import { save } from './save';
-import { genDesign, makeShip } from './ships';
+import { genDesign, makeShip, randDir } from './ships';
 import { NODE, goOn, nextSector, toMap } from './starmap';
-import { G, scaleOf, spanFor } from './state';
+import { G, scaleOf } from './state';
 import { tut } from './tutorial';
 import { designStats, hideOverlay, showOverlay, syncUI, toast } from './ui';
-import { keys } from './update';
 import type { EnemyCell, FightKind, Key, Ship, ShipSpec, Wave, WavePlan } from './types';
-import { H, W } from './view';
 
 // ---------- fights ----------
 export const bossSize = (s: number) => Math.round(32*Math.pow(s,1.45));
@@ -44,37 +43,39 @@ export function planFight(kind: FightKind, s: number, col: number): WavePlan {
   else if (kind==='station') waves.push([{n:Math.min(1300, Math.round(bossSize(s)*1.8)), boss:true, flag:true, station:true, guns:s >= 6 ? 12 : 8, bays:4}]);
   return waves;
 }
-// Carrier bays go on the rim, in mirrored pairs.
+/// Carrier bays go on the rim, in mirrored pairs.
 export function addBays(d: Map<Key, EnemyCell>, n: number){
-  const nbs = (k: Key) => NB.filter(o => d.has(k+o)).length;
   for (let c=0; c<n; c++){
-    const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && nbs(k) <= 2);
+    const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && NB.filter(o => !d.has(k+o)).length >= 2);
     if (!pool.length) return;
-    const k = pool[(Math.random()*pool.length)|0], mk = K(-KI(k), KJ(k));
+    const k = pool[(Math.random()*pool.length)|0], mk = K(-KI(k), KJ(k), KL(k));
     d.set(k,'bay'); if (d.get(mk)==='hull' || d.get(mk)==='armor') d.set(mk,'bay');
   }
 }
-// Starbase: a hub, four spokes and a ring, grown with fourfold symmetry. Guns, shields and bays sit on the rim, generators deep inside.
+// Starbase: a hub, four spokes, a ring and a mast, grown with fourfold symmetry around its vertical axis and mirrored top to bottom.
+// Guns, shields and bays sit on the outside, generators deep inside.
 export function genStation(n: number, stage: number, guns: number, bays: number){
   const d = new Map<Key, EnemyCell>([[CORE,'core']]), keys = [CORE];
-  const put = (i: number, j: number, t: EnemyCell) => { for (const [a,b] of [[i,j],[-j,i],[-i,-j],[j,-i]]){ const k = K(a,b); if (!d.has(k)){ d.set(k,t); keys.push(k); } } };
-  const R = Math.max(5, Math.round(Math.sqrt(n)*.42));
-  for (let i=-1; i<=1; i++) for (let j=-1; j<=1; j++) if (i || j) put(i,j,'armor');
-  for (let r=2; r<=R; r++){ put(0,-r,'armor'); put(1,-r,'hull'); }
-  for (let q=0; q<R*2; q++){ const a = q/(R*8)*TAU; for (const w of [0,1]) put(Math.round(Math.cos(a)*(R-w)), Math.round(Math.sin(a)*(R-w)), w ? 'hull' : 'armor'); }
+  const twins = (i: number, j: number, l: number) => [[i,j,l],[-j,i,l],[-i,-j,l],[j,-i,l],[i,j,-l],[-j,i,-l],[-i,-j,-l],[j,-i,-l]];
+  const put = (i: number, j: number, l: number, t: EnemyCell) => { for (const [a,b,c] of twins(i,j,l)){ const k = K(a,b,c); if (!d.has(k)){ d.set(k,t); keys.push(k); } } };
+  const R = Math.max(4, Math.round(Math.cbrt(n)*1.1));
+  for (let i=-1; i<=1; i++) for (let j=-1; j<=1; j++) for (let l=-1; l<=1; l++) if (i || j || l) put(i,j,l,'armor');
+  for (let r=2; r<=R; r++){ put(0,-r,0,'armor'); put(1,-r,0,'hull'); }
+  for (let r=2; r<=Math.round(R*.6); r++) put(0,0,r,'armor');
+  for (let q=0; q<R*2; q++){ const a = q/(R*8)*TAU; for (const w of [0,1]) put(Math.round(Math.cos(a)*(R-w)), Math.round(Math.sin(a)*(R-w)), 0, w ? 'hull' : 'armor'); }
   let tries = 0;
   while (d.size < n && tries++ < n*20){
-    const base = keys[(Math.random()*keys.length)|0], nk = base + NB[(Math.random()*4)|0];
-    if (d.has(nk) || Math.max(Math.abs(KI(nk)), Math.abs(KJ(nk))) > R + 6) continue;
-    put(KI(nk), KJ(nk), Math.random() < .35 ? 'armor' : 'hull');
+    const base = keys[(Math.random()*keys.length)|0], nk = base + NB[(Math.random()*6)|0];
+    const i = KI(nk), j = KJ(nk), l = KL(nk);
+    if (d.has(nk) || Math.max(Math.abs(i), Math.abs(j)) > R + 4 || Math.abs(l) > R*.6 + 1) continue;
+    put(i, j, l, Math.random() < .35 ? 'armor' : 'hull');
   }
-  const nbs = (k: Key) => NB.filter(o => d.has(k+o)).length;
   const conv = (t: EnemyCell | (() => EnemyCell), count: number, inner: boolean) => {
     for (let c=0; c<count; c++){
-      const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && (inner ? nbs(k)===4 : nbs(k) <= 2));
+      const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && (inner ? NB.every(o => d.has(k+o)) : NB.filter(o => !d.has(k+o)).length >= 2));
       if (!pool.length) return;
-      const k = pool[(Math.random()*pool.length)|0], i = KI(k), j = KJ(k);
-      for (const [a,b] of [[i,j],[-j,i],[-i,-j],[j,-i]]){ const kk = K(a,b); if (d.get(kk)==='hull' || d.get(kk)==='armor') d.set(kk, typeof t==='function' ? t() : t); }
+      const k = pool[(Math.random()*pool.length)|0];
+      for (const [a,b,cc] of twins(KI(k), KJ(k), KL(k)).slice(0,4)){ const kk = K(a,b,cc); if (d.get(kk)==='hull' || d.get(kk)==='armor') d.set(kk, typeof t==='function' ? t() : t); }
     }
   };
   conv(() => pickWeapon(stage), Math.ceil(guns/4), false);
@@ -84,28 +85,36 @@ export function genStation(n: number, stage: number, guns: number, bays: number)
   if (stage >= 5) conv('pd', 1 + Math.floor(d.size/350), false);
   return d;
 }
-export function spawnPos(){
-  const p = G.player!, m = .08;
-  for (let t=0; t<30; t++){
-    const side = (Math.random()*3)|0;
-    const x = side===0 ? rand(m,1-m)*G.AW : side===1 ? m*G.AW : (1-m)*G.AW;
-    const y = side===0 ? m*G.AH : rand(m,.6)*G.AH;
-    if (Math.hypot(x-p.x, y-p.y) > .4*Math.min(G.AW,G.AH)) return {x,y};
-  }
-  return {x:G.AW/2, y:G.AH*.1};
+const UP = new Vector3(0,1,0);
+/** The orientation that points a ship's nose (local -z) from one point at another. */
+export function faceQ(from: Vector3, to: Vector3, out = new Quaternion()){
+  return out.setFromRotationMatrix(new Matrix4().lookAt(from, to, UP));
 }
+/** A point at the far end of the arena, away from the player. */
+export function spawnPos(){
+  const p = G.player!, out = new Vector3();
+  for (let t=0; t<30; t++){
+    out.set(rand(-.8,.8)*G.AW, rand(-.7,.7)*G.AH, rand(-.9,-.15)*G.AD);
+    if (out.distanceTo(p.p) > .5*Math.min(G.AW, G.AD)) return out;
+  }
+  return out.set(0, 0, -.8*G.AD);
+}
+/** Keep a point inside the arena box. */
+export const inArena = (v: Vector3) => v.set(clamp(v.x, -G.AW, G.AW), clamp(v.y, -G.AH, G.AH), clamp(v.z, -G.AD, G.AD));
+/** A random axis to circle around, mostly upright so fights stay readable. */
+const orbitAxis = () => new Vector3(rand(-.5,.5), 1, rand(-.5,.5)).normalize();
 export function spawnWave(list: Wave){
-  const hpMul = 1.15 + .22*(G.stage-1), tier = tierOf(G.stage);
+  const hpMul = 1.15 + .22*(G.stage-1), tier = tierOf(G.stage), p = G.player!;
   let boss: Ship | null = null;
   for (const spec of list){
-    const d = spec.station ? genStation(spec.n, tier, spec.guns, spec.bays || 0) : genDesign(spec.n, !!(spec.boss || spec.elite), tier, spec.guns), pos = spawnPos();
+    const d = spec.station ? genStation(spec.n, tier, spec.guns, spec.bays || 0) : genDesign(spec.n, !!(spec.boss || spec.elite), tier, spec.guns);
     if (spec.bays && !spec.station) addBays(d, spec.bays);
     // a starbase has so many blocks that each one is lighter
-    const e = makeShip(d,'e',pos.x,pos.y,hpMul*(spec.elite ? 1.3 : spec.station ? .5 : 1));
+    const e = makeShip(d,'e',spawnPos(),hpMul*(spec.elite ? 1.3 : spec.station ? .5 : 1));
     e.boss = !!spec.boss; e.elite = !!spec.elite; e.flag = !!spec.flag; e.station = !!spec.station; e.n0 = d.size; e.phaseN = 1;
     if (e.boss) boss = e;
     e.sc = G.SC; e.ft = 3; e.phase = rand(0,TAU); e.spin = Math.random()<.5 ? 1 : -1;
-    e.orb = rand(0,TAU); e.orbSpd = rand(.12,.35)*(Math.random()<.5 ? 1 : -1);
+    e.orb = rand(0,TAU); e.orbSpd = rand(.12,.35)*(Math.random()<.5 ? 1 : -1); e.orbAxis = orbitAxis();
     // railgun ships hang back
     e.pref = (spec.boss ? 360 : e.guns.some(g => g.t==='rail') ? rand(420,520) : rand(220,380))*G.SC + e.r;
     // close in until the shortest-ranged gun can reach
@@ -113,13 +122,12 @@ export function spawnWave(list: Wave){
     e.vmax = 200/Math.sqrt(1 + d.size/30); e.turn = 1.6/Math.sqrt(1 + d.size/20);
     // salvage grows with the square root of size, so big late-game hulls don't flood the run with credits
     e.value = inc((4 + Math.sqrt(d.size)*2.2)*(spec.flag ? 5 : spec.boss ? 3 : spec.elite ? 2 : 1));
-    e.a = Math.atan2(G.player!.x-e.x, -(G.player!.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
     if (e.station){
-      // the starbase holds still above the player (startFight made the arena tall enough)
-      const p = G.player!, gap = e.r + p.r + 320*G.SC;
-      G.AW = Math.max(G.AW, e.r*2 + 600*G.SC); G.AH = Math.max(G.AH, e.r*2 + 600*G.SC);
-      e.x = clamp(p.x, e.r + 40, G.AW - e.r - 40); e.y = Math.max(e.r + 40, p.y - gap); e.vmax = 0; e.a = 0; e.c = 1; e.sn = 0;
+      // the starbase holds still ahead of the player (startFight made the arena deep enough)
+      G.AW = Math.max(G.AW, e.r + 400*G.SC); G.AH = Math.max(G.AH, e.r + 300*G.SC);
+      e.p.set(0, 0, p.p.z - (e.r + p.r + 320*G.SC)); inArena(e.p); e.vmax = 0;
     }
+    faceQ(e.p, p.p, e.q);
     G.ships.push(e);
   }
   if (boss) G.boss = boss;
@@ -130,25 +138,20 @@ export function spawnWave(list: Wave){
 // Swarm: flights of ships sized like earlier sectors arrive during gate and flagship fights, so a grown hull towers over them.
 export function spawnSwarm(){
   const p = G.player!, s = G.stage;
-  const tier = 1 + Math.floor(Math.random()**2 * (s-1)), tS = Math.pow(scaleOf(tier),.8);
-  const ang = rand(0,TAU), dist = .5*Math.hypot(W,H)/G.zoom + 40;
-  const cx = clamp(p.x + Math.cos(ang)*dist, 0, G.AW), cy = clamp(p.y + Math.sin(ang)*dist, 0, G.AH);
-  const flight = 1;
-  for (let q=0; q<flight; q++) makeFighter(cx + rand(-40,40)*tS, cy + rand(-40,40)*tS, tier);
+  const tier = 1 + Math.floor(Math.random()**2 * (s-1));
+  makeFighter(inArena(p.p.clone().add(randDir().multiplyScalar(700*G.SC))), tier);
 }
-export function makeFighter(x: number, y: number, tier: number){
+export function makeFighter(at: Vector3, tier: number){
   const p = G.player!, tS = Math.pow(scaleOf(tier),.8);
-  {
-    const d = genDesign(Math.round((7 + 3.2*Math.pow(tier,1.3))*rand(.85,1.1)), false, tierOf(tier), 2);
-    const e = makeShip(d,'e', clamp(x, 0, G.AW), clamp(y, 0, G.AH), 1);
-    e.fodder = true; e.sc = tS;
-    e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);
-    e.pref = p.r + rand(140,260)*tS + e.r;
-    e.vmax = 190/Math.sqrt(1 + d.size/30); e.turn = 2.4;
-    e.value = inc(2 + Math.sqrt(d.size));
-    e.a = Math.atan2(p.x-e.x, -(p.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
-    G.ships.push(e);
-  }
+  const d = genDesign(Math.round((7 + 3.2*Math.pow(tier,1.3))*rand(.85,1.1)), false, tierOf(tier), 2);
+  const e = makeShip(d,'e', inArena(at.clone()), 1);
+  e.fodder = true; e.sc = tS;
+  e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1); e.orbAxis = orbitAxis();
+  e.pref = p.r + rand(140,260)*tS + e.r;
+  e.vmax = 190/Math.sqrt(1 + d.size/30); e.turn = 2.4;
+  e.value = inc(2 + Math.sqrt(d.size));
+  faceQ(e.p, p.p, e.q);
+  G.ships.push(e);
 }
 // The ship that flies: the design without its damaged blocks, and without anything they cut off from the core.
 export function flyDesign(){
@@ -161,17 +164,14 @@ export function flyDesign(){
 export function startFight(kind: FightKind){
   undoStack.length = 0; G.fight = kind; G.lost = new Set(); G.boss = null;
   G.S = scaleOf(G.stage); G.SC = Math.pow(G.S,.8);
-  const p = G.player = makeShip(flyDesign(),'p',0,0,1,G.dirs);
-  // every sector opens on last sector's view and slowly pulls back to a wider one, even if the hull didn't grow
-  if (G.spanStage !== G.stage){ G.span0 = G.spanT ? G.spanT : spanFor(p.r, G.S)*.6; G.spanStage = G.stage; }
-  G.spanT = Math.max(spanFor(p.r, G.S), G.span0*1.15); G.span = G.span0; G.fit = 0; G.spanAt = 0; G.swarmT = 4;
-  G.AW = Math.max(1300*G.S, G.spanT*3); G.AH = Math.max(900*G.S, G.spanT*2.2);
-  // a starbase needs room above the player
-  if (kind==='station'){ G.AW *= 1.4; G.AH *= 2; }
-  p.x = G.AW/2; p.y = G.AH*(kind==='station' ? .85 : .72);
+  const p = G.player = makeShip(flyDesign(),'p',new Vector3(),1,G.dirs);
+  // the arena: a box around the origin, wider and deeper than it is tall
+  G.AW = G.AD = Math.max(800*G.S, p.r*14); G.AH = G.AW*.6;
+  if (kind==='station') G.AD *= 1.6;
+  p.p.set(0, 0, G.AD*.6);
   G.ships = [p]; G.pb = []; G.eb = []; G.fx = []; G.beams = [];
-  G.waves = planFight(kind, G.stage, G.node ? G.node.col : 1); G.waveIdx = 0; G.waveGap = 2.5;
-  G.camX = p.x; G.camY = p.y; G.joy = null; G.aimJoy = null; G.deadT = 0; G.earned = 0; G.paused = false;
+  G.waves = planFight(kind, G.stage, G.node ? G.node.col : 1); G.waveIdx = 0; G.waveGap = 2.5; G.swarmT = 4;
+  G.joy = null; G.aimJoy = null; G.deadT = 0; G.earned = 0; G.paused = false;
   G.banner = {text:G.waves.name || NODE[kind].name, sub:`Sector ${G.stage}`, t:2};
   G.mode = 'combat'; hideOverlay(); syncUI(); tut('combat');
   const st = designStats(), n = st.badT + st.badW + st.badE;

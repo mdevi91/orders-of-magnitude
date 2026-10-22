@@ -11,6 +11,7 @@
 </head>
 <body>
 
+<canvas id="gl" aria-hidden="true"></canvas>
 <canvas id="c" aria-label="Game field"></canvas>
 <canvas id="hi"></canvas>
 <div id="crt"></div>
@@ -60,12 +61,12 @@
     <summary>Controls</summary>
     <ul>
       <li><b>Run:</b> jump across each sector's star map to the gate. Fights, wrecks and signals give credits and blocks; shops buy, sell, upgrade and repair. Raiders and signals can also turn up mid-jump. Every third sector ends in a flagship or starbase. Lose the core and the run is over.</li>
-      <li><b>Build:</b> click or drag to place blocks from your cargo. Right-click or the Remove tool puts a block back in cargo. Hull and armor plating can be bought here at any time. Blocks must touch your ship.</li>
+      <li><b>Build:</b> the drydock is 3D. Click a face of your ship to put a block on it, or drag to paint several. Right-click removes a block back into cargo. Right-drag (or two fingers) turns the view, the wheel zooms. Hull and armor plating are bought with credits. Blocks must touch your ship.</li>
       <li><b>Damage:</b> blocks destroyed in a fight stay damaged (dark, cracked) and don't fly until repaired. Removing a damaged block scraps it.</li>
-      <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button turns the next turret or engine in 45° steps, and lasers, railguns and hangar bays in 90° steps. Tap a placed block of the selected type to turn it in place. Turrets cover an arc around their facing. Lasers and railguns fire along it and can swing up to 5° either side to aim.</li>
-      <li><b>Engines</b> push away from their exhaust, which must be open. Most of your speed comes from the direction your engines face. Off-centre engines also help the ship turn.</li>
+      <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button sets the next block's facing: fore, starboard, aft, port, up or down. Click a placed block of the selected type to turn it. Turrets cover a cone around their facing. Lasers and railguns fire along it and can swing 5° to aim.</li>
+      <li><b>Engines</b> push toward their facing; the cell behind must be open for the exhaust. Your speed in each direction comes from the engines pointing that way, and how fast you get there from thrust against mass: a small hull with big engines is a fighter, a huge armored one a slow, imposing flagship. Gyros make any hull turn faster.</li>
       <li><b>Line of fire:</b> guns can't shoot through your own hull, so put them where they can see out. A red ✕ marks a block that can't fire or thrust; a gold mark means a turret is mostly boxed in.</li>
-      <li><b>Fly:</b> W/S thrust along the nose, A/D turn the ship. Hold Shift and the ship turns toward the mouse while A/D slide sideways. On touch, drag to move.</li>
+      <li><b>Fly:</b> the ship steers toward the mouse cursor: the further from the centre, the harder it turns. <kbd>W</kbd>/<kbd>S</kbd> thrust, <kbd>A</kbd>/<kbd>D</kbd> strafe, <kbd>R</kbd>/<kbd>F</kbd> rise and sink, <kbd>Q</kbd>/<kbd>E</kbd> roll. On touch, the left thumb moves and the ship turns to its target by itself.</li>
       <li><b>Aim:</b> your ship turns its nose toward the cursor. Big ships turn slowly; gyros help. Hold the mouse button or <kbd>Space</kbd> to fire. <kbd>T</kbd> or the Auto button switches to auto-aim: the ship targets the nearest enemy and fires on its own. Point defense always fires on its own.</li>
       <li><b>Energy:</b> weapons use energy to fire and shields use it to recharge. The core makes a little; Generators add more and Batteries store it. Both are safe deep inside the hull. When energy runs out, weapons wait. The gold Energy stat means full fire uses more than you make.</li>
       <li><b>Shields</b> each project a bubble that stops enemy shots from every side, protecting blocks up to 2 cells away (3 at Lv2, 4 at Lv3). Overlap them to cover a big hull. If it pops it is down for 5 s, and it recharges after 2.5 s without hits. Enemies carry the same weapons you unlock. A red dashed line means an enemy railgun is about to fire.</li>

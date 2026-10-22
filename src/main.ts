@@ -5,6 +5,7 @@ import { init as init_catalog } from './catalog';
 import { init as init_controls } from './controls';
 import { init as init_groups } from './groups';
 import { init as init_input } from './input';
+import { init as init_render3d } from './render3d';
 import { frame } from './loop';
 import { showTitle } from './runs';
 import { init as init_save, load, loadMeta } from './save';
@@ -14,6 +15,7 @@ import { buildPalette, init as init_ui } from './ui';
 import { $, init as init_view } from './view';
 
 init_view();
+init_render3d();
 init_catalog();
 init_state();
 init_input();

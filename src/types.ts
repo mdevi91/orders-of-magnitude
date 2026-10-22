@@ -1,10 +1,11 @@
 // Shared shapes for the whole game. Runtime data lives in the modules; this file only describes it.
+import type { Quaternion, Vector3 } from 'three';
 import type { BLOCKS, CRAFT, ET, EW } from './catalog';
 import type { NODE } from './starmap';
 
-/** Grid key from K(i,j): one number per cell. */
+/** Grid key from K(i,j,l): one number per cell. */
 export type Key = number;
-/** Facing 0..7 in 45° steps clockwise from fore. */
+/** Facing 0..5: fore, starboard, aft, port, up, down. */
 export type Facing = number;
 export type Team = 'p' | 'e' | 'a';
 
@@ -27,7 +28,7 @@ export interface GunDef {
   /** reach in world units at scale 1 */
   range?: number;
   cd: number; en?: number; spd: number; dmg: number; spread: number; r: number;
-  /** turret swing either side of the facing, radians */
+  /** turret swing either side of the facing, radians: a cone around it */
   arc?: number;
   fx?: BulletKind; homing?: boolean; mirv?: number; pellets?: number; fan?: number; ion?: boolean;
   life?: number; fuse?: number; blast?: number; lob?: boolean; nofall?: boolean;
@@ -58,7 +59,7 @@ export interface Bubble { hp: number; max: number; down: number; last: number; f
 
 /** A block on a live ship. */
 export interface Block {
-  t: Cell; i: number; j: number; o: Facing; hp: number; max: number;
+  t: Cell; i: number; j: number; l: number; o: Facing; hp: number; max: number;
   /** weapon cooldown */
   cd: number;
   /** time it was last hit, for the white flash */
@@ -74,25 +75,29 @@ export interface Block {
   craft?: Ship;
   /** enemy gatlings: shots so far in the current burst */
   shots?: number;
-  beam?: [number, number, number, number] | null;
+  /** lasers: the beam this frame, start and end in world space */
+  beam?: [Vector3, Vector3] | null;
+  /** turrets: world direction the barrel points this frame */
+  aim?: Vector3;
 }
 
-export interface Engine { c: { t: Cell; i: number; j: number; o: Facing; firing?: boolean }; active: boolean; tx: number; ty: number; tau: number }
+export interface Engine { c: { t: Cell; i: number; j: number; l: number; o: Facing; firing?: boolean }; active: boolean; dir: Vector3; thrust: number }
 export interface Physics {
-  mass: number; inertia: number; torque: number; coreT: number; jetCW: number; jetCCW: number;
-  F: { px: number; nx: number; py: number; ny: number }; engines: Engine[];
+  mass: number; inertia: number; torque: number; coreT: number;
+  /** engine thrust along each local axis: +x, -x, +y, -y, +z, -z */
+  F: { px: number; nx: number; py: number; ny: number; pz: number; nz: number }; engines: Engine[];
 }
 
 export interface Ship {
-  team: Team; x: number; y: number; vx: number; vy: number;
-  /** heading, and its cosine and sine */
-  a: number; c: number; sn: number;
+  team: Team;
+  /** position, velocity, orientation and angular velocity (ship-local axes) */
+  p: Vector3; v: Vector3; q: Quaternion; w: Vector3;
   blocks: Map<Key, Block>; alive: boolean; hpMul: number; r: number;
+  /** bumped whenever blocks are lost, so the renderer knows to rebuild the mesh */
+  ver: number;
   guns: Block[]; pds: Block[]; rails: Block[]; lasers: Block[]; shields: Block[]; bays: Block[]; epd: Block[]; teslas: Block[];
   // player
   ph: Physics; en: number; enMax: number; enRegen: number;
-  /** angular velocity */
-  w: number;
   // enemies
   boss: boolean; elite: boolean; flag: boolean; station: boolean; fodder: boolean; craft: boolean;
   /** blocks at spawn, for phases and the boss bar */
@@ -100,16 +105,16 @@ export interface Ship {
   /** enemy scale: bullet speed and reach */
   sc: number;
   fireMul: number; ft: number; phase: number; spin: number; orb: number; orbSpd: number; pref: number; vmax: number; turn: number; value: number;
-  tgt: Ship | null; armed?: boolean; sights: [number, number, number][] | null; jam?: number; wob?: number; flT?: number; rbT?: number;
+  /** the axis an enemy circles the player around */
+  orbAxis: Vector3;
+  tgt: Ship | null; armed?: boolean; sights: [Vector3, Vector3][] | null; jam?: number; wob?: number; flT?: number; rbT?: number;
   // hangar craft (either side)
-  kind: CraftKind | null; bay: Block | null; sortie: number; aimA: number; cd: number; pick: number;
+  kind: CraftKind | null; bay: Block | null; sortie: number; cd: number; pick: number;
 }
 
 export interface Bullet {
-  x: number; y: number; vx: number; vy: number; sp: number; r: number; dmg: number; life: number; life0?: number; kind: BulletKind;
+  p: Vector3; v: Vector3; sp: number; r: number; dmg: number; life: number; life0?: number; kind: BulletKind;
   dead?: boolean; fuse?: number; blast?: number; fall?: boolean; ion?: boolean; homing?: boolean; mirv?: number;
-  /** missile exhaust trail as x,y pairs */
-  tr?: number[] | null;
   /** what the player's missile homes on */
   target?: Ship | null;
   /** what an enemy missile homes on */
@@ -117,14 +122,14 @@ export interface Bullet {
 }
 
 export type Fx =
-  | { k: 'deb'; x: number; y: number; vx: number; vy: number; a: number; va: number; life: number; max: number; col: string }
-  | { k: 'spk'; x: number; y: number; vx: number; vy: number; life: number; max: number; col: string }
-  | { k: 'smoke'; x: number; y: number; vx: number; vy: number; r: number; life: number; max: number }
-  | { k: 'boom'; x: number; y: number; r: number; life: number; max: number }
-  | { k: 'ring'; x: number; y: number; r: number; life: number; max: number; col: string }
-  | { k: 'txt'; x: number; y: number; vy: number; text: string; life: number; max: number };
+  | { k: 'deb'; p: Vector3; v: Vector3; life: number; max: number; col: string; spin: Vector3 }
+  | { k: 'spk'; p: Vector3; v: Vector3; life: number; max: number; col: string }
+  | { k: 'smoke'; p: Vector3; v: Vector3; r: number; life: number; max: number }
+  | { k: 'boom'; p: Vector3; r: number; life: number; max: number }
+  | { k: 'ring'; p: Vector3; r: number; life: number; max: number; col: string }
+  | { k: 'txt'; p: Vector3; vy: number; text: string; life: number; max: number };
 
-export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; max: number; kind?: 'rail' | 'tesla' | 'epd' }
+export interface Beam { a: Vector3; b: Vector3; life: number; max: number; kind?: 'rail' | 'tesla' | 'epd' | 'pd' }
 
 /** One ship in a wave plan. */
 export interface ShipSpec { n: number; guns: number; bays?: number; boss?: boolean; elite?: boolean; flag?: boolean; station?: boolean }
@@ -144,12 +149,14 @@ export interface Meta { data: number; lv: Record<string, number> }
 export interface Stick { id: number; x0: number; y0: number; x: number; y: number }
 export interface Banner { text: string; sub: string; t: number; red?: boolean }
 export type Mode = 'title' | 'map' | 'build' | 'combat' | 'clear' | 'dead';
+/** A cell under the drydock cursor, and the empty cell beside the face it was hit on. */
+export interface BuildHover { i: number; j: number; l: number; ni: number; nj: number; nl: number }
 
 export interface GameState {
   mode: Mode;
   // drydock view and tools
-  bz: number; bpx: number; bpy: number; mir: number; sel: BlockType; rot: Facing; mirror: boolean;
-  hover: { i: number; j: number } | null; drag: 'place' | 'sell' | null; dragR?: number; lastCell: string | null; grpBrush: number;
+  bYaw: number; bPitch: number; bDist: number; mir: number; sel: BlockType; rot: Facing; mirror: boolean;
+  hover: BuildHover | null; drag: 'place' | 'sell' | null; lastCell: string | null; grpBrush: number;
   // the run
   stage: number; credits: number; design: Map<Key, BlockType>; dirs: Map<Key, Facing>; lv: Partial<Record<BlockType, number>>;
   inv: Partial<Record<BlockType, number>>; dmg: Partial<Record<BlockType, number>>; grp: Record<Key, number>; auto: boolean[];
@@ -159,10 +166,16 @@ export interface GameState {
   pick: ((t: BlockType | null) => void) | null;
   // the fight
   fight: FightKind; ships: Ship[]; player: Ship | null; boss: Ship | null; pb: Bullet[]; eb: Bullet[]; fx: Fx[]; beams: Beam[];
-  waves: WavePlan; waveIdx: number; waveGap: number; time: number; S: number; SC: number; AW: number; AH: number;
-  camX: number; camY: number; camOX: number; camOY: number; zoom: number; camMul: number;
-  span: number; spanT: number; span0: number; spanAt: number; spanStage: number | null; fit: number; swarmT: number;
+  waves: WavePlan; waveIdx: number; waveGap: number; time: number; S: number; SC: number;
+  /** arena half-sizes: x, y (up) and z */
+  AW: number; AH: number; AD: number;
+  /** chase camera: distance multiplier the player sets, and the smoothed camera orientation */
+  camMul: number; swarmT: number;
   paused: boolean; aimAuto: boolean; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
   joy: Stick | null; aimJoy: Stick | null;
-  banner: Banner | null; deadT: number; earned: number; shake: number; aim: { x: number; y: number };
+  /** a fixed aim point (tests; touch aiming), overriding the mouse */
+  aimAt: Vector3 | null;
+  /** a world-space direction to move in (tests and bots), overriding the keys */
+  moveWish: Vector3 | null;
+  banner: Banner | null; deadT: number; earned: number; shake: number; aim: Vector3;
 }

@@ -1,8 +1,8 @@
 import { audio, muted, setMute, sfx } from './audio';
-import { layoutBuild } from './draw';
 import { rotate } from './editor';
 import { togglePause } from './fights';
-import { undo, undoStack, zoomAt } from './input';
+import { clamp } from './grid';
+import { undo, undoStack } from './input';
 import { repair } from './loot';
 import { runOver } from './runs';
 import { NODE, mapAction, nodeDef, toDrydock, toMap } from './starmap';
@@ -11,7 +11,8 @@ import { syncUI, toast } from './ui';
 import { $ } from './view';
 
 export const abandon = () => { if (confirm('Abandon this run? You keep the data it has earned so far.')) runOver('abandoned'); };
-export const zoomBtn = (f: number) => { const L = layoutBuild(); zoomAt(L.cx, L.cy, f); };
+/** Drydock zoom: f > 1 moves the camera in. */
+export const zoomBtn = (f: number) => { G.bDist = clamp((G.bDist || 1)/f, .3, 4); };
 export function cycleMirror(){ G.mir = (G.mir + 1) % 4; syncUI(); }
 
 // wiring that runs once at start-up
@@ -29,7 +30,7 @@ export function init(){
   $('zIn').addEventListener('click', () => zoomBtn(1.4));
   $('zOut').addEventListener('click', () => zoomBtn(1/1.4));
   $('undo').addEventListener('click', undo);
-  $('zFit').addEventListener('click', () => { G.bz = 1; G.bpx = G.bpy = 0; });
+  $('zFit').addEventListener('click', () => { G.bDist = 1; G.bYaw = .7; G.bPitch = .5; });
   $('pauseBtn').addEventListener('click', togglePause);
   $('muteBtn').addEventListener('click', () => { audio(); setMute(!muted); });
   setMute(muted);

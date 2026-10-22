@@ -22,7 +22,7 @@ function botShip(s){
   for (const k of back){ d.set(k,'engine'); dirs.set(k,0); }
   const nW = Math.max(1, Math.round(d.size/7));
   const spots = rim.filter(k => d.get(k)==='hull').sort(() => Math.random() - .5).slice(0, nW);
-  spots.forEach((k,n) => { const t = guns[n % guns.length]; d.set(k,t); if (T[t].rot) dirs.set(k, ((Math.round(Math.atan2(KI(k), -KJ(k))/(Math.PI/4)) % 8) + 8) % 8); });
+  spots.forEach((k,n) => { const t = guns[n % guns.length]; d.set(k,t); if (T[t].rot) dirs.set(k, Math.abs(KI(k)) > Math.abs(KJ(k)) ? (KI(k) > 0 ? 1 : 3) : (KJ(k) < 0 ? 0 : 2)); }); // turrets face outward
   inner.slice(0, Math.round(nW*.6)).forEach(k => d.set(k,'gen'));
   inner.slice(Math.round(nW*.6), Math.round(nW*.6) + Math.round(nW*.3)).forEach(k => d.set(k,'battery'));
   // once unlocked, shields and point defense go on like a sensible player would fit them
@@ -36,24 +36,24 @@ function botShip(s){
   G.lv = {}; for (const t of [...guns, 'armor','hull','gen','shield','pd']) G.lv[t] = Math.min(MAXLV, 1 + Math.floor((s-1)/2));
 }
 function botFight(kind){
-  G.auto = [true,true,true,true,true]; G.aimAuto = true; G.mouse.has = false; // mouse-less: WASD move in screen directions
+  G.auto = [true,true,true,true,true]; G.aimAuto = true; G.mouse.has = false; G.aimAt = null; // mouse-less: the ship turns to its target
   startFight(kind);
   const p = G.player, hp0 = [...p.blocks.values()].reduce((a,b) => a + b.max, 0); let ehp = 0;
   // kite: hold 60-85% of the weapons' average reach from the nearest hostile, circling sideways
   const rs = [...new Set(p.guns.filter(g => g.t!=='core').map(g => rangeOf(g.t)))], want = (rs.length ? rs.reduce((a,b) => a+b, 0)/rs.length : 300)*.85*G.SC + p.r*.5;
   const t = sim(kind==='fight' ? 150 : 300, () => !p.alive, () => {
-    for (const k of ['KeyW','KeyA','KeyS','KeyD']) keys[k] = false;
-    let e = G.ships.filter(x => x.team==='e' && x.alive).sort((a,b) => Math.hypot(a.x-p.x,a.y-p.y) - Math.hypot(b.x-p.x,b.y-p.y))[0];
-    if (!e) return;
+    let e = G.ships.filter(x => x.team==='e' && x.alive).sort((a,b) => a.p.distanceTo(p.p) - b.p.distanceTo(p.p))[0];
+    if (!e){ G.moveWish = null; return; }
     if (G.boss && G.boss.alive && G.boss.station) e = G.boss; // a starbase is the objective: go for it, not its escorts
     if (!ehp) ehp = G.ships.filter(x => x.team==='e').reduce((a,x) => a + [...x.blocks.values()].reduce((q,b) => q + b.max, 0), 0) | 0;
     // a starbase never moves, so close in on it
     const w = e.station ? 120*G.SC : want;
-    const dx = e.x-p.x, dy = e.y-p.y, dist = Math.hypot(dx,dy) - e.r, toward = dist > w ? 1 : dist < w*.7 ? -1 : 0;
-    const mx = dx/(dist||1)*toward - dy/(dist||1)*.6, my = dy/(dist||1)*toward + dx/(dist||1)*.6;
-    if (mx > .3) keys.KeyD = true; if (mx < -.3) keys.KeyA = true; if (my > .3) keys.KeyS = true; if (my < -.3) keys.KeyW = true;
+    // close in or back off along the line to the target, while sliding sideways around it
+    const to = e.p.clone().sub(p.p), dist = to.length() - e.r, toward = dist > w ? 1 : dist < w*.7 ? -1 : 0;
+    to.normalize(); const side = new THREE_Vector3(0,1,0).cross(to).normalize();
+    G.moveWish = to.multiplyScalar(toward).addScaledVector(side, .6);
   });
-  for (const k of ['KeyW','KeyA','KeyS','KeyD']) keys[k] = false;
+  G.moveWish = null;
   const left = p.alive ? [...p.blocks.values()].reduce((a,b) => a + b.hp, 0) : 0;
   return {won: G.mode==='clear', t, lost: 1 - left/hp0, ehp};
 }

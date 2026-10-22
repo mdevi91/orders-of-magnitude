@@ -50,7 +50,7 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const port = server.address().port;
 
 const runChrome = (url, profile) => new Promise(resolve => {
-  const c = spawn(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', `--user-data-dir=${profile}`,
+  const c = spawn(chrome, ['--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-first-run', `--user-data-dir=${profile}`,
     '--enable-logging=stderr', '--v=0', '--virtual-time-budget=600000', '--dump-dom', url]);
   let err = ''; c.stderr.on('data', d => err += d); c.stdout.on('data', () => {});
   const kill = setTimeout(() => c.kill(), 600000);

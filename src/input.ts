@@ -1,25 +1,19 @@
 import { audio, sfx } from './audio';
 import { PAL, T } from './catalog';
 import { cycleMirror, zoomBtn } from './controls';
-import { layoutBuild } from './draw';
-import { buildAction, cellAt, rotate } from './editor';
+import { buildAction, rotate } from './editor';
 import { togglePause } from './fights';
 import { clamp } from './grid';
 import { camZoom, setAuto, setBrush, toggleGroup } from './groups';
 import { mapNodeAt } from './mapdraw';
+import { buildPick } from './render3d';
 import { canJump, curNode, jumpTo, mapAction, toDrydock, toMap } from './starmap';
-import { G, buildR } from './state';
+import { G } from './state';
 import { select, syncMapPanel, syncUI, toast } from './ui';
 import { keys } from './update';
 import type { BlockType, Facing, Key } from './types';
 import { $, PX, W, cv } from './view';
 
-// Drydock zoom about a canvas point: the cell under (x,y) stays put.
-export function zoomAt(x: number, y: number, f: number){
-  const L = layoutBuild(), u = (x-L.cx)/L.cs, v = (y-L.cy)/L.cs;
-  G.bz = clamp(G.bz*f, .3, 8);
-  const M = layoutBuild(); G.bpx += x - (M.cx + u*M.cs); G.bpy += y - (M.cy + v*M.cs);
-}
 // Undo: one entry per press-drag-release in the drydock (design, facings and credits).
 interface Snap { d: [Key, BlockType][]; o: [Key, Facing][]; c: number; inv: typeof G.inv; br: Key[] }
 export const undoStack: Snap[] = [];
@@ -35,16 +29,21 @@ export function undo(){
   G.design = new Map(u.d); G.dirs = new Map(u.o); G.credits = u.c; G.inv = u.inv; G.broken = new Set(u.br); sfx('place'); syncUI();
 }
 export const ptrs = new Map<number, {x: number; y: number}>();
-export let pinch: {d: number; mx: number; my: number} | null = null, panning: {x: number; y: number; bpx: number; bpy: number} | null = null,
-  pending: {i: number; j: number} | null = null, undoMark: Snap | null = null;
+/** Drydock pointer state: an orbit drag (right or middle button, or two fingers), a pinch, and a tap waiting to see if it becomes a drag. */
+export let orbitDrag: {x: number; y: number; moved: boolean} | null = null, pinch: {d: number; mx: number; my: number} | null = null,
+  pending: boolean = false, undoMark: Snap | null = null;
+/** Turn the drydock view by a drag of dx, dy canvas pixels. */
+const orbitBy = (dx: number, dy: number) => { G.bYaw -= dx*.012; G.bPitch = clamp(G.bPitch + dy*.012, -1.45, 1.45); };
 export const endPtr = (e: PointerEvent) => {
   ptrs.delete(e.pointerId);
   if (e.pointerType!=='touch') G.fireHeld = false;
   if (G.joy && G.joy.id===e.pointerId) G.joy = null;
   if (G.aimJoy && G.aimJoy.id===e.pointerId) G.aimJoy = null;
   if (G.mode==='build'){
-    if (pending && !pinch && G.drag) buildAction(pending.i, pending.j, G.drag, true);
-    pending = null; panning = null;
+    // a right click that didn't turn into an orbit removes the block under the cursor
+    if (orbitDrag && !orbitDrag.moved && e.button===2){ undoMark = snap(); buildAction('sell', true); }
+    if (pending && !pinch && G.drag) buildAction(G.drag, true);
+    pending = false; orbitDrag = null;
     if (pinch && ptrs.size < 2) pinch = null;
     if (G.drag || undoMark) commitUndoMark();
   }
@@ -75,24 +74,25 @@ export function init(){
       setAuto(true, false);
     }
     if (G.mode==='build'){
-      if (e.button===1){ panning = {x, y, bpx:G.bpx, bpy:G.bpy}; e.preventDefault(); return; }
+      if (e.button===1 || e.button===2){ orbitDrag = {x, y, moved:false}; e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch {} return; }
       if (touch && ptrs.size===2){
-        // second finger: drop the pending tap and pinch/pan instead
-        pending = null; G.drag = null; dropUndoMark();
+        // second finger: drop the pending tap and orbit/pinch instead
+        pending = false; G.drag = null; dropUndoMark();
         const [p1,p2] = [...ptrs.values()]; pinch = {d:Math.hypot(p2.x-p1.x, p2.y-p1.y), mx:(p1.x+p2.x)/2, my:(p1.y+p2.y)/2};
         return;
       }
       if (ptrs.size > 1) return;
-      const c = cellAt(x,y);
-      G.dragR = buildR(); G.drag = (e.button===2 || G.sel==='sell') ? 'sell' : 'place';
-      G.lastCell = c.i+','+c.j; G.hover = c; undoMark = snap();
-      if (touch) pending = c; else buildAction(c.i,c.j,G.drag,true);
+      G.hover = buildPick(x, y);
+      G.drag = G.sel==='sell' ? 'sell' : 'place';
+      G.lastCell = G.hover ? `${G.hover.i},${G.hover.j},${G.hover.l}` : null; undoMark = snap();
+      if (touch) pending = true; else buildAction(G.drag, true);
     }
     try { cv.setPointerCapture(e.pointerId); } catch {}
   });
   cv.addEventListener('pointermove', e => {
     const x = e.clientX/PX, y = e.clientY/PX, touch = e.pointerType==='touch';
-    if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, {x, y});
+    const prev = ptrs.get(e.pointerId);
+    if (prev) ptrs.set(e.pointerId, {x, y});
     if (!touch) G.mouse = {x, y, has:true};
     if (G.mode==='combat'){
       if (G.joy && G.joy.id===e.pointerId){ G.joy.x = x; G.joy.y = y; }
@@ -106,25 +106,31 @@ export function init(){
       return;
     }
     if (G.mode!=='build') return;
-    if (panning){ G.bpx = panning.bpx + x - panning.x; G.bpy = panning.bpy + y - panning.y; return; }
+    if (orbitDrag){
+      if (Math.hypot(x-orbitDrag.x, y-orbitDrag.y) > 2) orbitDrag.moved = true;
+      if (orbitDrag.moved){ orbitBy(x-orbitDrag.x, y-orbitDrag.y); orbitDrag.x = x; orbitDrag.y = y; }
+      return;
+    }
     if (pinch && ptrs.size >= 2){
+      // two fingers: drag to orbit, spread to zoom
       const [p1,p2] = [...ptrs.values()], d = Math.hypot(p2.x-p1.x, p2.y-p1.y), mx = (p1.x+p2.x)/2, my = (p1.y+p2.y)/2;
-      G.bpx += mx - pinch.mx; G.bpy += my - pinch.my;
-      if (pinch.d > 4 && d > 4) zoomAt(mx, my, d/pinch.d);
+      orbitBy(mx - pinch.mx, my - pinch.my);
+      if (pinch.d > 4 && d > 4) zoomBtn(d/pinch.d);
       pinch = {d, mx, my}; return;
     }
-    const c = cellAt(x,y); G.hover = touch && !G.drag ? null : c;
-    const id = c.i+','+c.j;
-    if (G.drag && id !== G.lastCell){
-      if (pending){ buildAction(pending.i, pending.j, G.drag, false); pending = null; }
-      G.lastCell = id; buildAction(c.i,c.j,G.drag);
+    G.hover = touch && !G.drag ? null : buildPick(x, y);
+    const id = G.hover ? `${G.hover.i},${G.hover.j},${G.hover.l}` : null;
+    if (G.drag && id && id !== G.lastCell){
+      if (pending){ pending = false; }
+      // painting: each new cell under a held button gets the same action
+      G.lastCell = id; buildAction(G.drag);
     }
   });
-  cv.addEventListener('pointerup', endPtr);   cv.addEventListener('pointercancel', endPtr);
+  cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
   cv.addEventListener('wheel', e => {
     if (G.mode==='combat'){ e.preventDefault(); camZoom(Math.exp(e.deltaY*.0012)); return; }
     if (G.mode!=='build') return;
-    e.preventDefault(); zoomAt(e.clientX/PX, e.clientY/PX, Math.exp(-e.deltaY*.0015));
+    e.preventDefault(); zoomBtn(Math.exp(-e.deltaY*.0015));
   }, {passive:false});
   cv.addEventListener('pointerleave', e => { if (e.pointerType==='mouse' && !G.drag) G.hover = null; });
   addEventListener('keydown', e => {

@@ -3,11 +3,12 @@ const W = ['cannon','gatling','scatter','flak','ion','missile','mirv','torpedo',
 function armed(t){
   // the weapon straight ahead of the core (multi-cell parts trail back to it), two generators and a battery for energy
   const len = PARTS[t] ? PARTS[t].len : 1, d = new Map([[CORE,'core'],[K(-1,0),'gen'],[K(1,0),'gen'],[K(0,1),'battery']]);
-  for (const [i,j,ct] of cellsFor(0,-len,t,0)) d.set(K(i,j), ct);
+  for (const [i,j,l,ct] of cellsFor(0,-len,0,t,0)) d.set(K(i,j,l), ct);
   G.design = d; G.dirs = new Map([[K(0,-len),0]]); G.broken = new Set();
   startFight('fight'); G.waves = []; G.ships = [G.player];
   // manual fire, aimed dead ahead (auto-aim's deliberate wobble would make slow shots miss a small target)
-  G.auto = [false,false,false,false,false]; G.aimAuto = false; G.mouse.has = true; G.fireHeld = true; G.aimJoy = {x0:0, y0:0, x:0, y:-50};
+  G.auto = [false,false,false,false,false]; G.aimAuto = false; centreMouse(); G.fireHeld = true;
+  G.aimAt = G.player.p.clone().add(new THREE_Vector3(0,0,-1000));
   G.player.guns = G.player.guns.filter(g => g.t!=='core'); // the core's own gun would muddy the result
 }
 for (const t of W){
@@ -30,7 +31,7 @@ ok('homing shots never fade', fallOff({fall:false, life0:1, life:0}) === 1);
 for (const t of W){
   const R = rangeOf(t)*G.SC;
   fresh(); armed(t);
-  G.auto = [true,true,true,true,true]; G.fireHeld = false; G.aimJoy = null;
+  G.auto = [true,true,true,true,true]; G.fireHeld = false; G.aimAt = null; centreMouse();
   const e = dummy(t==='mine' ? 70 : R*.6 + 25);
   sim(8);
   ok(`${t} hits on auto fire`, hpLost(e) > 0, `damage ${Math.round(hpLost(e))}`);
