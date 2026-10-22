@@ -58,14 +58,14 @@ button,.pal,#panel,.card,#toast,.tag{border-radius:0}
 .bar{width:120px;height:10px;background:var(--ink);border:var(--px) solid var(--paper);position:relative}
 .bar i{position:absolute;inset:0 auto 0 0;background:var(--paper);width:100%}
 
-#panel{
+#panel,#mapPanel{
   position:fixed;z-index:6;top:calc(env(safe-area-inset-top,0px) + 56px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);
   right:max(16px,env(safe-area-inset-right,0px));width:292px;overflow-y:auto;
   background:var(--ink-2);border:var(--px) solid var(--line);box-shadow:4px 4px 0 #050a1a;
   padding:14px;display:flex;flex-direction:column;gap:12px;
 }
-#panel > *{flex-shrink:0}
-#panel h2{margin:0;font-family:var(--display);font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);text-shadow:2px 2px 0 #7a2a20}
+#panel > *,#mapPanel > *{flex-shrink:0}
+#panel h2,#mapPanel h2{margin:0;font-family:var(--display);font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);text-shadow:2px 2px 0 #7a2a20}
 .sub{margin:0;color:var(--muted);line-height:1.15}
 .sub b{color:var(--paper);font-weight:400}
 #palette{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -131,20 +131,44 @@ details li b{color:var(--paper);font-weight:400}
 
 #overlay{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:rgba(6,12,30,.62);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.card{max-width:460px;width:100%;background:var(--ink-2);border:var(--px) solid var(--line);box-shadow:6px 6px 0 #050a1a;padding:24px;display:flex;flex-direction:column;gap:14px}
+.card{max-width:460px;width:100%;max-height:calc(100vh - 32px);overflow-y:auto;background:var(--ink-2);border:var(--px) solid var(--line);box-shadow:6px 6px 0 #050a1a;padding:24px;display:flex;flex-direction:column;gap:14px}
 .card h1{margin:0;font-family:var(--display);font-size:20px;line-height:1.4;text-transform:uppercase;text-wrap:balance;color:var(--gold);text-shadow:3px 3px 0 #7a2a20}
-.card p{margin:0;line-height:1.2;color:var(--muted)}
-.card p b{color:var(--paper);font-weight:400}
+.card p,.card .ovt{margin:0;line-height:1.2;color:var(--muted)}
+.card p b,.card .ovt b{color:var(--paper);font-weight:400}
 .card .gold{color:var(--gold)}
 .ov-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
 .ov-actions button{font-family:var(--display);font-size:11px;line-height:1.4;text-transform:uppercase;padding:10px 14px;border:0;background:var(--gold);color:var(--ink);cursor:pointer;box-shadow:4px 4px 0 #7a2a20}
 .ov-actions button:active{transform:translate(4px,4px);box-shadow:none}
 .ov-actions button.ghost{background:transparent;color:var(--paper);border:var(--px) solid var(--paper);box-shadow:none}
+.card.wide{max-width:640px}
+/* shop and hangar rows: name, detail, price button */
+.rows{display:flex;flex-direction:column;gap:5px}
+.rows h3{margin:8px 0 0;font:11px/1.4 var(--display);color:var(--line);text-transform:uppercase}
+.row{display:flex;align-items:center;gap:8px;padding:3px 6px;background:var(--well);border:var(--px) solid;border-color:var(--lo) #4a505c #4a505c var(--lo)}
+.row span{flex:1;min-width:0;color:var(--paper)}
+.row small{display:block;color:var(--muted);font-size:16px}
+.row .rot{flex:none;color:var(--gold)}
+.row .rot:disabled{color:var(--muted)}
+#legend{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;color:var(--muted)}
+#legend b{display:inline-block;width:2.2ch;font-family:var(--display);font-size:10px;font-weight:400}
+.wide-btn{justify-content:center;color:var(--gold)}
+#bossWrap{position:fixed;z-index:5;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 60px);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;width:min(420px,calc(100% - 32px))}
+#bossName{font-family:var(--display);font-size:10px;color:var(--foe);text-transform:uppercase;letter-spacing:.08em;text-shadow:2px 2px 0 #000}
+#bossWrap .bar{width:100%;height:8px}
+#bossBar{background:linear-gradient(to bottom,#ff9a7a,#c8301a)!important}
+.grow{display:flex;align-items:center;gap:4px;margin-top:4px}
+.grow span{flex:1;min-width:0;color:var(--paper)}
+.gb{font:inherit;font-size:16px;min-width:26px;padding:1px 6px;background:var(--well);color:var(--muted);border:var(--px) solid var(--lo);cursor:pointer}
+.gb[aria-pressed="true"]{color:var(--ink);background:var(--gold);border-color:var(--gold)}
+#groups{position:fixed;z-index:5;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:calc(100% - 32px)}
+#groups .grpc{text-align:left}
+#groups .grpc[aria-pressed="false"]{color:var(--paper);background:rgba(20,24,30,.85)}
+#groups kbd{font-size:12px}
 #toast{position:fixed;z-index:9;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translateX(-50%);
   background:var(--ink);border:var(--px) solid var(--foe);color:var(--paper);padding:4px 12px;font-size:18px;pointer-events:none;max-width:calc(100% - 32px)}
 
 /* bevels */
-#panel,.card{background:linear-gradient(to bottom,#3a404b,#262a32);border:var(--px) solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);box-shadow:inset 0 0 0 1px #4a505c,4px 4px 0 #000}
+#panel,#mapPanel,.card{background:linear-gradient(to bottom,#3a404b,#262a32);border:var(--px) solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);box-shadow:inset 0 0 0 1px #4a505c,4px 4px 0 #000}
 .pal,.rot,.tag,kbd,.bar{background:var(--well);border-style:solid;border-color:var(--lo) #4a505c #4a505c var(--lo)}
 .pal[aria-pressed="true"]{background:#1e2a3a;border-color:var(--gold)}
 #hud{background:linear-gradient(to bottom,rgba(46,51,61,.96),rgba(30,34,41,.9));border-bottom:var(--px) solid var(--lo);box-shadow:inset 0 -1px 0 #4a505c;padding-bottom:8px}
@@ -174,6 +198,8 @@ details li b{color:var(--paper);font-weight:400}
 #saveBox p{margin:6px 0 0;color:var(--muted)}
 @media (max-width:760px){
   #panel{top:auto;left:max(16px,env(safe-area-inset-left,0px));width:auto;max-height:46vh;gap:10px;padding:10px}
+  #mapPanel{top:auto;left:max(16px,env(safe-area-inset-left,0px));width:auto;max-height:34vh;gap:8px;padding:10px}
+  #legend{display:none}
   #palette{grid-template-columns:repeat(4,minmax(0,1fr))}
   .pal{flex-direction:column;gap:2px;padding:4px;text-align:center}
   .pal kbd{display:none}
@@ -196,7 +222,7 @@ details li b{color:var(--paper);font-weight:400}
 <header id="hud">
   <div class="hud-l">
     <span class="brand">Orders of Magnitude</span>
-    <span id="hudStage" class="tag">Stage 1</span>
+    <span id="hudStage" class="tag">Sector 1</span>
     <span id="hudScale" class="tag">Scale ×1.00</span>
     <span id="hudWave" class="tag" hidden>Wave 1/2</span>
   </div>
@@ -205,6 +231,8 @@ details li b{color:var(--paper);font-weight:400}
     <span class="lbl">Credits</span><b id="hudCredits">0</b>
     <button id="muteBtn" class="tag hudbtn" type="button" aria-label="Sound">♪ on</button>
     <button id="aimBtn" class="tag hudbtn" type="button" aria-label="Auto-aim" aria-pressed="false" hidden>Auto off</button>
+    <button id="zoomOut" class="tag hudbtn" type="button" aria-label="Zoom out" hidden>−</button>
+    <button id="zoomIn" class="tag hudbtn" type="button" aria-label="Zoom in" hidden>+</button>
     <button id="pauseBtn" class="tag hudbtn" type="button" aria-label="Pause" hidden>II</button>
   </div>
 </header>
@@ -214,7 +242,7 @@ details li b{color:var(--paper);font-weight:400}
   <p class="sub" id="gridInfo"></p>
   <div id="palette"></div>
   <p id="selDesc"></p>
-  <button id="upg" class="rot upg" type="button"></button>
+  <button id="repair" class="rot upg" type="button"></button>
   <div class="tools">
     <button id="rot" class="rot" type="button">⟳ Rotate <span id="rotArrow">↑</span> <span id="rotName">fore</span> <kbd>R</kbd></button>
     <button id="mirror" class="rot" type="button">Mirror <span id="mirName">⇆ L/R</span> <kbd>M</kbd></button>
@@ -230,11 +258,14 @@ details li b{color:var(--paper);font-weight:400}
     <input id="saveFile" type="file" accept=".json,application/json" hidden>
   </details>
   <details id="bpBox"><summary>Blueprints</summary><div id="bps"></div></details>
-  <button id="launch" type="button">Launch stage 1</button>
+  <details id="grpBox"><summary>Weapon groups</summary><div id="grps"></div></details>
+  <button id="launch" type="button">Star map</button>
   <details id="help" open>
     <summary>Controls</summary>
     <ul>
-      <li><b>Build:</b> click or drag to place. Right-click or the Sell tool removes a block for a full refund. Blocks must touch your ship. New blocks unlock as you clear stages.</li>
+      <li><b>Run:</b> jump across each sector's star map to the gate. Fights, wrecks and signals give credits and blocks; shops buy, sell, upgrade and repair. Raiders and signals can also turn up mid-jump. Every third sector ends in a flagship or starbase. Lose the core and the run is over.</li>
+      <li><b>Build:</b> click or drag to place blocks from your cargo. Right-click or the Remove tool puts a block back in cargo. Hull and armor plating can be bought here at any time. Blocks must touch your ship.</li>
+      <li><b>Damage:</b> blocks destroyed in a fight stay damaged (dark, cracked) and don't fly until repaired. Removing a damaged block scraps it.</li>
       <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button turns the next turret or engine in 45° steps, and lasers, railguns and hangar bays in 90° steps. Tap a placed block of the selected type to turn it in place. Turrets cover an arc around their facing. Lasers and railguns fire along it and can swing up to 5° either side to aim.</li>
       <li><b>Engines</b> push away from their exhaust, which must be open. Most of your speed comes from the direction your engines face. Off-centre engines also help the ship turn.</li>
       <li><b>Line of fire:</b> guns can't shoot through your own hull, so put them where they can see out. A red ✕ marks a block that can't fire or thrust; a gold mark means a turret is mostly boxed in.</li>
@@ -245,15 +276,27 @@ details li b{color:var(--paper);font-weight:400}
       <li><b>Touch:</b> left half of the screen is a move stick, right half aims. Without the aim stick the ship aims at the nearest enemy.</li>
       <li><b>Drydock view:</b> mouse wheel, pinch, or the − + buttons zoom; middle-drag or two fingers pan; Fit resets. <kbd>Ctrl</kbd>+<kbd>Z</kbd> or Undo takes back a change. Blueprints keep up to three designs.</li>
       <li><b>Hangar bays</b> launch a fighter (1×4 bay) or bomber (2×6 bay) out of their front end. The craft fights on its own, flies home every 30 s to rearm and repair, then launches again. If it is shot down the bay builds a new one, which takes longer.</li>
-      <li><b>Missiles</b> blow up in a wide blast. <b>MIRVs</b> split into five homing warheads near their target.</li>
+      <li><b>Missiles</b> blow up in a wide blast. <b>MIRVs</b> (2×2 launchers) split into three homing warheads near their target.</li>
       <li><b>Flak</b> shells burst near enemy ships: area damage, and the blast clears enemy bullets.</li>
-      <li><b>Enemies</b> grow shields (orange bubbles; railguns and lasers go straight through), generators that explode when hit and make them fire faster, and carrier bays that launch fighters.</li>
-      <li><b>Damage</b> knocks blocks off. Anything cut off from the core drifts away. Lose the core and the stage is lost. Drydock repairs everything for free.</li>
+      <li><b>Enemies</b> grow point defense that shoots down missiles, shields (orange bubbles; railguns and lasers go straight through), generators that explode when hit and make them fire faster, and carrier bays that launch fighters and bombers. Some sectors end in a starbase instead of a flagship.</li>
+      <li><b>Damage</b> knocks blocks off. Anything cut off from the core drifts away for the rest of the fight but comes back afterwards.</li>
+      <li><b>Weapon groups:</b> each weapon type sits in one of five groups (set them under Weapon groups). In a fight, <kbd>1</kbd>-<kbd>5</kbd> or the buttons bottom left put a group on auto: it fires on its own at the nearest hostile while the rest fire with you.</li>
+      <li><b>Camera:</b> mouse wheel, <kbd>+</kbd>/<kbd>−</kbd> or the HUD buttons zoom the fight view in and out.</li>
       <li><kbd>P</kbd> pauses.</li>
     </ul>
   </details>
-  <button id="reset" type="button">Reset progress</button>
+  <button id="reset" type="button">Abandon run</button>
 </aside>
+
+<aside id="mapPanel" aria-label="Star map" hidden>
+  <h2 id="mapTitle">Sector 1</h2>
+  <p class="sub" id="mapInfo"></p>
+  <button id="mapGo" class="rot wide-btn" type="button" hidden></button>
+  <button id="toDock" class="rot wide-btn" type="button">Open drydock <kbd>D</kbd></button>
+  <ul id="legend"></ul>
+  <button id="mapAbandon" type="button" style="background:none;border:0;padding:0;color:var(--muted);font:inherit;font-size:16px;text-decoration:underline;cursor:pointer;align-self:flex-start">Abandon run</button>
+</aside>
+<div id="bossWrap" hidden><span id="bossName">Flagship</span><div class="bar"><i id="bossBar"></i></div></div>
 
 <div id="splash" role="img" aria-label="Devigili Studios">
   <div class="logo">
@@ -269,8 +312,9 @@ details li b{color:var(--paper);font-weight:400}
     <p class="pres">presents</p>
   </div>
 </div>
-<div id="overlay" hidden><div class="card" role="dialog" aria-live="polite"><h1 id="ovTitle"></h1><p id="ovText"></p><div class="ov-actions" id="ovActions"></div></div></div>
+<div id="overlay" hidden><div class="card" role="dialog" aria-live="polite"><h1 id="ovTitle"></h1><div id="ovText" class="ovt"></div><div class="ov-actions" id="ovActions"></div></div></div>
 <div id="toast" hidden></div>
+<div id="groups" hidden></div>
 
 <script>
 (() => {
@@ -322,10 +366,15 @@ const T = {
   hull:   {name:'Hull', key:'1', unlock:1, cost:4, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
   armor:  {name:'Armor', key:'2', unlock:1, cost:10, hp:70, mass:3, desc:'Three times the toughness of hull. Heavy.'},
   cannon: {name:'Cannon', key:'3', unlock:1, cost:33, hp:20, mass:1.5, rot:true, gun:{cd:.5, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 18 damage per second. Covers 50° either side of its facing.'},
-  gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{cd:.09, en:.5, spd:760, dmg:2.2, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
+  gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{cd:.15, en:.8, spd:760, dmg:3.6, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
   missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{cd:2.9, en:8, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
-  mirv:   {name:'MIRV', key:'v', unlock:8, cost:130, hp:18, mass:2.5, gun:{cd:4.5, en:16, spd:190, dmg:11, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:5}, desc:'Heavy carrier missile that splits into 5 homing warheads near its target, each with its own blast. Launches in any direction and flies over your own hull.'},
+  mirv:   {name:'MIRV', key:'v', unlock:8, cost:180, hp:18, mass:2.5, gun:{cd:7, en:22, spd:190, dmg:7, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:3}, desc:'2×2 launcher. A slow carrier missile that splits into 3 homing warheads near its target, each with its own blast. Enemy point defense can shoot them down.'},
   flak:   {name:'Flak', key:'f', unlock:4, cost:45, hp:18, mass:1.5, rot:true, gun:{cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', life:1.4, fuse:22, blast:26}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
+  scatter:{name:'Scatter gun', key:'c', unlock:2, cost:40, hp:18, mass:1.5, rot:true, gun:{cd:1.1, en:4, spd:520, dmg:3.2, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32, life:.6}, desc:'Turret. Blasts 7 pellets in a wide cone: about 20 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
+  ion:    {name:'Ion cannon', key:'i', unlock:5, cost:85, hp:18, mass:1.5, rot:true, gun:{cd:1.4, en:9, spd:420, dmg:6, spread:.03, r:2.6, arc:.8, fx:'ion', ion:true}, desc:'Turret. Ion bolts do 5× damage to shield bubbles and jam the ship they hit: its guns stop for 1.5 s (a moment for capital ships). Weak against hull. Covers 46° either side of its facing.'},
+  tesla:  {name:'Tesla coil', key:'z', unlock:6, cost:120, hp:22, mass:2, tesla:{cd:.9, range:110, dmg:14, jumps:3, en:6}, desc:'Arcs lightning to the nearest enemy block within 11 m, then jumps to 2 more blocks close by. Reaches in every direction, through your own hull, and zaps enemy fighters and missiles too.'},
+  torpedo:{name:'Torpedo', key:'o', unlock:7, cost:140, hp:22, mass:2.5, rot:true, gun:{cd:5, en:18, spd:150, dmg:70, spread:.01, r:3.4, arc:.35, fx:'torp', life:7}, desc:'Slow, unguided heavy torpedo fired along its facing (20° either side to aim): 70 damage and a wide blast. Point defense cannot stop it.'},
+  mine:   {name:'Mine layer', key:'n', unlock:4, cost:60, hp:18, mass:1.5, gun:{cd:2.4, en:5, spd:70, dmg:20, spread:.5, r:2.4, arc:Math.PI, fx:'mine', life:20, fuse:24, blast:34, lob:true}, desc:'Drops proximity mines that drift to a stop and wait up to 20 s, bursting when an enemy comes near. Launched over your own hull in any direction.'},
   laser:  {name:'Laser', key:'6', unlock:6, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:70, range:150, en:10}, desc:'2 blocks long. Continuous beam along its facing, swinging 5° to aim. Short range, and hits hardest up close.'},
   rail:   {name:'Railgun', key:'7', unlock:7, cost:150, hp:28, mass:2, rot:true, rail:{cd:2.6, pool:130, en:25}, desc:'3 blocks long. Fires along its facing and pierces block after block. Swings 5° to aim; line up the ship to shoot.'},
   engine: {name:'Engine', key:'8', unlock:1, cost:16, hp:14, mass:1, rot:true, thrust:6, desc:'Pushes toward its facing. Exhaust needs an open cell behind it.'},
@@ -336,33 +385,34 @@ const T = {
   battery:{name:'Battery', key:'b', unlock:1, cost:15, hp:12, mass:1.5, en:{cap:60}, desc:'Stores 60 energy for bursts of fire. Safe deep inside the hull.'},
   fbay:   {name:'Fighter bay', key:'h', unlock:9, cost:95, hp:20, mass:1.5, rot:true, desc:'1×4 hangar. Launches a fighter out of its front end that dogfights nearby enemies. Every 30 s it docks to rearm and repair, then flies out again. A lost fighter takes 15 s to replace.'},
   bbay:   {name:'Bomber bay', key:'j', unlock:10, cost:240, hp:24, mass:2, rot:true, desc:'2×6 hangar. Launches a slow, tough bomber that passes over enemy hulls dropping heavy area bombs. Every 30 s it docks to rearm and repair, then flies out again. A lost bomber takes 25 s to replace.'},
-  sell:   {name:'Sell', key:'x', cost:0, desc:'Remove a block for a full refund. Right-click does the same.'},
+  sell:   {name:'Remove', key:'x', cost:0, desc:'Take a block off the ship and back into cargo (plating is refunded). Damaged blocks are scrapped. Right-click does the same.'},
   rail_b: {name:'Railgun', cost:0, hp:28, mass:2, rot:true},
   laser_b:{name:'Laser', cost:0, hp:24, mass:1.5, rot:true},
   fbay_b: {name:'Fighter bay', cost:0, hp:20, mass:1.5, rot:true},
   bbay_b: {name:'Bomber bay', cost:0, hp:24, mass:2, rot:true},
+  mirv_b: {name:'MIRV', cost:0, hp:18, mass:2.5},
 };
 // multi-cell parts: len cells trailing behind the head along its facing, w columns wide extending to the head's starboard
-const PARTS = {rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}};
-const HEAD_OF = {rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay'};
+const PARTS = {rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}};
+const HEAD_OF = {rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv'};
 const isPart = t => !!(t && (PARTS[t] || HEAD_OF[t]));
 const BEAM = t => t==='rail' || t==='laser';
 // Hangar craft flown out of the bays. hp scales the craft's blocks; it circles its target at target radius*over + orbit.
 const CRAFT = {
-  fbay:{design:[[0,0,'core'],[0,-1,'gatling'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']], hp:.5, spd:320, agi:3, turn:6, orbit:60, over:1, orbSpd:1.1, range:220, sortie:30, rearm:3, rebuild:15, sfx:'gatling',
-    gun:{cd:.2, spd:720, dmg:3, spread:.05, r:1.6, fx:'line'}},
-  bbay:{design:[[0,0,'core'],[0,-1,'armor'],[-1,0,'armor'],[1,0,'armor'],[-2,0,'hull'],[2,0,'hull'],[-1,1,'engine'],[1,1,'engine'],[0,1,'hull']], hp:.8, spd:170, agi:1.4, turn:2.2, orbit:10, over:.5, orbSpd:.5, range:60, sortie:30, rearm:3, rebuild:25, sfx:'cannon',
+  fbay:{design:[[0,0,'core'],[0,-1,'gatling'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']], hp:.28, spd:320, agi:3, turn:6, orbit:60, over:1, orbSpd:1.1, range:220, sortie:30, rearm:3, rebuild:15, sfx:'gatling',
+    gun:{cd:.35, spd:720, dmg:5.2, spread:.05, r:1.6, fx:'line'}},
+  bbay:{design:[[0,0,'core'],[0,-1,'armor'],[-1,0,'armor'],[1,0,'armor'],[-2,0,'hull'],[2,0,'hull'],[-1,1,'engine'],[1,1,'engine'],[0,1,'hull']], hp:.45, spd:170, agi:1.4, turn:2.2, orbit:10, over:.5, orbSpd:.5, range:60, sortie:30, rearm:3, rebuild:25, sfx:'cannon',
     gun:{cd:1.6, spd:200, dmg:30, spread:.05, r:3, fx:'flak', life:2, fuse:6, blast:32}},
 };
-const ET = {core:{hp:45}, hull:{hp:18}, armor:{hp:55}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}};
+const ET = {core:{hp:45}, engine:{hp:12}, hull:{hp:18}, armor:{hp:55}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}, pd:{hp:12}};
 // Enemy turrets: the player's weapons, slowed down to enemy scale. They unlock on the same stages as the player's.
 // cd is per gun; gatlings fire bursts of `burst` shots `gap` apart; rails show a sight line for the last `aim` seconds.
 const EW = {
-  cannon: {unlock:1, w:3, cd:2.8, spd:200, dmg:9, r:1.3, kind:'eoval', spread:.04},
-  gatling:{unlock:2, w:3, cd:2.4, burst:5, gap:.1, spd:280, dmg:2.6, r:.7, kind:'egat', spread:.07},
-  missile:{unlock:3, w:1.5, cd:6.5, spd:120, dmg:14, r:1.1, kind:'emiss', spread:.5},
-  flak:   {unlock:4, w:2, cd:3.4, spd:170, dmg:6, r:.9, kind:'eflak', spread:.1, fuse:16, blast:24, life:4},
-  rail:   {unlock:7, w:1, cd:5.5, spd:320, dmg:26, r:1.4, kind:'snipe', aim:.9},
+  cannon: {unlock:1, w:3, cd:3.8, spd:200, dmg:14, r:1.5, kind:'eoval', spread:.04},
+  gatling:{unlock:2, w:3, cd:3.2, burst:3, gap:.12, spd:280, dmg:5, r:.8, kind:'egat', spread:.07},
+  missile:{unlock:3, w:1.5, cd:8, spd:120, dmg:22, r:1.2, kind:'emiss', spread:.5},
+  flak:   {unlock:4, w:2, cd:4.4, spd:170, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4},
+  rail:   {unlock:7, w:1, cd:6.5, spd:320, dmg:36, r:1.5, kind:'snipe', aim:.9},
 };
 function pickWeapon(stage){
   const ks = Object.keys(EW).filter(k => EW[k].unlock <= stage);
@@ -371,27 +421,41 @@ function pickWeapon(stage){
   return ks[0];
 }
 const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-const PAL = ['hull','armor','cannon','gatling','missile','mirv','flak','laser','rail','fbay','bbay','engine','gyro','shield','pd','gen','battery','sell'];
+const PAL = ['hull','armor','cannon','gatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','gen','battery','sell'];
 const COL = {
-  p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', gatling:'#a8ecff', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', gyro:'#8ff0c8',
+  p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', gatling:'#a8ecff', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
-     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050'},
-  e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630'},
+     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', tesla:'#c8b0ff', torpedo:'#ffe08a', mine:'#ffb27a'},
+  e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
 };
 COL.a = COL.p; // hangar craft
-const BCOL = {shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
-const locked = t => (T[t].unlock || 1) > G.stage;
-// block levels: bought per type in drydock, each level +35% to the block's main stat
-const MAXLV = 3;
+const BCOL = {pellet:'#fff0a0', ion:'#5fe0ff', torp:'#ffd04a', mine:'#ff7a3a', shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
+// Hull and armor are plating: bought with credits in drydock. Every other block comes out of cargo.
+const PLATE = t => t==='hull' || t==='armor';
+const onShip = t => { for (const v of G.design.values()) if (v===t) return true; return false; };
+const owned = t => t==='sell' || PLATE(t) || (G.inv[t]||0) > 0 || onShip(t);
+// sectors map onto the old stage tiers: which blocks drop and which weapons enemies carry
+const tierOf = s => Math.floor(s*1.5 + 1);
+// block levels: bought per type at shops, each level +35% to the block's main stat
+const MAXLV = 5;
+// Weapon groups, Starsector style: every weapon type belongs to one of five groups; a group on auto fires on its own at the nearest hostile.
+const WGRP = {cannon:1, gatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4};
+const isWeapon = t => !!WGRP[t];
+const grpOf = t => G.grp[t] || WGRP[t] || 1;
+const autoOf = t => !!G.auto[grpOf(t)-1];
 const lvOf = t => G.lv[t.replace('_b','')] || 1;
 const LV = t => 1 + .35*(lvOf(t)-1);
-const upCost = t => T[t].cost*5*lvOf(t);
+const priceMul = () => (1 + .08*(G.stage-1))*(1 - .08*metaLv('trade'));
+const upCost = t => Math.round(Math.max(30, T[t].cost*3)*lvOf(t)*priceMul());
+// fixing one destroyed cell; multi-cell parts spread their price over their cells
+const repCost = t => { const h = HEAD_OF[t] || t; return Math.max(1, Math.ceil(T[h].cost*.3/(PARTS[h] ? PARTS[h].len*(PARTS[h].w||1) : 1))); };
 // shield bubble radius: covers blocks up to 1 + level cells away (2 at Lv1, 4 at Lv3)
-const shRad = () => (1 + lvOf('shield') + .5)*BS;
+const shRad = () => (1 + Math.min(4, lvOf('shield')) + .5)*BS;
 
 // ---------- state ----------
 const G = {
-  mode:'build', bz:1, bpx:0, bpy:0, mir:1, stage:1, credits:140, design:new Map(), dirs:new Map(), lv:{}, sel:'hull', rot:0, mirror:true,
+  mode:'title', bz:1, bpx:0, bpy:0, mir:1, stage:1, credits:0, design:new Map(), dirs:new Map(), lv:{}, sel:'hull', rot:0, mirror:true,
+  inv:{}, dmg:{}, grp:{}, auto:[false,false,false,true,false], camMul:1, broken:new Set(), lost:new Set(), map:null, node:null, stats:null, fresh:new Set(), mapHover:null, meta:{data:0, lv:{}},
   ships:[], player:null, pb:[], eb:[], fx:[], beams:[],
   waves:[], waveIdx:0, waveGap:0, time:0, S:1, SC:1, AW:0, AH:0, camX:0, camY:0, zoom:1, span:0, spanT:0, span0:0, spanAt:0, swarmT:0,
   paused:false, aimAuto:false, fireHeld:false, mouse:{x:0,y:0,has:false}, tdx:0, tdy:0, touchId:null,
@@ -406,8 +470,11 @@ const buildR = () => {
   return Math.max(3, m + 2);
 };
 const scaleOf = s => Math.pow(1.22, s-1);
+// Block limit: grows every sector and with the hangar's frame upgrade. A multi-cell part counts as one block.
+const blockLimit = () => 30 + 15*G.stage + 15*metaLv('frame');
+const blockCount = () => { let n = 0; for (const t of G.design.values()) if (!HEAD_OF[t]) n++; return n; };
 // World units across the short side of the screen: the camera backs off as the player's hull grows.
-const spanFor = (r,S) => Math.max(300 + 8*r, 300*Math.pow(S,.6));
+const spanFor = (r,S) => Math.max(360 + 9.5*r, 360*Math.pow(S,.6));
 const speedOf = (thrust,mass) => 60 + 260*Math.min(1.3, Math.sqrt(thrust/Math.max(1,mass)));
 const turnOf = (torque,inertia,mass) => Math.min(3.5, 2.2*Math.sqrt(torque/Math.max(1,inertia))/Math.sqrt(1 + mass/60));
 
@@ -446,14 +513,14 @@ function laneFwd(typeAt, i, j, o){
 function makeShip(design, team, x, y, hpMul=1, dirs=null){
   const s = {team, x, y, vx:0, vy:0, a:0, c:1, sn:0, blocks:new Map(), alive:true, hpMul};
   for (const [k,t] of design){
-    const hp = (team==='e' ? ET[t].hp : T[t].hp*LV(t)) * hpMul;
+    const hp = (team==='e' ? ET[t].hp : T[t].hp*LV(t)*(team==='p' && t==='core' ? 1 + .25*metaLv('core') : 1)) * hpMul;
     const b = {t, i:KI(k), j:KJ(k), o:dirs ? dirs.get(k)||0 : 0, hp, max:hp, cd:Math.random()*.4, hit:-1};
     s.blocks.set(k, b);
   }
   recalc(s); return s;
 }
 function recalc(s){
-  let r = 0; s.guns = []; s.pds = []; s.rails = []; s.lasers = []; s.shields = []; s.bays = [];
+  let r = 0; s.guns = []; s.pds = []; s.rails = []; s.lasers = []; s.shields = []; s.bays = []; s.epd = []; s.teslas = [];
   for (const b of s.blocks.values()) r = Math.max(r, Math.hypot(b.i,b.j)*BS + BS*.75);
   s.r = r;
   if (s.team==='a') return; // hangar craft fly and shoot from updateCraft
@@ -461,20 +528,22 @@ function recalc(s){
     // enemies: guns, shield bubbles, carrier bays; each generator speeds up their fire
     let gens = 0;
     for (const b of s.blocks.values()){
-      if (EW[b.t]) s.guns.push(b); else if (b.t==='bay') s.bays.push(b); else if (b.t==='gen') gens++;
+      if (EW[b.t]) s.guns.push(b); else if (b.t==='bay') s.bays.push(b); else if (b.t==='gen') gens++; else if (b.t==='pd') s.epd.push(b);
       else if (b.t==='shield'){ s.shields.push(b); if (!b.bub){ const max = ESH.hp*s.hpMul; b.bub = {hp:max, max, down:0, last:-9, flash:-9}; } }
     }
-    s.fireMul = 1 + .3*gens; return;
+    s.fireMul = 1 + .3*Math.min(gens, 3); return;
   }
   const typeAt = k => s.blocks.get(k)?.t;
   s.ph = physics(s.blocks.values(), typeAt);
   for (const b of s.blocks.values()){
     const d = T[b.t];
-    if (d.gun) s.guns.push(b);
+    // a MIRV fires only while its whole launcher is intact
+    if (d.gun && !(PARTS[b.t] && !partComplete(typeAt, b.i, b.j, b.t, b.o))) s.guns.push(b);
     if (d.pd) s.pds.push(b);
+    if (d.tesla) s.teslas.push(b);
     if (b.t==='shield') s.shields.push(b);
-    if (PARTS[b.t] && partComplete(typeAt, b.i, b.j, b.t, b.o)){
-      if (!BEAM(b.t)){ s.bays.push(b); if (b.bt == null) b.bt = 1.5; continue; }
+    if (PARTS[b.t] && !d.gun && partComplete(typeAt, b.i, b.j, b.t, b.o)){
+      if (CRAFT[b.t]){ s.bays.push(b); if (b.bt == null) b.bt = 1.5; continue; }
       b.lane = laneFwd(typeAt, b.i, b.j, b.o);
       (b.t==='rail' ? s.rails : s.lasers).push(b);
     }
@@ -486,7 +555,7 @@ function recalc(s){
   // each shield block keeps its own bubble state
   for (const b of s.shields) if (!b.bub){ const max = T.shield.sh.hp*LV('shield'); b.bub = {hp:max, max, down:0, last:-9, flash:-9}; }
 }
-function genDesign(n, boss, stage){
+function genDesign(n, boss, stage, maxGuns=99){
   const d = new Map([[CORE,'core']]), keys = [CORE];
   const pa = Math.min(.3, .08 + .025*stage), pg = boss ? .12 : .15;
   let tries = 0;
@@ -512,9 +581,18 @@ function genDesign(n, boss, stage){
         if (d.get(mk)==='hull' || d.get(mk)==='armor') d.set(mk,t);
       }
     };
-    if (stage >= 3 && (boss || Math.random() < .6)) conv('shield', Math.floor(d.size/30) + (boss ? 1 : 0) || 1, false);
-    if (stage >= 4) conv('gen', Math.floor(d.size/35) + (boss ? 1 : 0), true);
+    // capped, so a huge hull is not a wall of shields or a gun-speeding reactor farm
+    if (stage >= 3 && (boss || Math.random() < .6)) conv('shield', Math.min(4, Math.floor(d.size/30) + (boss ? 1 : 0)) || 1, false);
+    if (stage >= 4) conv('gen', Math.min(3, Math.floor(d.size/35) + (boss ? 1 : 0)), true);
     if ((boss && stage >= 5) || (d.size >= 40 && stage >= 6 && Math.random() < .25)) conv('bay', boss ? 2 : 1, false);
+    if (stage >= 5) conv('pd', Math.min(5, Math.floor(d.size/45) + (boss ? 1 : 0)), false);
+  }
+  // a few heavy guns read better than a wall of small ones: extra weapons become armor, mirror twins together
+  let guns = [...d.keys()].filter(k => EW[d.get(k)]);
+  while (guns.length > Math.max(1, maxGuns)){
+    const k = guns[(Math.random()*guns.length)|0], mk = K(-KI(k), KJ(k));
+    d.set(k,'armor'); if (EW[d.get(mk)] && guns.length > maxGuns + 1) d.set(mk,'armor');
+    guns = guns.filter(g => EW[d.get(g)]);
   }
   return d;
 }
@@ -566,6 +644,7 @@ function damage(s,k,dmg){
 }
 function destroyBlock(s,k,b){
   s.blocks.delete(k); debris(s,b,true);
+  if (s.team==='p') G.lost.add(k);
   if (b.t==='core'){ killShip(s); return; }
   // an enemy generator goes up and takes its neighbours with it
   if (s.team==='e' && b.t==='gen'){
@@ -585,7 +664,7 @@ function killShip(s){
   G.fx.push({k:'ring', x:s.x, y:s.y, r:s.r*1.8 + 20*G.SC, life:.7, max:.7, col:s.team==='p' ? '#ffffff' : '#ff9a7a'});
   if (s.team==='e'){
     sfx(s.boss ? 'big' : 'boom', Math.min(1.5, .4 + s.r/60));
-    G.credits += s.value; G.earned += s.value;
+    G.credits += s.value; G.earned += s.value; G.stats.kills++;
     G.fx.push({k:'txt', x:s.x, y:s.y, vy:-30*G.SC, text:'+'+s.value, life:1.4, max:1.4});
   } else if (s.team==='p'){ G.deadT = 1.6; sfx('die'); }
   else sfx('boom', .6);
@@ -655,14 +734,14 @@ function mirvSplit(b, enemies){
 }
 function pBullet(x,y,ang,gun,target,mul=1){
   const sp = gun.spd*G.SC;
-  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC, life:gun.homing ? 6 : gun.life || 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0, kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot'});
+  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC, life:gun.homing ? 6 : gun.life || 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0, kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot'});
 }
 // every enemy shot flies this much faster than its base speed
 const EB_SPD = 1.2;
 function eBullet(x,y,ang,mul,kind,dmg=10,rMul=1){
   sfx('eshot');
-  if (G.eb.length > 1600) return null;
-  const sp = 110*EB_SPD*G.SC*mul, b = {x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:3.4*G.SC*rMul, dmg, life:8, kind};
+  if (G.eb.length > 300) return null;
+  const sp = 110*EB_SPD*G.SC*mul, b = {x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:3.4*G.SC*rMul, dmg, life:5.5, kind};
   G.eb.push(b); return b;
 }
 // Where to shoot so a bullet of speed sp meets the player, assuming the player keeps its velocity.
@@ -677,7 +756,7 @@ function shieldBlock(p,b){
     const B = s.bub; if (B.down > 0 || B.hp <= 0) continue;
     const [cx,cy] = wpos(p,s), dx = b.x-cx, dy = b.y-cy;
     if (dx*dx + dy*dy > (rad + b.r)**2 || dx*b.vx + dy*b.vy > 0) continue;
-    B.hp -= b.dmg; B.last = B.flash = G.time; sfx('shield', p.team==='p' ? 1 : .5);
+    B.hp -= b.dmg*(b.ion ? 5 : 1); B.last = B.flash = G.time; sfx('shield', p.team==='p' ? 1 : .5);
     sparks(b.x, b.y, Math.atan2(dy,dx), 4, 120*G.SC, ['#5fd3ff','#ffffff']);
     if (B.hp <= 0){ sfx('pop'); B.hp = 0; B.down = SH.down; G.fx.push({k:'ring', x:cx, y:cy, r:rad*1.1, life:.5, max:.5, col:p.team==='p' ? '#5fd3ff' : '#ff9a5a'}); }
     return true;
@@ -685,25 +764,73 @@ function shieldBlock(p,b){
   return false;
 }
 
-// ---------- stage flow ----------
+// ---------- fights ----------
 const bossSize = s => Math.round(24*Math.pow(s,1.45));
-const fodderCap = () => Math.round(1.2*Math.min(8, 2 + G.stage));
-function planStage(s){
-  const nW = 2 + Math.floor(s/3), waves = [];
-  for (let w=0; w<nW; w++){
-    const last = w === nW-1;
-    // few ships, but big ones
-    const base = last ? Math.min(2, Math.floor(s/4)) : Math.min(3, 1 + Math.floor((s + w)/4));
-    // 20% more ships on average: the fraction becomes a chance of one extra
-    const count = Math.floor(base*1.2 + Math.random());
-    const list = [];
-    for (let c=0; c<count; c++){
-      list.push({n:Math.round((12 + 7*Math.pow(s,1.35))*rand(.85,1.15))});
-    }
-    if (last) list.push({n:bossSize(s), boss:true});
-    waves.push(list);
-  }
+const fodderCap = () => Math.min(3, 1 + Math.floor(G.stage/3));
+// enemy fighters and bombers alive at once
+const craftCap = () => Math.min(5, 2 + Math.floor(G.stage/3));
+const shipSize = (s, col) => Math.round((10 + 6*Math.pow(s,1.3))*(1 + .06*col)*rand(.85,1.12));
+// every enemy shot hits a little harder each sector, so fewer guns still keep up
+const eDmg = () => 1 + .12*(G.stage-1);
+// Waves for one fight: few ships, but big and tough ones. Gun caps keep it readable: a few heavy guns per ship instead of a wall of small ones.
+function planFight(kind, s, col){
+  const waves = [], g = 2 + Math.floor(s/2), ship = (m=1, x={}) => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
+  if (kind==='fight'){
+    // a random encounter: a patrol, a lone cruiser, a carrier, or a pack of light raiders
+    const r = Math.random();
+    if (r < .3){ waves.name = 'Cruiser'; waves.push([ship(2, {guns:g+2})]); }
+    else if (r < .5 && s >= 2){ waves.name = 'Carrier'; waves.push([ship(1.7, {guns:Math.max(1, g-1), bays:1 + (s >= 5 ? 1 : 0)})]); }
+    else if (r < .7){ waves.name = 'Raiders'; waves.push(Array.from({length:2 + (Math.random() < s/10 ? 1 : 0)}, () => ship(.6, {guns:2}))); }
+    else { waves.name = 'Patrol'; waves.push([ship(1.3), ...(s >= 4 && Math.random() < .4 ? [ship()] : [])]); }
+    if (col >= 4 && Math.random() < .35) waves.push([ship(1.2)]);
+  } else if (kind==='ambush') waves.push([ship(1.3), ...(s >= 5 ? [ship(.8)] : [])]);
+  else if (kind==='elite') waves.push([{n:Math.round(bossSize(s)*.6), elite:true, guns:g+3, bays:s >= 4 ? 1 : 0}]);
+  else if (kind==='gate'){
+    waves.push([ship(1.3), ...(s >= 4 ? [ship()] : [])]);
+    waves.push([{n:Math.round(bossSize(s)*1.1), boss:true, guns:5 + Math.floor(s/2), bays:s >= 3 ? 1 : 0}]);
+  } else if (kind==='boss') waves.push([{n:Math.min(1100, Math.round(bossSize(s)*2)), boss:true, flag:true, guns:6 + Math.floor(s/2), bays:2 + Math.floor(s/3)}]);
+  else if (kind==='station') waves.push([{n:Math.min(1400, Math.round(bossSize(s)*2.6)), boss:true, flag:true, station:true, guns:s >= 6 ? 16 : 12, bays:4}]);
   return waves;
+}
+// Carrier bays go on the rim, in mirrored pairs.
+function addBays(d, n){
+  const nbs = k => NB.filter(o => d.has(k+o)).length;
+  for (let c=0; c<n; c++){
+    const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && nbs(k) <= 2);
+    if (!pool.length) return;
+    const k = pool[(Math.random()*pool.length)|0], mk = K(-KI(k), KJ(k));
+    d.set(k,'bay'); if (d.get(mk)==='hull' || d.get(mk)==='armor') d.set(mk,'bay');
+  }
+}
+// Starbase: a hub, four spokes and a ring, grown with fourfold symmetry. Guns, shields and bays sit on the rim, generators deep inside.
+function genStation(n, stage, guns, bays){
+  const d = new Map([[CORE,'core']]), keys = [CORE];
+  const put = (i,j,t) => { for (const [a,b] of [[i,j],[-j,i],[-i,-j],[j,-i]]){ const k = K(a,b); if (!d.has(k)){ d.set(k,t); keys.push(k); } } };
+  const R = Math.max(5, Math.round(Math.sqrt(n)*.42));
+  for (let i=-1; i<=1; i++) for (let j=-1; j<=1; j++) if (i || j) put(i,j,'armor');
+  for (let r=2; r<=R; r++){ put(0,-r,'armor'); put(1,-r,'hull'); }
+  for (let q=0; q<R*2; q++){ const a = q/(R*8)*TAU; for (const w of [0,1]) put(Math.round(Math.cos(a)*(R-w)), Math.round(Math.sin(a)*(R-w)), w ? 'hull' : 'armor'); }
+  let tries = 0;
+  while (d.size < n && tries++ < n*20){
+    const base = keys[(Math.random()*keys.length)|0], nk = base + NB[(Math.random()*4)|0];
+    if (d.has(nk) || Math.max(Math.abs(KI(nk)), Math.abs(KJ(nk))) > R + 6) continue;
+    put(KI(nk), KJ(nk), Math.random() < .35 ? 'armor' : 'hull');
+  }
+  const nbs = k => NB.filter(o => d.has(k+o)).length;
+  const conv = (t, count, inner) => {
+    for (let c=0; c<count; c++){
+      const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && (inner ? nbs(k)===4 : nbs(k) <= 2));
+      if (!pool.length) return;
+      const k = pool[(Math.random()*pool.length)|0], i = KI(k), j = KJ(k);
+      for (const [a,b] of [[i,j],[-j,i],[-i,-j],[j,-i]]){ const kk = K(a,b); if (d.get(kk)==='hull' || d.get(kk)==='armor') d.set(kk, typeof t==='function' ? t() : t); }
+    }
+  };
+  conv(() => pickWeapon(stage), Math.ceil(guns/4), false);
+  conv('bay', Math.ceil(bays/4), false);
+  if (stage >= 3) conv('shield', 1 + Math.floor(d.size/400), false);
+  if (stage >= 4) conv('gen', 1 + Math.floor(d.size/500), true);
+  if (stage >= 5) conv('pd', 1 + Math.floor(d.size/350), false);
+  return d;
 }
 function spawnPos(){
   const p = G.player, m = .08;
@@ -716,96 +843,455 @@ function spawnPos(){
   return {x:G.AW/2, y:G.AH*.1};
 }
 function spawnWave(list){
-  const hpMul = 1 + .15*(G.stage-1);
-  let boss = false;
+  const hpMul = 1 + .22*(G.stage-1), tier = tierOf(G.stage);
+  let boss = null;
   for (const spec of list){
-    const d = genDesign(spec.n, spec.boss, G.stage), pos = spawnPos();
-    const e = makeShip(d,'e',pos.x,pos.y,hpMul);
-    e.boss = !!spec.boss; boss ||= e.boss;
+    const d = spec.station ? genStation(spec.n, tier, spec.guns, spec.bays) : genDesign(spec.n, spec.boss || spec.elite, tier, spec.guns), pos = spawnPos();
+    if (spec.bays && !spec.station) addBays(d, spec.bays);
+    const e = makeShip(d,'e',pos.x,pos.y,hpMul*(spec.elite ? 1.3 : 1));
+    e.boss = !!spec.boss; e.elite = !!spec.elite; e.flag = !!spec.flag; e.station = !!spec.station; e.n0 = d.size; e.phaseN = 1;
+    if (e.boss) boss = e;
     e.sc = G.SC; e.ft = 3; e.phase = rand(0,TAU); e.spin = Math.random()<.5 ? 1 : -1;
     e.orb = rand(0,TAU); e.orbSpd = rand(.12,.35)*(Math.random()<.5 ? 1 : -1);
     // railgun ships hang back
     e.pref = (spec.boss ? 360 : e.guns.some(g => g.t==='rail') ? rand(420,520) : rand(220,380))*G.SC + e.r;
     e.vmax = 150/Math.sqrt(1 + d.size/30); e.turn = 1.6/Math.sqrt(1 + d.size/20);
-    e.value = Math.round((d.size*2.4 + e.guns.length*3)*(spec.boss ? 1.5 : 1));
+    // salvage grows with the square root of size, so big late-game hulls don't flood the run with credits
+    e.value = Math.round((4 + Math.sqrt(d.size)*2.2)*(spec.flag ? 5 : spec.boss ? 3 : spec.elite ? 2 : 1));
     e.a = Math.atan2(G.player.x-e.x, -(G.player.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
+    if (e.station){
+      // the starbase holds still above the player (startFight made the arena tall enough)
+      const p = G.player, gap = e.r + p.r + 320*G.SC;
+      G.AW = Math.max(G.AW, e.r*2 + 600*G.SC); G.AH = Math.max(G.AH, e.r*2 + 600*G.SC);
+      e.x = clamp(p.x, e.r + 40, G.AW - e.r - 40); e.y = Math.max(e.r + 40, p.y - gap); e.vmax = 0; e.a = 0; e.c = 1; e.sn = 0;
+    }
     G.ships.push(e);
   }
-  G.banner = {text:`Wave ${G.waveIdx}/${G.waves.length}`, sub: boss ? 'Capital ship inbound' : `${list.length} hostiles`, t:2.4};
+  if (boss) G.boss = boss;
+  G.banner = {text: G.waves.length > 1 ? `Wave ${G.waveIdx}/${G.waves.length}` : G.waves.name || NODE[G.fight].name,
+    sub: boss ? (boss.station ? 'Enemy starbase' : boss.flag ? 'Enemy flagship' : 'Capital ship inbound') : `${list.length} hostile${list.length>1 ? 's' : ''}`, red:!!boss, t:2.4};
 }
-// Swarm: flights of ships sized like earlier stages keep arriving all stage, so a grown hull towers over them.
+// Swarm: flights of ships sized like earlier sectors arrive during gate and flagship fights, so a grown hull towers over them.
 function spawnSwarm(){
   const p = G.player, s = G.stage;
   const tier = 1 + Math.floor(Math.random()**2 * (s-1)), tS = Math.pow(scaleOf(tier),.8);
   const ang = rand(0,TAU), dist = .5*Math.hypot(W,H)/G.zoom + 40;
   const cx = clamp(p.x + Math.cos(ang)*dist, 0, G.AW), cy = clamp(p.y + Math.sin(ang)*dist, 0, G.AH);
-  const flight = 1 + (s >= 5 ? 1 : 0);
+  const flight = 1;
   for (let q=0; q<flight; q++) makeFighter(cx + rand(-40,40)*tS, cy + rand(-40,40)*tS, tier);
 }
 function makeFighter(x, y, tier){
   const p = G.player, tS = Math.pow(scaleOf(tier),.8);
   {
-    const d = genDesign(Math.round((7 + 3.2*Math.pow(tier,1.3))*rand(.85,1.1)), false, tier);
+    const d = genDesign(Math.round((7 + 3.2*Math.pow(tier,1.3))*rand(.85,1.1)), false, tierOf(tier), 2);
     const e = makeShip(d,'e', clamp(x, 0, G.AW), clamp(y, 0, G.AH), 1);
     e.fodder = true; e.sc = tS;
     e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);
     e.pref = p.r + rand(140,260)*tS + e.r;
     e.vmax = 190/Math.sqrt(1 + d.size/30); e.turn = 2.4;
-    e.value = Math.round(d.size*1.2 + e.guns.length);
+    e.value = Math.round(1 + Math.sqrt(d.size));
     e.a = Math.atan2(p.x-e.x, -(p.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
     G.ships.push(e);
   }
 }
-function startStage(){
-  undoStack.length = 0;
+// The ship that flies: the design without its damaged blocks, and without anything they cut off from the core.
+function flyDesign(){
+  const d = new Map([...G.design].filter(([k]) => !G.broken.has(k)));
+  const seen = new Set([CORE]), q = [CORE];
+  while (q.length){ const c = q.pop(); for (const nb of NB){ const m = c+nb; if (d.has(m) && !seen.has(m)){ seen.add(m); q.push(m); } } }
+  for (const k of [...d.keys()]) if (!seen.has(k)) d.delete(k);
+  return d;
+}
+function startFight(kind){
+  undoStack.length = 0; G.fight = kind; G.lost = new Set(); G.boss = null;
   G.S = scaleOf(G.stage); G.SC = Math.pow(G.S,.8);
-  G.player = makeShip(G.design,'p',0,0,1,G.dirs);
-  // every stage opens on last stage's view and slowly pulls back to a wider one, even if the hull didn't grow
-  // a retry of the same stage replays the same zoom instead of widening again
+  G.player = makeShip(flyDesign(),'p',0,0,1,G.dirs);
+  // every sector opens on last sector's view and slowly pulls back to a wider one, even if the hull didn't grow
   if (G.spanStage !== G.stage){ G.span0 = G.spanT ? G.spanT : spanFor(G.player.r, G.S)*.6; G.spanStage = G.stage; }
   G.spanT = Math.max(spanFor(G.player.r, G.S), G.span0*1.15); G.span = G.span0; G.fit = 0; G.spanAt = 0; G.swarmT = 4;
   G.AW = Math.max(1300*G.S, G.spanT*3); G.AH = Math.max(900*G.S, G.spanT*2.2);
-  G.player.x = G.AW/2; G.player.y = G.AH*.72;
+  // a starbase needs room above the player
+  if (kind==='station'){ G.AW *= 1.4; G.AH *= 2; }
+  G.player.x = G.AW/2; G.player.y = G.AH*(kind==='station' ? .85 : .72);
   G.ships = [G.player]; G.pb = []; G.eb = []; G.fx = []; G.beams = [];
-  G.waves = planStage(G.stage); G.waveIdx = 0; G.waveGap = 3.5;
+  G.waves = planFight(kind, G.stage, G.node ? G.node.col : 1); G.waveIdx = 0; G.waveGap = 2.5;
   G.camX = G.player.x; G.camY = G.player.y; G.joy = null; G.aimJoy = null; G.deadT = 0; G.earned = 0; G.paused = false;
-  G.banner = {text:`Stage ${G.stage}`, sub:`Scale ×${G.S.toFixed(2)}`, t:2};
+  G.banner = {text:G.waves.name || NODE[kind].name, sub:`Sector ${G.stage}`, t:2};
   G.mode = 'combat'; hideOverlay(); syncUI();
+  const st = designStats(), n = st.badT + st.badW + st.badE;
+  if (n) toast(`${n} block${n>1?'s':''} can't fire or thrust: marked ✕ in drydock`);
 }
-const unlocksAt = s => PAL.filter(t => T[t].unlock === s).map(t => T[t].name);
-function toDrydock(advance){
-  if (advance) G.stage++;
-  G.mode = 'build'; G.paused = false; hideOverlay();
-  G.ships = []; G.pb = []; G.eb = []; G.fx = [];
-  syncUI();
-  if (advance && PAL.some(t => T[t].unlock === G.stage)) setTimeout(() => sfx('unlock'), 300);
-  if (advance) PAL.filter(t => T[t].unlock === G.stage).forEach((t,n) => {
-    const b = $('pal-'+t); b.classList.remove('fresh'); void b.offsetWidth;
-    b.style.setProperty('--d', (.3 + n*.25)+'s'); b.classList.add('fresh');
-    b.addEventListener('click', () => b.classList.remove('fresh'), {once:true});
-  });
+// Blocks destroyed in a fight stay damaged until repaired.
+function keepDamage(){ for (const k of G.lost) if (G.design.has(k)) G.broken.add(k); G.lost = new Set(); }
+function fightWon(){
+  const kind = G.fight, dmg = [...G.lost].filter(k => G.design.has(k)).length, cap = kind==='boss' || kind==='station';
+  G.mode = 'clear'; sfx('clear'); keepDamage();
+  const bonus = Math.round({fight:14, ambush:12, elite:28, gate:40, boss:100, station:110}[kind] + {fight:6, ambush:5, elite:10, gate:14, boss:34, station:38}[kind]*G.stage) + (G.bounty || 0);
+  G.credits += bonus; G.bounty = 0;
+  const nb = {fight:Math.random() < .6 ? 1 : 0, ambush:1, elite:2, gate:2, boss:3, station:4}[kind];
+  if (kind==='elite') G.stats.elites++;
+  if (cap) G.stats.flags++;
+  // the gate opens before the loot pick, so a reload mid-pick doesn't close it again
+  if (kind==='gate' || cap){ G.map.done = true; G.stats.sectors++; }
+  const head = `Salvage <b class="gold">+${G.earned}</b>, bounty <b class="gold">+${bonus}</b>.`;
+  save();
+  if (nb) chooseLoot(nb, kind==='elite' || cap ? 1.6 : 1, 'Victory', head, got => fightResult(kind, cap, head + lootText(got), dmg));
+  else fightResult(kind, cap, head, dmg);
 }
-function stageClear(){
-  const bonus = 40 + 25*G.stage; G.credits += bonus; sfx('clear');
-  const nS = scaleOf(G.stage+1), un = unlocksAt(G.stage+1);
-  G.mode = 'clear';
-  showOverlay(`Stage ${G.stage} cleared`,
-    `Salvage <b class="gold">+${G.earned}</b>, clear bonus <b class="gold">+${bonus}</b>. Next is scale <b>×${nS.toFixed(2)}</b>: bigger fleets and faster ships.` +
-    (un.length ? ` Unlocked: <b class="gold">${un.join(', ')}</b>.` : ''),
-    [['Enter drydock', () => toDrydock(true)]]);
+function fightResult(kind, cap, text, dmg){
+  text += dmg ? ` <b>${dmg}</b> block${dmg>1?'s':''} damaged: repair in drydock or at a shop.` : '';
+  if (kind==='gate' || cap){
+    if (cap && G.stage >= 9 && !G.stats.won){
+      G.stats.won = true; save();
+      showOverlay('Victory', text + ` The third ${kind==='station' ? 'starbase' : 'flagship'} is down: the run is won. Keep going for more data, or end the run here.`,
+        [['Keep going', nextSector], ['End run', () => runOver('won'), 'ghost']]);
+      return;
+    }
+    const nx = G.stage + 1;
+    showOverlay(kind==='station' ? 'Starbase destroyed' : kind==='boss' ? 'Flagship destroyed' : `Sector ${G.stage} cleared`, text + ` The gate is open. Sector ${nx} is next${nx%3===0 ? ', and a flagship or starbase guards it' : ''}.`,
+      [[`Jump to sector ${nx}`, nextSector], ['Star map', toMap, 'ghost']]);
+  } else showOverlay('Victory', text, [[G.pendingNode ? 'Continue' : 'Star map', goOn]]);
+  save();
 }
-function playerDied(){
-  G.mode = 'dead';
-  showOverlay('Core destroyed',
-    `Lost on stage ${G.stage}, wave ${G.waveIdx} of ${G.waves.length}. You keep the <b class="gold">${G.earned}</b> credits you salvaged, and drydock repairs your ship for free.`,
-    [['Back to drydock', () => toDrydock(false)]]);
-}
+function playerDied(){ G.mode = 'dead'; runOver('dead'); }
+function flee(){ keepDamage(); G.pendingNode = null; G.bounty = 0; toast('You jumped away'); toMap(); }
 function togglePause(){
   if (G.mode!=='combat') return;
   G.paused = !G.paused;
-  if (G.paused) showOverlay('Paused', `Stage ${G.stage}, wave ${G.waveIdx} of ${G.waves.length}.`,
-    [['Resume', togglePause], ['Abandon stage', () => toDrydock(false), 'ghost']]);
+  if (G.paused) showOverlay('Paused', `${NODE[G.fight].name}, wave ${G.waveIdx} of ${G.waves.length}. Fleeing keeps the damage you took and gives no reward.`,
+    [['Resume', togglePause], ['Flee', flee, 'ghost']]);
   else hideOverlay();
+}
+
+// ---------- star map ----------
+const NODE = {
+  start:  {name:'Jump point', col:'#9aa8d0', g:'o', desc:'Where you entered the sector.'},
+  fight:  {name:'Hostiles', col:'#ff7a66', g:'!', desc:'A fight. Salvage, and maybe a block.'},
+  elite:  {name:'Elite', col:'#ff9a3a', g:'!', desc:'One tough warship and an escort. Better loot.'},
+  shop:   {name:'Shop', col:'#ffc46b', g:'$', desc:'Buy, sell, upgrade and repair.'},
+  event:  {name:'Signal', col:'#5fd8ff', g:'?', desc:'An unknown signal. Could be anything.'},
+  salvage:{name:'Wreckage', col:'#7fe07a', g:'*', desc:'Free salvage, unless someone is guarding it.'},
+  repair: {name:'Repair dock', col:'#8ff0c8', g:'+', desc:'Fixes every damaged block for free.'},
+  gate:   {name:'Sector gate', col:'#ff5a3a', g:'>', desc:'Guarded by a capital ship. Clear it to leave the sector.'},
+  boss:   {name:'Flagship', col:'#ff3d8a', g:'B', desc:'The enemy flagship, huge and escorted by its hangars. Beat it to leave the sector.'},
+  station:{name:'Starbase', col:'#ff3d8a', g:'S', desc:'A fortified enemy starbase. It never moves, but it is enormous and full of hangars. Destroy it to leave the sector.'},
+  ambush: {name:'Ambush'},
+};
+const COLS = 7;
+// FTL-style beacon map: columns of 2-4 beacons, each linked to the nearest ones in the next column, the gate at the far end.
+function genMap(s){
+  const nodes = [{id:0, col:0, x:0, y:.5, type:'start', links:[]}];
+  for (let c=1; c<COLS-1; c++){
+    const n = 2 + ((Math.random()*3)|0);
+    for (let q=0; q<n; q++) nodes.push({id:nodes.length, col:c, x:(c + rand(-.2,.2))/(COLS-1), y:clamp((q + .5 + rand(-.25,.25))/n, .04, .96), type:null, links:[]});
+  }
+  nodes.push({id:nodes.length, col:COLS-1, x:1, y:.5, type:s%3===0 ? (Math.random() < .45 ? 'station' : 'boss') : 'gate', links:[]});
+  const colN = c => nodes.filter(n => n.col===c), near = (L, y) => [...L].sort((p,q) => Math.abs(p.y-y) - Math.abs(q.y-y));
+  for (let c=0; c<COLS-1; c++){
+    const A = colN(c), B = colN(c+1);
+    for (const a of A){
+      const by = near(B, a.y); a.links.push(by[0].id);
+      if (by[1] && Math.abs(by[1].y-a.y) < .4 && Math.random() < .55) a.links.push(by[1].id);
+    }
+    for (const b of B) if (!A.some(a => a.links.includes(b.id))) near(A, b.y)[0].links.push(b.id);
+  }
+  // the first jump is always a fight, elites only show up past the middle, and the column before the gate always offers a shop or repair dock
+  const odds = [['fight',40],['event',22],['shop',12],['salvage',10],['elite',10],['repair',6]];
+  const pick = c => {
+    const pool = odds.filter(([t]) => !(t==='elite' && c < 3));
+    let r = Math.random()*pool.reduce((a,[,w]) => a+w, 0);
+    for (const [t,w] of pool) if ((r -= w) < 0) return t;
+    return 'fight';
+  };
+  for (const n of nodes) if (!n.type) n.type = n.col===1 ? 'fight' : pick(n.col);
+  const last = colN(COLS-2);
+  if (!last.some(n => n.type==='shop' || n.type==='repair')) last[(Math.random()*last.length)|0].type = Math.random() < .6 ? 'shop' : 'repair';
+  if (!nodes.some(n => n.type==='shop')){ const mid = nodes.filter(n => n.col >= 2 && n.col <= 4); mid[(Math.random()*mid.length)|0].type = 'shop'; }
+  return {nodes, cur:0, done:false, seen:[0]};
+}
+const curNode = () => G.map.nodes[G.map.cur];
+const exitNode = n => n.type==='gate' || n.type==='boss' || n.type==='station';
+const canJump = n => curNode().links.includes(n.id) && !exitNode(curNode());
+function jumpTo(n){
+  if (!canJump(n)) return;
+  G.map.cur = n.id; G.map.seen.push(n.id); G.node = n; G.stats.nodes++; G.mapHover = null; sfx('launch');
+  save();
+  // random encounters on the way: raiders intercept a quiet jump, or a signal comes in mid-jump; the beacon waits until it is dealt with
+  const r = Math.random(), quiet = n.type!=='fight' && n.type!=='elite' && !exitNode(n);
+  if (quiet && r < .15){ G.pendingNode = n; showOverlay('Intercepted', 'Raiders drop out of the jump lane across your path.', [['Fight', () => startFight('ambush')]]); return; }
+  if (r > .85){ G.pendingNode = n; runEvent({}); return; }
+  enterNode(n);
+}
+// after an encounter on the way, carry on to the beacon the jump was headed for
+function goOn(){ const n = G.pendingNode; G.pendingNode = null; if (n) enterNode(n); else toMap(); }
+function enterNode(n){
+  G.node = n;
+  if (n.type==='fight' || n.type==='elite' || exitNode(n)) startFight(n.type);
+  else if (n.type==='shop') openShop(n);
+  else if (n.type==='event') runEvent(n);
+  else if (n.type==='salvage') salvage(n);
+  else if (n.type==='repair') repairDock(n);
+}
+// what the current beacon still offers: reopen the shop, answer a signal, fight or pass the gate
+function mapAction(){
+  const n = curNode();
+  if (exitNode(n)) G.map.done ? nextSector() : startFight(n.type);
+  else if (n.type==='shop') openShop(n);
+  else if (n.type==='event' && !n.used) runEvent(n);
+}
+function nextSector(){
+  G.stage++; G.map = genMap(G.stage); G.node = curNode();
+  toMap(); toast(`Sector ${G.stage}${G.stage%3===0 ? ': a capital fight waits at the end' : ''}`); save();
+}
+function toMap(){
+  G.mode = 'map'; G.paused = false; hideOverlay(); G.mapHover = null;
+  G.ships = []; G.pb = []; G.eb = []; G.fx = []; G.boss = null;
+  syncUI();
+}
+function toDrydock(){
+  G.mode = 'build'; G.paused = false; hideOverlay();
+  syncUI();
+  if (G.fresh.size) setTimeout(() => sfx('unlock'), 300);
+  [...G.fresh].forEach((t,n) => {
+    const b = $('pal-'+t); if (!b) return;
+    b.classList.remove('fresh'); void b.offsetWidth;
+    b.style.setProperty('--d', (.3 + n*.25)+'s'); b.classList.add('fresh');
+    b.addEventListener('click', () => b.classList.remove('fresh'), {once:true});
+  });
+  G.fresh.clear();
+}
+
+// ---------- loot ----------
+const lootPool = () => PAL.filter(t => t!=='sell' && !PLATE(t) && T[t].unlock <= tierOf(G.stage) + metaLv('proto'));
+// cheap blocks are common and expensive ones rare; boost flattens the odds
+function rollBlock(boost=1, pool=lootPool()){
+  const w = pool.map(t => Math.pow(40/T[t].cost, .8/boost));
+  let r = Math.random()*w.reduce((a,b) => a+b, 0);
+  for (let n=0; n<pool.length; n++) if ((r -= w[n]) < 0) return pool[n];
+  return pool[0];
+}
+// G.dmg[t] of the G.inv[t] blocks in cargo are damaged. Taking one uses an intact block first (or a damaged one first, for selling); returns whether it was damaged.
+const dmgOf = t => Math.min(G.dmg[t]||0, G.inv[t]||0);
+function takeCargo(t, damagedFirst=false){
+  const d = dmgOf(t), hurt = damagedFirst ? d > 0 : G.inv[t] - d <= 0;
+  G.inv[t]--; G.dmg[t] = hurt ? d - 1 : Math.min(d, G.inv[t]);
+  return hurt;
+}
+function addBlock(t, n=1){ if (!owned(t)) G.fresh.add(t); G.inv[t] = (G.inv[t]||0) + n; }
+function giveLoot(boost){ const t = rollBlock(boost); addBlock(t); return t; }
+// Loot you choose: each pick offers three different blocks, or skip. done gets the blocks taken.
+function chooseLoot(n, boost, title, intro, done){
+  const got = [];
+  const step = () => {
+    if (got.length >= n) return done(got);
+    const offers = [];
+    for (let q=0; offers.length < 3 && q < 30; q++){ const t = rollBlock(boost); if (!offers.includes(t)) offers.push(t); }
+    G.pick = t => { G.pick = null; if (t){ addBlock(t); got.push(t); sfx('place'); } else got.push(null); step(); };
+    showOverlay(title, intro + `<div class="rows"><h3>Choose a block${n > 1 ? ` · ${got.length+1} of ${n}` : ''}</h3>` +
+      offers.map((t,i) => row(T[t].name + (owned(t) ? '' : ' · new'), T[t].desc, 'Take', `pick:${t}`)).join('') + '</div>',
+      [['Skip', () => G.pick && G.pick(null), 'ghost']], true);
+  };
+  step();
+}
+const lootText = got => (got = got.filter(Boolean)).length ? ` Found: <b class="gold">${got.map(t => T[t].name).join(', ')}</b>.` : '';
+const chance = p => Math.random() < p;
+const cargoTypes = () => Object.keys(G.inv).filter(t => G.inv[t] > 0);
+function damageRandom(n){
+  const ks = [...G.design.keys()].filter(k => k!==CORE && !G.broken.has(k));
+  let c = 0;
+  for (; c<n && ks.length; c++){ const i = (Math.random()*ks.length)|0; G.broken.add(ks[i]); ks.splice(i,1); }
+  return c;
+}
+function upgradeRandom(){
+  const ts = PAL.filter(t => t!=='sell' && (onShip(t) || G.inv[t] > 0) && lvOf(t) < MAXLV);
+  if (!ts.length) return null;
+  const t = ts[(Math.random()*ts.length)|0]; G.lv[t] = lvOf(t) + 1; return t;
+}
+const repTotal = (mul=1) => { let c = 0; for (const k of G.broken) if (G.design.has(k)) c += Math.ceil(repCost(G.design.get(k))*mul); return c; };
+// repairs damaged blocks one by one while the credits last; returns how many were fixed
+function repair(mul=1){
+  let n = 0;
+  for (const k of [...G.broken]){
+    if (!G.design.has(k)){ G.broken.delete(k); continue; }
+    const c = Math.ceil(repCost(G.design.get(k))*mul); if (c > G.credits) continue;
+    G.credits -= c; G.broken.delete(k); n++;
+  }
+  return n;
+}
+function salvage(n){
+  n.used = true;
+  if (chance(.3)){ showOverlay('Wreckage', 'The wreck is bait. Hostiles are closing in.', [['Fight', () => startFight('ambush')]]); return; }
+  const cr = Math.round(rand(15,30) + 6*G.stage), head = `You strip the wreck for <b class="gold">${cr}</b> credits.`;
+  G.credits += cr; save();
+  chooseLoot(chance(.35) ? 2 : 1, 1, 'Wreckage', head, got => { save(); showOverlay('Wreckage', head + lootText(got), [['Star map', toMap]]); });
+}
+function repairDock(n){
+  n.used = true;
+  const c = G.broken.size; G.broken.clear(); sfx('upgrade');
+  if (!c) G.credits += 20;
+  save();
+  showOverlay('Repair dock', c ? `The crew fixes <b>${c}</b> damaged block${c>1?'s':''}, free of charge.` : 'Nothing to fix. The crew pays you <b class="gold">20</b> credits for your spare plating.', [['Star map', toMap]]);
+}
+
+// ---------- signals: random events ----------
+// Each choice returns the outcome text, or {fight, text} to start a fight. A third element hides the choice when it returns false.
+const EVENTS = [
+  {title:'Drifting cargo pod', text:'A sealed pod tumbles past, still beeping.', choices:[
+    ['Tractor it in', () => chance(.75) ? 'It holds a spare part.' + lootText([giveLoot(1.3)]) : `It was rigged. <b>${damageRandom(2)}</b> blocks damaged.`],
+    ['Leave it', () => 'You let it drift.']]},
+  {title:'Minefield', text:'Old mines litter the jump lane.', choices:[
+    ['Thread through slowly', () => chance(.5) ? `A mine clips the hull. <b>${damageRandom(1)}</b> block damaged.` : 'You slip through untouched.'],
+    ['Blast a path', () => { const cr = Math.round(15 + 5*G.stage); G.credits += cr; return `The chain of blasts rattles the ship: <b>${damageRandom(3)}</b> blocks damaged, but the casings sell for <b class="gold">+${cr}</b> credits.`; }]]},
+  {title:'Bounty hunter', text:'A hunter offers a cut of a bounty if you help bring down a warship.', choices:[
+    ['Join the hunt', () => { G.bounty = Math.round(50 + 15*G.stage); return {fight:'elite', text:`The target turns on you. <b class="gold">${G.bounty}</b> credits if it goes down.`}; }],
+    ['Decline', () => 'The hunter flies off alone.']]},
+  {title:'Derelict starbase', text:'A dead station hangs in the dark, its docks still open.', choices:[
+    ['Board it', () => chance(.6) ? 'Its stores are intact.' + lootText([giveLoot(1.8), giveLoot(1)]) : {fight:'ambush', text:'It was not empty. Its last defenders open fire.'}],
+    ['Strip the hull', () => { const cr = Math.round(20 + 6*G.stage); G.credits += cr; return `<b class="gold">+${cr}</b> credits of scrap.`; }]]},
+  {title:'Derelict freighter', text:'A freighter drifts dark, cargo bay open.', choices:[
+    ['Board it', () => {
+      if (chance(.4)) return `Booby-trapped. <b>${damageRandom(3)}</b> blocks damaged.`;
+      const cr = Math.round(10 + 5*G.stage); G.credits += cr;
+      return `The hold is full: <b class="gold">+${cr}</b> credits.` + lootText([giveLoot(1.3)]);
+    }],
+    ['Leave it', () => 'You leave it to drift.']]},
+  {title:'Distress call', text:'A damaged transport begs for help.', choices:[
+    ['Answer', () => {
+      if (chance(.5)) return {fight:'ambush', text:'It was a trap. Pirates drop their disguise.'};
+      const cr = Math.round(20 + 6*G.stage); G.credits += cr;
+      return `The crew pays you <b class="gold">${cr}</b> credits and hands over a spare.` + lootText([giveLoot(1)]);
+    }],
+    ['Ignore it', () => 'You fly on.']]},
+  {title:'Wandering trader', text:'A trader hails you with a cargo hold full of parts.', choices:[
+    ['Swap one cargo block for two', () => {
+      const ks = cargoTypes(), t = ks[(Math.random()*ks.length)|0]; takeCargo(t);
+      return `You hand over a ${T[t].name.toLowerCase()}.` + lootText([giveLoot(1), giveLoot(1)]);
+    }, () => cargoTypes().length > 0],
+    ['Buy a sealed crate (45 cr)', () => { G.credits -= 45; return 'You crack the crate open.' + lootText([giveLoot(2.2)]); }, () => G.credits >= 45],
+    ['Move on', () => 'You decline.']]},
+  {title:'Asteroid field', text:'Rich ore, and a lot of loose rock.', choices:[
+    ['Mine it', () => {
+      const cr = Math.round(25 + 8*G.stage); G.credits += cr;
+      const d = chance(.5) ? damageRandom(2) : 0;
+      return `<b class="gold">+${cr}</b> credits of ore.` + (d ? ` Rocks damage <b>${d}</b> blocks.` : '');
+    }],
+    ['Go around', () => 'You go around.']]},
+  {title:'Mad engineer', text:'A tinkerer offers to tune your ship.', choices:[
+    ['Pay him (60 cr)', () => { G.credits -= 60; const t = upgradeRandom(); return t ? `Your ${T[t].name.toLowerCase()} blocks are now level ${lvOf(t)}.` : 'He finds nothing left to improve and keeps the money.'; }, () => G.credits >= 60],
+    ['Let him try for free', () => {
+      if (chance(.5)){ const t = upgradeRandom(); if (t) return `It works. Your ${T[t].name.toLowerCase()} blocks are now level ${lvOf(t)}.`; }
+      return `Sparks fly. <b>${damageRandom(3)}</b> blocks damaged.`;
+    }],
+    ['Decline', () => 'You leave him to his tools.']]},
+  {title:'Military beacon', text:'A navy relay, lightly guarded.', choices:[
+    ['Hack it', () => {
+      if (chance(.5)) return {fight:'elite', text:'The hack trips an alarm. A warship answers.'};
+      const t = upgradeRandom(); return t ? `You pull their specs. Your ${T[t].name.toLowerCase()} blocks are now level ${lvOf(t)}.` : 'Nothing useful in the files.';
+    }],
+    ['Leave it', () => 'You leave it alone.']]},
+  {title:'Refugee convoy', text:'Refugees ask for credits to buy fuel.', choices:[
+    ['Give 30 cr', () => { G.credits -= 30; G.stats.bonus = (G.stats.bonus||0) + 3; return 'They thank you. Word of it spreads: <b class="gold">+3 data</b> at the end of the run.'; }, () => G.credits >= 30],
+    ['Move on', () => 'You fly on.']]},
+  {title:'Scrap cloud', text:'Wreckage from an old battle.', choices:[
+    ['Collect', () => { const cr = Math.round(rand(15,30) + 4*G.stage); G.credits += cr; return `<b class="gold">+${cr}</b> credits of scrap.`; }]]},
+  {title:'Smuggler', text:'A smuggler wants parts, and pays well.', choices:[
+    ['Sell a cargo block at full price', () => {
+      const ks = cargoTypes(), t = ks[(Math.random()*ks.length)|0], cr = T[t].cost; takeCargo(t); G.credits += cr;
+      return `He takes a ${T[t].name.toLowerCase()} for <b class="gold">${cr}</b> credits.`;
+    }, () => cargoTypes().length > 0],
+    ['Refuse', () => 'He shrugs and leaves.']]},
+  {title:'Ion storm', text:'A storm blocks the lane.', choices:[
+    ['Push through', () => `Arcs hit the hull. <b>${damageRandom(2)}</b> blocks damaged.`],
+    ['Wait it out (20 cr)', () => { G.credits -= 20; return 'You wait for the storm to pass.'; }, () => G.credits >= 20]]},
+  {title:'Abandoned shipyard', text:'An empty yard with working tools.', choices:[
+    ['Use the dock', () => { const c = G.broken.size; G.broken.clear(); return c ? `You fix <b>${c}</b> damaged blocks.` : 'Nothing to fix, but you find a spare.' + lootText([giveLoot(1)]); }]]},
+  {title:'Pirate toll', text:'Pirates demand payment to pass.', choices:[
+    ['Pay 40 cr', () => { G.credits -= 40; return 'They let you through.'; }, () => G.credits >= 40],
+    ['Refuse', () => ({fight:'ambush', text:'They open fire.'})]]},
+];
+function runEvent(n){
+  if (n.ev == null) n.ev = (Math.random()*EVENTS.length)|0;
+  const E = EVENTS[n.ev];
+  const acts = E.choices.filter(c => !c[2] || c[2]()).map(([label, fn]) => [label, () => {
+    n.used = true; const r = fn(); save();
+    if (r && r.fight) showOverlay(E.title, r.text, [['Fight', () => startFight(r.fight)]]);
+    else showOverlay(E.title, r, [[G.pendingNode ? 'Continue' : 'Star map', goOn]]);
+  }]);
+  showOverlay(E.title, E.text, acts);
+}
+
+// ---------- shop ----------
+const buyPrice = t => Math.round(T[t].cost*1.1*priceMul());
+const sellPrice = t => Math.round(T[t].cost*.45);
+const row = (name, sub, label, act, dis) =>
+  `<div class="row"><span>${name}<small>${sub}</small></span><button class="rot" type="button" data-act="${act}"${dis ? ' disabled' : ''}>${label}</button></div>`;
+function openShop(n){
+  G.shopNode = n;
+  if (!n.offers){
+    const pool = lootPool(); n.offers = [];
+    for (let q=0; q<5; q++){ const t = rollBlock(1.6, pool), o = n.offers.find(x => x.t===t); if (o) o.n++; else n.offers.push({t, n:1}); }
+  }
+  const ups = PAL.filter(t => t!=='sell' && (onShip(t) || G.inv[t] > 0)), rep = repTotal(.5);
+  let h = `Credits <b class="gold">${Math.round(G.credits)}</b>. Repairs here cost half.<div class="rows"><h3>Buy</h3>` +
+    n.offers.map((o,i) => row(T[o.t].name + (o.n > 1 ? ` ×${o.n}` : ''), T[o.t].desc, o.n ? `${buyPrice(o.t)} cr` : 'sold', `buy:${i}`, !o.n || buyPrice(o.t) > G.credits)).join('');
+  if (G.broken.size) h += `<h3>Repair</h3>` + row(`${G.broken.size} damaged block${G.broken.size>1?'s':''}`, 'Fixes as many as you can afford.', `${rep} cr`, 'rep:0', !canRepair(.5));
+  h += `<h3>Upgrade</h3>` + (ups.length ? ups.map(t => row(`${T[t].name} Lv${lvOf(t)}`, lvOf(t) < MAXLV ? `+35% to every ${T[t].name.toLowerCase()} block.` : 'Fully upgraded.',
+    lvOf(t) < MAXLV ? `${upCost(t)} cr` : 'max', `up:${t}`, lvOf(t) >= MAXLV || upCost(t) > G.credits)).join('') : '<small>Nothing to upgrade.</small>');
+  const cargo = cargoTypes();
+  h += `<h3>Sell from cargo</h3>` + (cargo.length ? cargo.map(t => row(`${T[t].name} ×${G.inv[t]}${dmgOf(t) ? ` (${dmgOf(t)} damaged)` : ''}`, dmgOf(t) ? 'Damaged blocks sell first, at half price.' : 'Only blocks in cargo can be sold. Remove them from the ship in drydock first.', `+${dmgOf(t) ? Math.round(sellPrice(t)/2) : sellPrice(t)} cr`, `sell:${t}`, false)).join('') : '<small>Cargo is empty.</small>');
+  h += '</div>';
+  const top = $('overlay').hidden ? 0 : $('ovText').closest('.card').scrollTop;
+  showOverlay('Shop', h, [['Leave', toMap], ['Drydock', toDrydock, 'ghost']], true);
+  $('ovText').closest('.card').scrollTop = top;
+}
+function canRepair(mul){ return [...G.broken].some(k => G.design.has(k) && Math.ceil(repCost(G.design.get(k))*mul) <= G.credits); }
+const ACT = {
+  buy: i => { const o = G.shopNode.offers[i], c = buyPrice(o.t); if (!o.n || c > G.credits) return; G.credits -= c; o.n--; addBlock(o.t); sfx('place'); },
+  up: t => { const c = upCost(t); if (lvOf(t) >= MAXLV || c > G.credits) return; G.credits -= c; G.lv[t] = lvOf(t) + 1; sfx('upgrade'); },
+  rep: () => { if (repair(.5)) sfx('upgrade'); },
+  sell: t => { if (!(G.inv[t] > 0)) return; G.credits += takeCargo(t, true) ? Math.round(sellPrice(t)/2) : sellPrice(t); sfx('place'); },
+  pick: t => { if (G.pick) G.pick(t); return true; },
+  meta: id => { const m = META.find(x => x.id===id); if (!m || metaLv(id) >= m.max || metaCost(m) > G.meta.data) return; G.meta.data -= metaCost(m); G.meta.lv[id] = metaLv(id) + 1; saveMeta(); sfx('upgrade'); showTitle(); return true; },
+};
+
+// ---------- runs and the hangar ----------
+// Data is earned at the end of every run and buys permanent upgrades here.
+const META = [
+  {id:'cash', name:'Seed money', desc:'+40 starting credits.', max:3, cost:4},
+  {id:'core', name:'Hardened core', desc:'Core +25% hit points.', max:3, cost:5},
+  {id:'arms', name:'Armory', desc:'Start with one more random weapon.', max:2, cost:6},
+  {id:'trade', name:'Trade contacts', desc:'Shop prices −8%.', max:3, cost:5},
+  {id:'frame', name:'Reinforced frame', desc:'+15 block limit.', max:3, cost:5},
+  {id:'proto', name:'Prototype access', desc:'Loot and shops reach one tier further.', max:2, cost:8},
+];
+function metaLv(id){ return G.meta.lv[id] || 0; }
+const metaCost = m => m.cost*(metaLv(m.id) + 1);
+function showTitle(){
+  G.mode = 'title'; G.ships = []; G.pb = []; G.eb = []; G.fx = []; syncUI();
+  const h = 'Cross nine sectors. Pick your route on each star map, salvage blocks, trade at shops and rebuild between jumps. A flagship guards every third sector. Lose the core and the run is over.' +
+    `<div class="rows"><h3>Hangar · ${G.meta.data} data</h3>` +
+    META.map(m => row(m.name + (metaLv(m.id) ? ` Lv${metaLv(m.id)}` : ''), m.desc, metaLv(m.id) >= m.max ? 'max' : `${metaCost(m)} data`, `meta:${m.id}`, metaLv(m.id) >= m.max || metaCost(m) > G.meta.data)).join('') + '</div>';
+  showOverlay('Orders of Magnitude', h, G.stats ? [['Continue run', toMap], ['New run', () => { if (confirm('Abandon the saved run? You keep the data you already have.')) newRun(); }, 'ghost']] : [['New run', newRun]], true);
+}
+function newRun(){
+  G.stage = 1; G.pendingNode = null; G.bounty = 0; G.lv = {}; G.broken = new Set(); G.fresh = new Set(); G.spanT = G.span0 = 0; G.spanStage = null;
+  G.design = new Map(); G.dirs = new Map();
+  [[0,0,'core'],[0,-1,'cannon'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']].forEach(([i,j,t]) => G.design.set(K(i,j),t));
+  G.dirs.set(K(0,-1),0); G.dirs.set(K(0,1),0);
+  G.inv = {cannon:1, engine:2, gen:1, battery:1}; G.dmg = {}; G.grp = {}; G.auto = [false,false,false,true,false];
+  for (let q=0; q<metaLv('arms'); q++){ const t = ['cannon','gatling','missile','flak'][(Math.random()*4)|0]; G.inv[t] = (G.inv[t]||0) + 1; }
+  G.credits = 80 + 40*metaLv('cash');
+  G.stats = {kills:0, nodes:0, elites:0, flags:0, sectors:0, bonus:0, won:false};
+  G.map = genMap(1); G.node = curNode(); undoStack.length = 0;
+  toMap(); save();
+}
+function runOver(why){
+  const st = G.stats; if (!st) return;
+  const data = st.sectors*3 + st.elites + st.flags*8 + Math.floor(st.nodes/3) + (st.bonus||0) + (st.won ? 10 : 0);
+  G.meta.data += data; saveMeta(); clearRun();
+  showOverlay(why==='dead' ? 'Core destroyed' : why==='won' ? 'Run complete' : 'Run abandoned',
+    `Sector <b>${G.stage}</b>, ${st.nodes} jumps, ${st.kills} kills, ${st.flags} flagship${st.flags===1 ? '' : 's'}. You earned <b class="gold">${data} data</b> for the hangar.`,
+    [['Hangar', showTitle]]);
 }
 
 // ---------- update ----------
@@ -822,7 +1308,9 @@ function update(dt){
   const aj = G.aimJoy, ajl = aj ? Math.hypot(aj.x-aj.x0, aj.y-aj.y0) : 0;
   if (aj && ajl > 4){ ax = p.x + (aj.x-aj.x0)/ajl*600*G.S; ay = p.y + (aj.y-aj.y0)/ajl*600*G.S; }
   else if (!G.aimAuto && G.mouse.has){ ax = (G.mouse.x - W/2)/G.zoom + G.camX; ay = (G.mouse.y - H/2)/G.zoom + G.camY; }
-  else {
+  // the auto-aim point: auto-aim, touch without an aim stick, and weapon groups on auto all use it
+  let px, py;
+  {
     let best = null, bd = 1e18;
     for (const e of enemies){ const d = (e.x-p.x)**2 + (e.y-p.y)**2; if (d < bd){ bd = d; best = e; } }
     // small lead on the target's movement plus a slow wobble, so auto fire is good but not perfect
@@ -830,13 +1318,16 @@ function update(dt){
       const w = best.wob ??= Math.random()*99, d = Math.sqrt(bd), amp = best.r*.9 + d*.06;
       // lead drifts between under- and over-leading
       const t = d/(550*SC)*(.4 + .4*Math.sin(G.time*.9 + w*.7));
-      ax = best.x + best.vx*t + Math.sin(G.time*1.7 + w)*amp;
-      ay = best.y + best.vy*t + Math.sin(G.time*2.3 + w*1.3)*amp;
-    } else { ax = p.x; ay = p.y - 100; }
+      px = best.x + best.vx*t + Math.sin(G.time*1.7 + w)*amp;
+      py = best.y + best.vy*t + Math.sin(G.time*2.3 + w*1.3)*amp;
+    } else { px = p.x; py = p.y - 100; }
   }
+  if (ax === undefined){ ax = px; ay = py; }
   G.aim = {x:ax, y:ay};
   // desktop fires on click or Space; auto-aim, touch and mouse-less play fire on their own
   const fire = G.aimAuto || G.fireHeld || keys.Space || !G.mouse.has;
+  // per weapon type: may it fire now, and where does it aim
+  const may = t => fire || autoOf(t), aimX = t => autoOf(t) ? px : ax, aimY = t => autoOf(t) ? py : ay;
 
   const spend = c => { if (p.en < c) return false; p.en -= c; return true; };
   if (p.alive){
@@ -888,26 +1379,29 @@ function update(dt){
     }
   }
 
-  if (p.alive && enemies.length && fire){
-    let tgt = null, td = 1e18;
-    for (const e of enemies){ const d = (e.x-ax)**2 + (e.y-ay)**2; if (d < td){ td = d; tgt = e; } }
+  if (p.alive && enemies.length){
+    const near = (x,y) => { let tg = null, td = 1e18; for (const e of enemies){ const d = (e.x-x)**2 + (e.y-y)**2; if (d < td){ td = d; tg = e; } } return tg; };
+    const tgtM = near(ax,ay), tgtA = near(px,py);
     // turrets: inside their arc and with a clear line out of the hull
     for (const g of p.guns){
+      if (!may(g.t)) continue;
       if (g.cd > 0){ g.cd -= dt; if (g.cd > 0) continue; }
-      const gun = T[g.t].gun, [wx,wy] = wpos(p,g), ang = Math.atan2(ay-wy, ax-wx);
+      const gun = T[g.t].gun, [wx,wy] = wpos(p,g), ang = Math.atan2(aimY(g.t)-wy, aimX(g.t)-wx);
       if (Math.abs(angDiff(ang, p.a + FA[g.o])) > gun.arc) continue;
-      if (!gun.homing && !laneClear(p,g,ang)) continue;
+      if (!gun.homing && !gun.lob && !laneClear(p,g,ang)) continue;
       if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
-      pBullet(wx, wy, ang + (Math.random()-.5)*2*gun.spread, gun, tgt, LV(g.t));
-      sfx(gun.homing ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='oval' ? 'cannon' : 'shot');
+      const n = gun.pellets || 1;
+      for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*gun.fan : 0) + (Math.random()-.5)*2*gun.spread, gun, autoOf(g.t) ? tgtA : tgtM, LV(g.t));
+      sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
       if (gun.fx==='oval') boomAt(wx + Math.cos(ang)*6, wy + Math.sin(ang)*6, 5*SC, .07);
     }
     // railguns: fire when the aim point sits on their line
     for (const h of p.rails){
+      if (!may('rail')) break;
       if (h.cd > 0){ h.cd -= dt; if (h.cd > 0) continue; }
       if (!h.lane) continue;
-      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], off = angDiff(Math.atan2(ay-wy, ax-wx), face);
+      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], off = angDiff(Math.atan2(aimY('rail')-wy, aimX('rail')-wx), face);
       if (Math.abs(off) > SWING + .02) continue;
       if (!spend(T.rail.rail.en)) continue;
       h.cd = T.rail.rail.cd; fireRail(p, wx, wy, face + clamp(off, -SWING, SWING)); sfx('rail');
@@ -915,9 +1409,9 @@ function update(dt){
   }
   // lasers: continuous beam on whatever is first along their line within range
   if (p.alive) for (const h of p.lasers){
-    h.beam = null; if (!h.lane || !enemies.length || !fire) continue;
+    h.beam = null; if (!h.lane || !enemies.length || !may('laser')) continue;
     const L = T.laser.laser, [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
-    const face = base + clamp(angDiff(Math.atan2(ay-wy, ax-wx), base), -SWING, SWING), dx = Math.cos(face), dy = Math.sin(face);
+    const face = base + clamp(angDiff(Math.atan2(aimY('laser')-wy, aimX('laser')-wx), base), -SWING, SWING), dx = Math.cos(face), dy = Math.sin(face);
     const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
     if (hit && spend(L.en*dt)){
@@ -925,6 +1419,36 @@ function update(dt){
       damage(hit.e, hit.k, L.dps*LV('laser')*(1 - .75*hit.t/range)*dt);
       h.beam = [ox, oy, ox + dx*hit.t, oy + dy*hit.t];
       if (Math.random() < .35) sparks(h.beam[2], h.beam[3], face+Math.PI, 1, 140*SC, ['#9dff8a','#ffffff']);
+    }
+  }
+  // tesla coils: lightning to the nearest enemy block in reach, then on to blocks close by; an enemy missile if no hull is in reach
+  if (p.alive && may('tesla')) for (const c of p.teslas){
+    if ((c.cd -= dt) > 0) continue;
+    const Z = T.tesla.tesla, [wx,wy] = wpos(p,c), R = Z.range*SC;
+    let hit = null, hd = R*R;
+    for (const e of enemies){
+      if (!e.alive || Math.hypot(e.x-wx, e.y-wy) > R + e.r) continue;
+      for (const [k,bb] of e.blocks){ const [bx,by] = wpos(e,bb), q = (bx-wx)**2 + (by-wy)**2; if (q < hd){ hd = q; hit = [e,k,bx,by]; } }
+    }
+    if (!hit){
+      let mb = null; for (const b of G.eb){ if (b.dead || b.kind!=='emiss') continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < hd){ hd = q; mb = b; } }
+      if (mb && spend(Z.en)){ mb.dead = true; c.cd = Z.cd*.5; G.beams.push({x1:wx, y1:wy, x2:mb.x, y2:mb.y, life:.15, max:.15, kind:'tesla'}); sfx('pd'); }
+      else c.cd = .15;
+      continue;
+    }
+    if (!spend(Z.en)){ c.cd = .3; continue; }
+    c.cd = Z.cd; sfx('laser');
+    let [e,k,x0,y0] = hit, lx = wx, ly = wy;
+    const done = new Set();
+    for (let n=0; n<Z.jumps && e.alive && e.blocks.has(k); n++){
+      const [bx,by] = wpos(e, e.blocks.get(k));
+      G.beams.push({x1:lx, y1:ly, x2:bx, y2:by, life:.15, max:.15, kind:'tesla'});
+      sparks(bx, by, 0, 3, 120*SC, ['#e8dcff','#ffffff']);
+      damage(e, k, Z.dmg*LV('tesla')); done.add(k); lx = bx; ly = by;
+      // jump to the closest untouched block within two cells
+      let nk = null, nd = (2.2*BS)**2;
+      if (e.alive) for (const [kk,b2] of e.blocks){ if (done.has(kk)) continue; const [x2,y2] = wpos(e,b2), q = (x2-lx)**2 + (y2-ly)**2; if (q < nd){ nd = q; nk = kk; } }
+      if (nk == null) break; k = nk;
     }
   }
   // point defense
@@ -945,46 +1469,59 @@ function update(dt){
 
   // enemies
   for (const e of enemies){
+    if (e.craft){ updateECraft(e, dt, allies); continue; }
     const dx = p.x-e.x, dy = p.y-e.y;
     const want = Math.atan2(dx,-dy);
     // aimed guns switch to a hangar craft that comes much closer than the player
     let td = Math.hypot(dx,dy)*.6; e.tgt = p;
     for (const A of allies){ const d = Math.hypot(A.x-e.x, A.y-e.y); if (A.alive && d < td){ td = d; e.tgt = A; } }
-    e.a += clamp(angDiff(want,e.a), -e.turn*dt, e.turn*dt);
-    e.orb += e.orbSpd*dt;
-    const tx = clamp(p.x + Math.cos(e.orb)*e.pref, 0, G.AW), ty = clamp(p.y + Math.sin(e.orb)*e.pref, 0, G.AH);
-    const ex = tx-e.x, ey = ty-e.y, el = Math.hypot(ex,ey) || 1, v = Math.min(e.vmax*e.sc, el*1.2);
-    e.vx += (ex/el*v - e.vx)*Math.min(1,dt*1.4); e.vy += (ey/el*v - e.vy)*Math.min(1,dt*1.4);
-    e.x += e.vx*dt; e.y += e.vy*dt;
+    if (e.station) e.a += .03*e.spin*dt; // starbases turn slowly in place
+    else {
+      e.a += clamp(angDiff(want,e.a), -e.turn*dt, e.turn*dt);
+      e.orb += e.orbSpd*dt;
+      const tx = clamp(p.x + Math.cos(e.orb)*e.pref, 0, G.AW), ty = clamp(p.y + Math.sin(e.orb)*e.pref, 0, G.AH);
+      const ex = tx-e.x, ey = ty-e.y, el = Math.hypot(ex,ey) || 1, v = Math.min(e.vmax*e.sc, el*1.2);
+      e.vx += (ex/el*v - e.vx)*Math.min(1,dt*1.4); e.vy += (ey/el*v - e.vy)*Math.min(1,dt*1.4);
+      e.x += e.vx*dt; e.y += e.vy*dt;
+    }
     // ramming: ships under a third of the player's size break up on the hull
     if (p.alive && e.r < p.r*.35 && Math.hypot(dx,dy) < p.r + e.r){
       const k = hitShip(p, e.x, e.y, e.r*.5);
       if (k >= 0){ damage(p, k, 1 + e.blocks.size*.4); G.shake = Math.max(G.shake, 2); sfx('ram'); killShip(e); continue; }
     }
-    if (p.alive) enemyFire(e, dt*e.fireMul);
+    if (p.alive && !(e.jam > G.time)) enemyFire(e, dt*e.fireMul);
+    // point defense: shoots down the player's missiles and MIRV warheads
+    for (const d of e.epd){
+      d.cd = (d.cd ?? rand(0,.6)) - dt; if (d.cd > 0) continue;
+      const [wx,wy] = wpos(e,d), R = 75*e.sc;
+      let best = null, bd = R*R;
+      for (const b of G.pb){ if (b.dead || !b.homing) continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < bd){ bd = q; best = b; } }
+      if (best){ best.dead = true; d.cd = .75; G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09, kind:'epd'}); boomAt(best.x, best.y, 4*SC, .12); }
+      else d.cd = .1;
+    }
     for (const sb of e.shields){
       const B = sb.bub;
       if (B.down > 0) B.down -= dt; else if (G.time - B.last > ESH.delay) B.hp = Math.min(B.max, B.hp + ESH.regen*e.hpMul*dt);
     }
-    // carriers launch fighters from their bays
-    if (e.bays.length && p.alive){
-      e.bayT = (e.bayT ?? 3) - dt;
-      if (e.bayT <= 0){
-        e.bayT = 12;
-        if (enemies.filter(x => x.alive && x.fodder).length < fodderCap())
-          for (const b of e.bays.slice(0,1)){ const [wx,wy] = wpos(e,b); makeFighter(wx, wy, Math.max(1, G.stage-3)); }
-      }
+    // carriers fly the player's fighters and bombers: one craft per bay at a time, a new one some time after it is lost
+    if (e.bays.length && p.alive) for (const b of e.bays){
+      if (b.craft && b.craft.alive) continue;
+      b.bt = (b.bt ?? rand(2,5)) - dt;
+      if (b.bt <= 0 && G.ships.filter(x => x.alive && x.craft).length < craftCap()){ b.bt = 14; b.craft = launchECraft(e, b); }
     }
   }
   for (let a=0; a<enemies.length; a++) for (let b=a+1; b<enemies.length; b++){
-    const A = enemies[a], B = enemies[b], dx = B.x-A.x, dy = B.y-A.y, d = Math.hypot(dx,dy) || 1, min = (A.r+B.r)*.95;
-    if (d < min){ const push = (min-d)*.5*Math.min(1,dt*6); A.x -= dx/d*push; A.y -= dy/d*push; B.x += dx/d*push; B.y += dy/d*push; }
+    const A = enemies[a], B = enemies[b]; if (A.craft || B.craft) continue;
+    const dx = B.x-A.x, dy = B.y-A.y, d = Math.hypot(dx,dy) || 1, min = (A.r+B.r)*.95;
+    // a starbase never gets pushed; whoever bumps it moves the whole way
+    if (d < min){ const push = (min-d)*.5*Math.min(1,dt*6), wa = A.station ? 0 : B.station ? 2 : 1, wb = 2 - wa; A.x -= dx/d*push*wa; A.y -= dy/d*push*wa; B.x += dx/d*push*wb; B.y += dy/d*push*wb; }
   }
 
   // bullets
   const mX = 150*G.S;
   for (const b of G.pb){
     if (b.dead) continue;
+    if (b.kind==='mine'){ const f = Math.pow(.35, dt); b.vx *= f; b.vy *= f; }
     if (b.homing){
       if (!b.target || !b.target.alive){ let bd = 1e18; b.target = null; for (const e of enemies){ const d = (e.x-b.x)**2 + (e.y-b.y)**2; if (d < bd){ bd = d; b.target = e; } } }
       // guidance burns out after 2 s; after that the warhead flies straight
@@ -1003,13 +1540,16 @@ function update(dt){
       for (const e of enemies){
         if (!e.alive) continue;
         if (e.shields.length && shieldBlock(e,b)){ b.dead = true; break; }
-        const k = hitShip(e,b.x,b.y,b.kind==='flak' ? b.fuse : b.r);
-        if (k >= 0 && b.kind==='flak'){ flakBurst(b); break; }
-        if (k >= 0){ damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); if (b.homing) missileBlast(b,e,k); G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
+        const burst = b.kind==='flak' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse : b.r);
+        if (k >= 0 && burst){ flakBurst(b); break; }
+        if (k >= 0){
+          damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); if (b.homing) missileBlast(b,e,k);
+          if (b.kind==='torp'){ missileBlast(b,e,k); impact(b,e,k); }
+          if (b.ion){ e.jam = G.time + (e.boss ? .4 : 1.5); sparks(b.x, b.y, 0, 6, 120*SC, ['#5fe0ff','#ffffff']); } G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }
     }
     b.life -= dt;
-    if (b.kind==='flak' && !b.dead && b.life <= 0) flakBurst(b);
+    if ((b.kind==='flak' || b.kind==='mine') && !b.dead && b.life <= 0) flakBurst(b);
     if (b.life <= 0 || b.x < -mX || b.y < -mX || b.x > G.AW+mX || b.y > G.AH+mX) b.dead = true;
   }
   for (const b of G.eb){
@@ -1062,16 +1602,16 @@ function update(dt){
   // camera: frame the player and every live enemy, never tighter than the stage's base view
   let x0 = p.x - p.r, x1 = p.x + p.r, y0 = p.y - p.r, y1 = p.y + p.r;
   for (const e of enemies) if (e.alive){ x0 = Math.min(x0, e.x - e.r); x1 = Math.max(x1, e.x + e.r); y0 = Math.min(y0, e.y - e.r); y1 = Math.max(y1, e.y + e.r); }
-  const m = Math.min(W,H), need = Math.max(G.span, 1.25*Math.max((x1-x0)*m/W, (y1-y0)*m/H));
+  const m = Math.min(W,H), need = Math.max(G.span, 1.6*Math.max((x1-x0)*m/W, (y1-y0)*m/H));
   G.fit = G.fit || G.span;
   G.fit += (need - G.fit)*Math.min(1, dt*(need > G.fit ? 3 : 1));
   const tx = (x0+x1)/2, ty = (y0+y1)/2;
   G.camX += (tx - G.camX)*Math.min(1,dt*4); G.camY += (ty - G.camY)*Math.min(1,dt*4);
 
-  // swarm keeps coming between and during waves; it never holds up a stage clear
-  if (p.alive && G.stage > 1 && G.waveIdx > 0){
+  // at gates and flagships a swarm keeps coming between and during waves; it never holds up a win
+  if (p.alive && (G.fight==='gate' || G.fight==='boss' || G.fight==='station') && G.waveIdx > 0){
     G.swarmT -= dt;
-    if (G.swarmT <= 0){ G.swarmT = 7.5; if (enemies.filter(e => e.alive && e.fodder).length < fodderCap()) spawnSwarm(); }
+    if (G.swarmT <= 0){ G.swarmT = 12; if (enemies.filter(e => e.alive && e.fodder).length < fodderCap()) spawnSwarm(); }
   }
 
   // waves
@@ -1080,11 +1620,43 @@ function update(dt){
     G.waveGap -= dt;
     if (G.waveGap <= 0){
       if (G.waveIdx < G.waves.length){ G.waveIdx++; spawnWave(G.waves[G.waveIdx-1]); G.waveGap = 1.6; }
-      else stageClear();
+      else fightWon();
     }
   }
 }
 // ---------- hangar craft ----------
+// Enemy carriers launch the same fighters and bombers as the player's bays. They fight until shot down.
+function launchECraft(e, b){
+  const kind = G.stage >= 4 && Math.random() < .35 ? 'bbay' : 'fbay', C = CRAFT[kind], [wx,wy] = wpos(e,b);
+  const A = makeShip(new Map(C.design.map(([i,j,t]) => [K(i,j),t])), 'e', wx, wy, C.hp*(1 + .15*(G.stage-1)));
+  A.craft = true; A.fodder = true; A.kind = kind; A.sc = G.SC; A.cd = 1.5; A.pick = 0; A.orb = rand(0,TAU);
+  A.value = kind==='bbay' ? 4 : 2; A.a = e.a; A.c = Math.cos(A.a); A.sn = Math.sin(A.a);
+  const ang = Math.atan2(wy-e.y, wx-e.x), v = C.spd*G.SC*.5; A.vx = e.vx + Math.cos(ang)*v; A.vy = e.vy + Math.sin(ang)*v;
+  for (const x of A.blocks.values()) if (x.t==='engine') x.firing = true;
+  G.ships.push(A); sfx('launch'); return A;
+}
+// Enemy fighters chase the player's craft when one is close, otherwise the ship; bombers always pass over the ship's hull.
+function updateECraft(A, dt, allies){
+  const p = G.player, C = CRAFT[A.kind], SC = G.SC;
+  A.cd -= dt;
+  if (!A.tgt || !A.tgt.alive || (A.pick -= dt) <= 0){
+    A.pick = 1.5; A.tgt = p; let bd = (p.x-A.x)**2 + (p.y-A.y)**2;
+    if (A.kind==='fbay') for (const o of allies){ const d = (o.x-A.x)**2 + (o.y-A.y)**2; if (o.alive && d < bd){ bd = d; A.tgt = o; } }
+  }
+  const o = A.tgt, R = o.r*C.over + C.orbit*SC;
+  A.orb += C.orbSpd*dt;
+  const tx = o.x + Math.cos(A.orb)*R, ty = o.y + Math.sin(A.orb)*R;
+  if (p.alive && A.cd <= 0 && Math.hypot(o.x-A.x, o.y-A.y) < o.r + C.range*SC){
+    const bomb = A.kind==='bbay', ang = Math.atan2(o.y-A.y, o.x-A.x) + (Math.random()-.5)*2*C.gun.spread;
+    A.cd = C.gun.cd*(bomb ? 1.6 : 2.4);
+    const b = eBullet(A.x, A.y, ang, C.gun.spd/110*.45, bomb ? 'eflak' : 'egat', (bomb ? 18 : 4)*eDmg(), bomb ? 1.2 : .7);
+    if (b && bomb){ b.fuse = C.gun.fuse*SC; b.blast = C.gun.blast*SC; b.life = C.gun.life; }
+  }
+  const ex = tx-A.x, ey = ty-A.y, el = Math.hypot(ex,ey) || 1, v = Math.min(C.spd*SC*.85, el*2);
+  A.vx += (ex/el*v - A.vx)*Math.min(1, dt*C.agi); A.vy += (ey/el*v - A.vy)*Math.min(1, dt*C.agi);
+  A.x = clamp(A.x + A.vx*dt, 0, G.AW); A.y = clamp(A.y + A.vy*dt, 0, G.AH);
+  if (A.vx*A.vx + A.vy*A.vy > 4) A.a += clamp(angDiff(Math.atan2(A.vx,-A.vy), A.a), -C.turn*dt, C.turn*dt);
+}
 function launchCraft(p,b){
   const C = CRAFT[b.t], [wx,wy] = wpos(p,b), dir = p.a + FA[b.o], v = C.spd*G.SC*.6;
   const A = makeShip(new Map(C.design.map(([i,j,t]) => [K(i,j),t])), 'a', wx, wy, C.hp*LV(b.t));
@@ -1144,12 +1716,26 @@ function fireRail(p, wx, wy, face){
 function enemyFire(e,dt){
   const p = G.player;
   if (e.boss){
+    // flagships fight in three phases as they lose blocks: spiral, then fighters, then ring bursts
+    if (e.flag){
+      const f = e.blocks.size/e.n0, ph = f > .66 ? 1 : f > .33 ? 2 : 3;
+      const nm = e.station ? 'starbase' : 'flagship';
+      if (ph > e.phaseN){ e.phaseN = ph; G.banner = {text:`Phase ${ph}`, sub: ph===2 ? `The ${nm} scrambles its hangars` : `The ${nm} fires ring bursts`, red:true, t:2.4}; sfx('pop'); }
+      if (ph >= 2 && (e.flT = (e.flT ?? 1) - dt) <= 0){
+        e.flT = 10;
+        for (let q=0; q<2; q++) if (G.ships.filter(x => x.alive && x.craft).length < craftCap() + 2) launchECraft(e, {i:Math.round(rand(-.3,.3)*e.r/BS), j:Math.round(rand(-.3,.3)*e.r/BS)});
+      }
+      if (ph >= 3 && (e.rbT = (e.rbT ?? 1.5) - dt) <= 0){
+        e.rbT = 4.5;
+        for (let q=0; q<12; q++) eBullet(e.x, e.y, e.phase + q*TAU/12, .55, 'ring', 11*eDmg());
+      }
+    }
     // capital ships also sweep a slow spiral of rings
     e.ft -= dt;
     if (e.ft <= 0){
-      e.ft = .3;
-      const arms = Math.min(3, 1 + Math.floor(G.stage/3));
-      for (let q=0; q<arms; q++) eBullet(e.x, e.y, e.phase + q*TAU/arms, .7, 'ring');
+      e.ft = e.flag ? .7 : .9;
+      const arms = e.flag ? Math.min(3, 1 + e.phaseN) : Math.min(2, 1 + Math.floor(G.stage/4));
+      for (let q=0; q<arms; q++) eBullet(e.x, e.y, e.phase + q*TAU/arms, .7, 'ring', 11*eDmg());
       e.phase += .3*e.spin;
     }
   }
@@ -1165,9 +1751,9 @@ function enemyFire(e,dt){
     if (w.burst && ++g.shots < w.burst) g.cd = w.gap;
     else { g.shots = 0; g.cd = w.cd*rand(.85,1.15); }
     const ang = leadAngle(wx,wy,sp,.8,tgt) + (Math.random()-.5)*2*(w.spread || 0);
-    const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC, w.kind, w.dmg*(e.fodder ? .5 : 1), w.r*e.sc/G.SC);
+    const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC, w.kind, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.r*e.sc/G.SC);
     if (!b) continue;
-    if (w.kind==='emiss'){ b.tgt = tgt; b.tr = []; }
+    if (w.kind==='emiss'){ b.tgt = tgt; b.tr = []; b.life = 8; }
     if (w.fuse){ b.fuse = w.fuse*e.sc; b.blast = w.blast*e.sc; b.life = w.life; }
   }
 }
@@ -1244,6 +1830,25 @@ function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
       X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill(); X.globalAlpha = 1; break;
     case 'cannon': case 'gun':
       barrel(X,x,y,ca,sa,7,2.4,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
+    case 'scatter':
+      for (const q of [-1,0,1]) barrel(X,x-sa*q*1.6,y+ca*q*1.6,Math.cos(ang+q*.18),Math.sin(ang+q*.18),5.4,1.3,gun);
+      orb(X,x,y,2.8, [gun[2],'#6a7280',gun[0]]); break;
+    case 'ion':
+      barrel(X,x,y,ca,sa,6,2,['#c8f4ff','#3a8ab0','#0a2a3a']); orb(X,x,y,3, ['#0a2a4a','#2a9ad0','#9ae8ff']);
+      X.fillStyle = Math.sin(G.time*8) > 0 ? '#ffffff' : '#5fe0ff'; X.fillRect(x-.6,y-.6,1.2,1.2); break;
+    case 'tesla': {
+      X.fillStyle = '#1a1430'; X.fillRect(x-3.6,y-3.6,7.2,7.2);
+      orb(X,x,y,3, ['#2a1a4a','#8a6ae0','#e8dcff']);
+      const k = G.time*9 + x;
+      X.fillStyle = '#ffffff'; for (let q=0; q<3; q++){ const a = k + q*TAU/3; X.fillRect(x + Math.cos(a)*3.6 - .5, y + Math.sin(a)*3.6 - .5, 1, 1); }
+      break;
+    }
+    case 'torpedo':
+      barrel(X,x,y,ca,sa,6.4,3.2,['#ffe8a0','#a07a20','#2a2008']); orb(X,x,y,2.6, ['#2a2008','#a07a20','#ffe08a']); break;
+    case 'mine':
+      X.fillStyle = '#20242c'; X.fillRect(x-3.6,y-3.6,7.2,7.2);
+      for (const [a,b] of [[-1.8,-1.8],[1.8,-1.8],[-1.8,1.8],[1.8,1.8]]){ X.fillStyle = '#ff7a3a'; X.fillRect(x+a-1,y+b-1,2,2); }
+      X.fillStyle = Math.sin(G.time*4 + x) > .6 ? '#ffffff' : '#ff3d2a'; X.fillRect(x-.6,y-.6,1.2,1.2); break;
     case 'flak':
       barrel(X,x-sa*1.4,y+ca*1.4,ca,sa,5,1.8,gun); barrel(X,x+sa*1.4,y-ca*1.4,ca,sa,5,1.8,gun);
       orb(X,x,y,3, ['#4a2010','#c8783a','#ffb060']); break;
@@ -1259,6 +1864,9 @@ function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
       X.fillStyle = '#d8dde6'; X.fillRect(x-1.6,y-2.4,3.2,5.4); X.fillStyle = '#ff7ad8'; X.fillRect(x-1.6,y-3.6,3.2,1.6);
       X.fillStyle = '#ffffff'; X.fillRect(x-.5,y-3.6,1,.8); X.fillStyle = '#5a6270'; X.fillRect(x-3,y+1.6,1.2,1.4); X.fillRect(x+1.8,y+1.6,1.2,1.4);
       break;
+    case 'mirv_b':
+      X.fillStyle = '#20242c'; X.fillRect(x-4,y-4,8,8); X.fillStyle = '#5a3a50'; X.fillRect(x-3,y-3,2.4,6); X.fillRect(x+.6,y-3,2.4,6);
+      X.fillStyle = '#ff7ad8'; X.fillRect(x-3,y-3,2.4,1); X.fillRect(x+.6,y-3,2.4,1); break;
     case 'engine':
       X.fillStyle = '#20242c'; X.fillRect(x-3.6,y-1,7.2,5.2); X.fillStyle = '#5a6270'; X.fillRect(x-3.6,y-1,7.2,1.2);
       X.fillStyle = '#ff7a2a'; X.fillRect(x-2.4,y+3,4.8,1.4);
@@ -1325,7 +1933,7 @@ function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
   // level pips: one gold chevron per level above 1, plus a gold trim at max level
   if (team==='p' && T[t]){
     const L = lvOf(t);
-    X.fillStyle = '#ffc46b'; for (let q=1; q<L; q++) X.fillRect(bx-3.8+(q-1)*2.4, by+1.8, 1.8, 1.4);
+    X.fillStyle = '#ffc46b'; for (let q=1; q<L; q++) X.fillRect(bx-4+(q-1)*2.1, by+1.8, 1.6, 1.4);
     if (L >= MAXLV){ X.globalAlpha = .7; X.fillRect(bx-5,by-5,10,.8); X.globalAlpha = 1; }
   }
 }
@@ -1339,7 +1947,7 @@ function drawShip(s){
   if (s.team==='e'){
     // bright rim around enemy hulls so they stand out in a crowd and against smoke
     const m = 1.5/z;
-    ctx.fillStyle = s.boss ? '#ffd04a' : '#ff5a3a';
+    ctx.fillStyle = s.boss || s.elite ? '#ffd04a' : '#ff5a3a';
     for (const b of s.blocks.values()) ctx.fillRect(b.i*BS-5-m, b.j*BS-5-m, 10+2*m, 10+2*m);
   }
   for (const b of s.blocks.values())
@@ -1367,7 +1975,7 @@ function drawSpace(cx, cy, z){
 function niceStep(z){ let sp = 10; if (!(z > 0)) return sp; while (sp*z < 12) sp *= 10; return sp; }
 function renderCombat(){
   const S = G.S, p = G.player;
-  G.zoom = Math.min(W,H)/(G.fit || G.span || spanFor(p.r, S));
+  G.zoom = Math.min(W,H)/((G.fit || G.span || spanFor(p.r, S))*G.camMul);
   const z = G.zoom, hw = W/2/z, hh = H/2/z;
   let cx = G.camX, cy = G.camY;
   cx = G.AW < 2*hw ? G.AW/2 : clamp(cx, hw, G.AW-hw);
@@ -1402,8 +2010,14 @@ function renderCombat(){
       ctx.globalAlpha = a; ctx.strokeStyle = '#b9a8f0'; ctx.lineWidth = Math.max(1, Math.round(3*a));
       ctx.beginPath(); ctx.moveTo(sx(b.x1),sy(b.y1)); ctx.lineTo(sx(b.x2),sy(b.y2)); ctx.stroke();
       ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke();
+    } else if (b.kind==='tesla'){
+      // lightning: a jagged line that re-rolls every frame
+      const x1 = sx(b.x1), y1 = sy(b.y1), x2 = sx(b.x2), y2 = sy(b.y2), len = Math.hypot(x2-x1, y2-y1) || 1, nx = -(y2-y1)/len, ny = (x2-x1)/len;
+      ctx.globalAlpha = a; ctx.strokeStyle = '#e8dcff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x1,y1);
+      for (let q=1; q<6; q++){ const f = q/6, j = rand(-1,1)*Math.min(8, len*.12); ctx.lineTo(x1 + (x2-x1)*f + nx*j, y1 + (y2-y1)*f + ny*j); }
+      ctx.lineTo(x2,y2); ctx.stroke();
     } else {
-      ctx.globalAlpha = a; ctx.strokeStyle = '#c9adff'; ctx.lineWidth = 1.5;
+      ctx.globalAlpha = a; ctx.strokeStyle = b.kind==='epd' ? '#ff7a66' : '#c9adff'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(sx(b.x1),sy(b.y1)); ctx.lineTo(sx(b.x2),sy(b.y2)); ctx.stroke();
     }
   }
@@ -1498,13 +2112,13 @@ function renderCombat(){
         }
         ctx.globalAlpha = 1;
       }
-      if (b.kind==='miss' || b.kind==='mirv' || b.kind==='emiss'){
-        const ang = Math.atan2(b.vy,b.vx), w = b.kind==='mirv' ? .75 : .5;
+      if (b.kind==='miss' || b.kind==='mirv' || b.kind==='emiss' || b.kind==='torp'){
+        const ang = Math.atan2(b.vy,b.vx), w = b.kind==='mirv' || b.kind==='torp' ? .75 : .5;
         ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, s*2.2, Math.max(.6, s*w), ang, 0, TAU); ctx.fill();
         ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(X + Math.cos(ang)*s*1.6), Math.round(Y + Math.sin(ang)*s*1.6), 1, 1);
         continue;
       }
-      if (b.kind==='line' || b.kind==='oval' || b.kind==='eoval' || b.kind==='snipe'){
+      if (b.kind==='line' || b.kind==='oval' || b.kind==='eoval' || b.kind==='snipe' || b.kind==='ion'){
         const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang);
         if (b.kind==='line'){
           // hairline tracer on the full-resolution layer, one screen pixel wide
@@ -1563,7 +2177,7 @@ function renderCombat(){
     const big = W > 260 ? 16 : 8;
     ctx.font = FONT(big); ctx.fillStyle = '#7a2a20'; ctx.fillText(b.text.toUpperCase(), Math.round(W/2)+2, y+2);
     ctx.fillStyle = '#ffc46b'; ctx.fillText(b.text.toUpperCase(), Math.round(W/2), y);
-    ctx.font = FONT(8); ctx.fillStyle = b.sub.startsWith('Capital') ? '#ff7a66' : '#9aa8d0';
+    ctx.font = FONT(8); ctx.fillStyle = b.red ? '#ff7a66' : '#9aa8d0';
     ctx.fillText(b.sub.toUpperCase(), Math.round(W/2), y + big + 6); ctx.globalAlpha = 1;
   }
 }
@@ -1581,7 +2195,7 @@ function layoutBuild(){
 }
 const designType = k => G.design.get(k);
 // Share of a design turret's firing arc that has a clear line out of the hull (same ray walk as laneClear).
-const aimsOut = t => T[t].gun && !T[t].gun.homing && t!=='core';
+const aimsOut = t => T[t].gun && !T[t].gun.homing && !T[t].gun.lob && t!=='core';
 const designR = () => { let R = 0; for (const k of G.design.keys()) R = Math.max(R, Math.hypot(KI(k),KJ(k))); return R; };
 // Cells a ray from (i,j) travels before meeting another design block, or Infinity if it gets out.
 function rayOut(i,j,a,R){
@@ -1655,6 +2269,12 @@ function renderBuild(){
   for (const [k,t] of G.design){
     const i = KI(k), j = KJ(k), o = G.dirs.get(k) || 0;
     drawBlock(ctx, t, o, 'p', i*BS, j*BS, FA[o], false, 1, detail, false);
+    // damaged: darkened plate with an orange crack
+    if (G.broken.has(k)){
+      ctx.globalAlpha = .6; ctx.fillStyle = '#000000'; ctx.fillRect(i*BS-5, j*BS-5, 10, 10); ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#ff9a3a'; ctx.beginPath(); ctx.moveTo(i*BS-4,j*BS-3); ctx.lineTo(i*BS-1,j*BS); ctx.lineTo(i*BS+1,j*BS-2); ctx.lineTo(i*BS+4,j*BS+3); ctx.stroke();
+      continue;
+    }
     // warnings: engine exhaust covered, or a beam weapon looking into its own hull
     const bad = (t==='engine' && designType(K(i-FACE[o][0], j-FACE[o][1]))) || (BEAM(t) && !laneFwd(designType, i, j, o));
     const fc = aimsOut(t) ? arcClear(i, j, o, t) : 1;
@@ -1678,6 +2298,57 @@ function renderBuild(){
   }
   ctx.restore();
 }
+// ---------- star map drawing ----------
+function layoutMap(){
+  const pr = $('mapPanel').getBoundingClientRect(), top = ($('hud').getBoundingClientRect().bottom + 8)/PX;
+  let x0 = 8, y0 = top + 18, x1 = W - 8, y1 = H - 12;
+  if (pr.width && pr.left/PX > W*.45) x1 = (pr.left - 8)/PX; else if (pr.height) y1 = (pr.top - 12)/PX;
+  return {x0, y0, x1, y1};
+}
+const nodeXY = (n, L) => [Math.round(L.x0 + 14 + n.x*(L.x1 - L.x0 - 28)), Math.round(L.y0 + 4 + n.y*(L.y1 - L.y0 - 8))];
+function mapNodeAt(x, y){
+  const L = layoutMap(); let best = null, bd = 13*13;
+  for (const n of G.map.nodes){ const [X,Y] = nodeXY(n,L), d = (X-x)**2 + (Y-y)**2; if (d < bd){ bd = d; best = n; } }
+  return best;
+}
+function renderMap(){
+  drawSpace(G.time*14, 0, 1);
+  const L = layoutMap(), M = G.map, cur = curNode(), seen = new Set(M.seen);
+  // lanes: gold where you have flown, pulsing cyan where you can jump next
+  ctx.lineWidth = 1;
+  for (const n of M.nodes) for (const id of n.links){
+    const m = M.nodes[id], [x1,y1] = nodeXY(n,L), [x2,y2] = nodeXY(m,L);
+    const open = n===cur && canJump(m), at = M.seen.indexOf(m.id), flown = at > 0 && M.seen[at-1] === n.id;
+    ctx.strokeStyle = flown ? '#ffc46b' : open ? '#5fd8ff' : '#2a3450';
+    ctx.globalAlpha = open ? .6 + .4*Math.sin(G.time*5) : 1;
+    if (open){ ctx.setLineDash([3,2]); ctx.lineDashOffset = -G.time*10; }
+    ctx.beginPath(); ctx.moveTo(x1+.5,y1+.5); ctx.lineTo(x2+.5,y2+.5); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+  }
+  ctx.globalAlpha = 1;
+  ctx.font = FONT(8); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const n of M.nodes){
+    const [X,Y] = nodeXY(n,L), N = NODE[n.type], big = exitNode(n), r = big ? 9 : 6, open = canJump(n);
+    ctx.globalAlpha = seen.has(n.id) && n!==cur ? .4 : 1;
+    ctx.fillStyle = '#05060c'; ctx.beginPath(); ctx.arc(X,Y,r,0,TAU); ctx.fill();
+    ctx.strokeStyle = N.col; ctx.lineWidth = G.mapHover===n ? 2 : 1; ctx.beginPath(); ctx.arc(X,Y,r,0,TAU); ctx.stroke();
+    if (n.type==='elite' || big){ ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X,Y,r-2,0,TAU); ctx.stroke(); }
+    ctx.fillStyle = N.col; ctx.fillText(N.g, X+1, Y+1);
+    if (open){ ctx.globalAlpha = .5 + .5*Math.sin(G.time*5); ctx.strokeStyle = '#e8ecf2'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X,Y,r+3,0,TAU); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+  // you are here: a bobbing marker over the current beacon
+  const [cx,cy] = nodeXY(cur,L), bob = Math.round(Math.sin(G.time*3)*1.5), top = cy - (exitNode(cur) ? 13 : 10) + bob;
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(cx+.5, top); ctx.lineTo(cx-3.5, top-5); ctx.lineTo(cx+4.5, top-5); ctx.closePath(); ctx.fill();
+  const h = G.mapHover;
+  if (h){
+    const [X,Y] = nodeXY(h,L), N = NODE[h.type], t = N.name.toUpperCase(), w = Math.ceil(ctx.measureText(t).width) + 8;
+    const ty = Y - L.y0 > 28 ? Y - 22 : Y + 22, tx = Math.round(clamp(X, L.x0 + w/2, L.x1 - w/2) - w/2);
+    ctx.fillStyle = '#05060c'; ctx.fillRect(tx, ty-7, w, 14); ctx.strokeStyle = N.col; ctx.lineWidth = 1; ctx.strokeRect(tx+.5, ty-6.5, w-1, 13);
+    ctx.fillStyle = N.col; ctx.fillText(t, tx + w/2 + 1, ty+1);
+  }
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#8497c4'; ctx.textAlign = 'left'; ctx.fillText(`SECTOR ${G.stage}`, Math.round(L.x0 + 4), Math.round(L.y0 - 8));
+}
 let lastT = performance.now();
 function frame(now){
   // schedule first, so an error in one frame can never stop the loop
@@ -1689,7 +2360,11 @@ function frame(now){
     else G.time += dt;
     ctx.setTransform(1,0,0,1,0,0); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#05060c'; ctx.fillRect(0,0,W,H);
-    if (G.mode==='build'){ hctx.setTransform(1,0,0,1,0,0); hctx.clearRect(0,0,hi.width,hi.height); renderBuild(); } else renderCombat();
+    const clearHi = () => { hctx.setTransform(1,0,0,1,0,0); hctx.clearRect(0,0,hi.width,hi.height); };
+    if (G.mode==='build'){ clearHi(); renderBuild(); }
+    else if (G.mode==='map'){ clearHi(); renderMap(); }
+    else if (G.mode==='title' || !G.player){ clearHi(); drawSpace(G.time*14, 0, 1); }
+    else renderCombat();
     syncHud();
   } catch (err) { console.error(err); }
 }
@@ -1716,7 +2391,6 @@ function placeSpots(i,j,o,t){
   });
 }
 function placeCheck(i,j,t,o){
-  if (locked(t)) return `${T[t].name} unlocks at stage ${T[t].unlock}`;
   const R = buildR(), oo = T[t].rot ? o : 0, cells = cellsFor(i,j,t,oo);
   for (const [a,b] of cells) if (Math.max(Math.abs(a),Math.abs(b)) > R) return 'Outside the build grid';
   const k = K(i,j), cur = G.design.get(k);
@@ -1724,8 +2398,11 @@ function placeCheck(i,j,t,o){
   if (isPart(cur)) return `Sell that ${T[cur].name.toLowerCase()} first`;
   if (PARTS[t]) for (const [a,b] of cells) if (G.design.has(K(a,b))) return `${T[t].name} needs ${cells.length} empty cells`;
   if (cur===t && (!T[t].rot || (G.dirs.get(k)||0)===oo)) return 'Already placed';
-  const cost = T[t].cost - (cur ? T[cur].cost : 0);
-  if (cost > G.credits) return `Not enough credits for ${T[t].name.toLowerCase()}`;
+  if (!cur && blockCount() >= blockLimit()) return `Block limit reached (${blockLimit()}): it grows each sector`;
+  if (PLATE(t)){
+    const back = cur && PLATE(cur) && !G.broken.has(k) ? T[cur].cost : 0;
+    if (T[t].cost - back > G.credits) return `Not enough credits for ${T[t].name.toLowerCase()}`;
+  } else if (!(G.inv[t] > 0)) return `No ${T[t].name.toLowerCase()} left in cargo`;
   if (!cur){
     const own = new Set(cells.map(([a,b]) => K(a,b)));
     if (!cells.some(([a,b]) => NB.some(d => { const n = K(a,b)+d; return !own.has(n) && G.design.has(n); }))) return 'Blocks must touch your ship';
@@ -1734,12 +2411,14 @@ function placeCheck(i,j,t,o){
 }
 function tryPlace(i,j,t,o){
   const why = placeCheck(i,j,t,o); if (why !== true) return why;
-  const k = K(i,j), cur = G.design.get(k), oo = T[t].rot ? o : 0;
-  G.credits -= T[t].cost - (cur ? T[cur].cost : 0);
+  const k = K(i,j), oo = T[t].rot ? o : 0;
+  if (G.design.has(k)) removeCell(k);
+  const hurt = PLATE(t) ? (G.credits -= T[t].cost, false) : takeCargo(t);
   for (const [a,b,ct] of cellsFor(i,j,t,oo)){
     const kk = K(a,b); G.design.set(kk,ct);
     if (T[ct].rot) G.dirs.set(kk,oo); else G.dirs.delete(kk);
   }
+  if (hurt) G.broken.add(k);
   return true;
 }
 // A body cell belongs to the head that sits ahead of it (and to port, for wide parts) along the shared facing.
@@ -1753,12 +2432,24 @@ function headOf(i,j){
   }
   return [i,j];
 }
-function removeCell(k){ const t = G.design.get(k); G.design.delete(k); G.dirs.delete(k); G.credits += T[t].cost; }
+// A removed block goes back to cargo (plating is refunded); a damaged one is scrapped.
+// A damaged block goes back to cargo still damaged (damaged plating refunds its value less the repair).
+function removeCell(k){
+  const t = G.design.get(k), was = G.broken.delete(k); G.design.delete(k); G.dirs.delete(k);
+  if (HEAD_OF[t]) return;
+  if (PLATE(t)) G.credits += was ? Math.max(0, T[t].cost - repCost(t)) : T[t].cost;
+  else { G.inv[t] = (G.inv[t]||0) + 1; if (was) G.dmg[t] = dmgOf(t) + 1; }
+}
 function sellAt(i,j){
   const cur = G.design.get(K(i,j));
   if (!cur || cur==='core') return;
   const [hi_, hj] = headOf(i,j), ht = G.design.get(K(hi_,hj));
-  if (PARTS[ht]) for (const [a,b] of cellsFor(hi_,hj,ht,G.dirs.get(K(hi_,hj))||0)){ if (G.design.has(K(a,b))) removeCell(K(a,b)); }
+  if (PARTS[ht]){
+    const cells = cellsFor(hi_,hj,ht,G.dirs.get(K(hi_,hj))||0);
+    // a part with any damaged cell is scrapped whole
+    if (cells.some(([a,b]) => G.broken.has(K(a,b)))) G.broken.add(K(hi_,hj));
+    for (const [a,b] of cells) if (G.design.has(K(a,b))) removeCell(K(a,b));
+  }
   else removeCell(K(i,j));
   const seen = new Set([CORE]), q = [CORE];
   while (q.length){ const c = q.pop(); for (const d of NB){ const n = c+d; if (G.design.has(n) && !seen.has(n)){ seen.add(n); q.push(n); } } }
@@ -1856,7 +2547,7 @@ function zoomAt(x, y, f){
 }
 // Undo: one entry per press-drag-release in the drydock (design, facings and credits).
 const undoStack = [];
-const snap = () => ({d:[...G.design], o:[...G.dirs], c:G.credits});
+const snap = () => ({d:[...G.design], o:[...G.dirs], c:G.credits, inv:{...G.inv}, br:[...G.broken]});
 const sameSnap = (a,b) => JSON.stringify([a.d,a.o]) === JSON.stringify([b.d,b.o]);
 function dropUndoMark(){ undoMark = null; }
 function commitUndoMark(){
@@ -1865,7 +2556,7 @@ function commitUndoMark(){
 }
 function undo(){
   const u = undoStack.pop(); if (!u){ toast('Nothing to undo'); return; }
-  G.design = new Map(u.d); G.dirs = new Map(u.o); G.credits = u.c; sfx('place'); syncUI();
+  G.design = new Map(u.d); G.dirs = new Map(u.o); G.credits = u.c; G.inv = u.inv; G.broken = new Set(u.br); sfx('place'); syncUI();
 }
 const ptrs = new Map();
 let pinch = null, panning = null, pending = null, undoMark = null;
@@ -1874,6 +2565,13 @@ cv.addEventListener('pointerdown', e => {
   ptrs.set(e.pointerId, {x, y}); audio();
   if (!touch) G.mouse = {x, y, has:true};
   if (G.mode==='combat' && !touch && e.button===0) G.fireHeld = true;
+  if (G.mode==='map' && $('overlay').hidden){
+    // touch picks a beacon first and jumps on a second tap; a mouse click jumps straight away
+    const n = mapNodeAt(x,y);
+    if (n && (!touch || G.mapHover===n)){ if (n===curNode()) mapAction(); else jumpTo(n); }
+    else { G.mapHover = n; syncMapPanel(); }
+    return;
+  }
   if (G.mode==='combat' && touch){
     // twin-stick: left half moves, right half aims; with no aim stick the ship auto-aims
     if (x < W/2 && !G.joy) G.joy = {id:e.pointerId, x0:x, y0:y, x, y};
@@ -1903,6 +2601,12 @@ cv.addEventListener('pointermove', e => {
   if (G.mode==='combat'){
     if (G.joy && G.joy.id===e.pointerId){ G.joy.x = x; G.joy.y = y; }
     if (G.aimJoy && G.aimJoy.id===e.pointerId){ G.aimJoy.x = x; G.aimJoy.y = y; }
+    return;
+  }
+  if (G.mode==='map' && !touch){
+    const n = mapNodeAt(x,y);
+    if (n !== G.mapHover){ G.mapHover = n; syncMapPanel(); }
+    cv.style.cursor = n && (canJump(n) || n===curNode()) ? 'pointer' : '';
     return;
   }
   if (G.mode!=='build') return;
@@ -1936,6 +2640,7 @@ const endPtr = e => {
 };
 cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
 cv.addEventListener('wheel', e => {
+  if (G.mode==='combat'){ e.preventDefault(); camZoom(Math.exp(e.deltaY*.0012)); return; }
   if (G.mode!=='build') return;
   e.preventDefault(); zoomAt(e.clientX/PX, e.clientY/PX, Math.exp(-e.deltaY*.0015));
 }, {passive:false});
@@ -1949,15 +2654,19 @@ addEventListener('keydown', e => {
   if (G.mode==='build'){
     const key = e.key.toLowerCase(), t = PAL.find(t => T[t].key === key); if (t) select(t);
     if (e.code==='KeyR') rotate();
-    if (e.code==='KeyU') upgrade();
     if (e.code==='Equal' || e.code==='NumpadAdd') zoomBtn(1.25);
     if (e.code==='Minus' || e.code==='NumpadSubtract') zoomBtn(.8);
     if (e.code==='KeyZ' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); undo(); }
     if (e.code==='KeyM') cycleMirror();
-    if (e.code==='Enter' && !(e.target instanceof HTMLButtonElement)) startStage();
+    if (e.code==='Enter' && !(e.target instanceof HTMLButtonElement)) toMap();
+  } else if (G.mode==='map' && $('overlay').hidden){
+    if (e.code==='KeyD') toDrydock();
   } else if (G.mode==='combat'){
     if (e.code==='KeyP' || e.code==='Escape') togglePause();
     if (e.code==='KeyT') setAuto(!G.aimAuto);
+    if (e.code==='Equal' || e.code==='NumpadAdd') camZoom(.85);
+    if (e.code==='Minus' || e.code==='NumpadSubtract') camZoom(1.18);
+    const gd = /^Digit([1-5])$/.exec(e.code); if (gd) toggleGroup(+gd[1]);
   }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1986,7 +2695,7 @@ function drawIcons(){
   }
 }
 function select(t){
-  if (locked(t)) return; // locked blocks stay secret until they unlock
+  if (!owned(t)) return; // blocks you have never found stay secret
   G.sel = t; if (PARTS[t]) G.rot &= ~1; syncUI();
 }
 function designStats(){
@@ -1996,7 +2705,8 @@ function designStats(){
   for (const c of cells){
     const d = T[c.t], m = LV(c.t); hp += d.hp*m;
     if (aimsOut(c.t)){ const fc = arcClear(c.i, c.j, c.o, c.t); if (fc === 0) badT++; else if (fc < .4) weakT++; }
-    if (d.gun) dps += d.gun.dmg*(d.gun.mirv || 1)*m/d.gun.cd;
+    if (d.gun) dps += d.gun.dmg*(d.gun.mirv || 1)*(d.gun.pellets || 1)*m/d.gun.cd;
+    if (d.tesla){ dps += d.tesla.dmg*d.tesla.jumps*m/d.tesla.cd; eUse += d.tesla.en/d.tesla.cd; }
     if (d.gun && d.gun.en) eUse += d.gun.en/d.gun.cd;
     if (c.t==='laser') eUse += d.laser.en; if (c.t==='rail') eUse += d.rail.en/d.rail.cd; if (c.t==='pd') eUse += d.pd.en/d.pd.cd*m;
     if (c.t==='gen') eGen += d.en.regen*m; if (c.t==='battery') eCap += d.en.cap*m;
@@ -2015,54 +2725,74 @@ function designStats(){
 function syncUI(){
   const s = G.stage, R = buildR(), S = scaleOf(s);
   for (const t of PAL){
-    const btn = $('pal-'+t), ct = $('ct-'+t), lk = t!=='sell' && locked(t);
-    btn.setAttribute('aria-pressed', String(G.sel===t)); btn.hidden = lk;
-    ct.textContent = t==='sell' ? 'refund' : lk ? `stage ${T[t].unlock}` : T[t].cost+' cr' + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '');
-    ct.classList.toggle('no', !lk && t!=='sell' && T[t].cost > G.credits);
+    const btn = $('pal-'+t), ct = $('ct-'+t), have = G.inv[t] || 0;
+    btn.setAttribute('aria-pressed', String(G.sel===t)); btn.hidden = !owned(t);
+    ct.textContent = t==='sell' ? 'to cargo' : PLATE(t) ? T[t].cost+' cr' + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '') : `×${have}` + (dmgOf(t) ? ` (${dmgOf(t)} dmg)` : '') + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '');
+    ct.classList.toggle('no', t!=='sell' && (PLATE(t) ? T[t].cost > G.credits : !have));
   }
+  if (!owned(G.sel)) G.sel = 'hull';
   const rotOk = !!T[G.sel].rot;
   $('rot').disabled = !rotOk; drawIcons();
   $('mirName').textContent = MIRROR[G.mir];
-  $('undo').disabled = !undoStack.length; renderBps();
+  $('undo').disabled = !undoStack.length; renderBps(); renderGroups();
   $('rotArrow').textContent = ARROW[G.rot]; $('rotName').textContent = FACING[G.rot];
   $('rot').title = rotOk ? 'Facing for the next block. Tip: tap a placed block of this type to turn it.' : 'This block has no facing';
   $('selDesc').textContent = T[G.sel].desc + (rotOk && !PARTS[G.sel] ? ' Tap a placed one to turn it 45°.' : '');
-  const up = $('upg'), L = G.sel==='sell' ? 0 : lvOf(G.sel);
-  up.hidden = !L;
-  if (L){
-    up.disabled = L >= MAXLV || upCost(G.sel) > G.credits;
-    up.innerHTML = L >= MAXLV ? `${T[G.sel].name} Lv${L} · max` : `Upgrade ${T[G.sel].name} Lv${L}→${L+1} · ${upCost(G.sel)} cr <kbd>U</kbd>`;
-  }
-  const un = unlocksAt(s);
-  $('gridInfo').innerHTML = `Stage <b>${s}</b> at scale <b>×${S.toFixed(2)}</b>. Build area <b>${2*R+1} × ${2*R+1} m</b>, grows as you build. Expect <b>${2+Math.floor(s/3)} waves</b> and a capital ship of about <b>${bossSize(s)} blocks</b>.` +
-    (s > 1 && un.length ? ` <span class="new">New: ${un.join(', ')}.</span>` : '');
+  const rb = $('repair');
+  rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
+  rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;
+  $('gridInfo').innerHTML = `Sector <b>${s}</b> at scale <b>×${S.toFixed(2)}</b>. Blocks <b>${blockCount()} / ${blockLimit()}</b>, more each sector. Plating costs credits; every other block comes from cargo. Upgrades are sold at shops.`;
   const st = designStats(), ms = v => (v/BS).toFixed(1);
   const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
   $('stats').innerHTML =
-    `<dt>Blocks</dt><dd>${st.n}</dd><dt>Structure</dt><dd>${st.hp} hp</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
+    `<dt>Blocks</dt><dd>${blockCount()} / ${blockLimit()}</dd><dt>Structure</dt><dd>${st.hp} hp</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
     `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Speed side / aft</dt><dd>${ms(st.side)} / ${ms(st.aft)}</dd>` +
     `<dt>Energy</dt><dd class="${st.eUse > st.eGen ? 'gold' : ''}">+${Math.round(st.eGen)}/s · uses ${Math.round(st.eUse)}/s · ${Math.round(st.eCap)}</dd>` +
     `<dt>Turn rate</dt><dd>${Math.round(st.turn*180/Math.PI)}°/s</dd><dt>Shields / PD</dt><dd>${st.sh} / ${st.pd}</dd>` +
     (st.fb || st.bb ? `<dt>Fighters / bombers</dt><dd>${st.fb} / ${st.bb}</dd>` : '') +
+    (G.broken.size ? `<dt class="warn">Damaged</dt><dd class="warn">${G.broken.size} block${G.broken.size>1?'s':''}</dd>` : '') +
     (warn ? `<dt class="warn">Blocked</dt><dd class="warn">${warn}</dd>` : '') +
     (st.weakT ? `<dt class="gold">Boxed in</dt><dd class="gold">${st.weakT} turret${st.weakT>1?'s':''}</dd>` : '');
-  $('launch').textContent = `Launch stage ${s}`;
-  const inBuild = G.mode==='build';
-  $('panel').hidden = !inBuild;
-  $('hudWave').hidden = inBuild; $('coreWrap').hidden = inBuild; $('pauseBtn').hidden = inBuild; $('aimBtn').hidden = inBuild;
+  $('launch').textContent = 'Star map';
+  const m = G.mode, fight = m==='combat' || ((m==='clear' || m==='dead') && G.player);
+  $('panel').hidden = m!=='build'; $('mapPanel').hidden = m!=='map';
+  $('hudWave').hidden = !fight; $('coreWrap').hidden = !fight; $('pauseBtn').hidden = !fight; $('aimBtn').hidden = !fight; $('zoomIn').hidden = $('zoomOut').hidden = !fight; $('groups').hidden = !fight;
+  $('hudScale').hidden = m==='title';
+  if (m==='map') syncMapPanel();
   hudCache = {};
-  if (inBuild) save();
+  if (m==='build' || m==='map') save();
+}
+function syncMapPanel(){
+  if (!G.map) return;
+  const cur = curNode(), h = G.mapHover, nb = G.broken.size, cargo = Object.values(G.inv).reduce((a,b) => a + b, 0);
+  $('mapTitle').textContent = `Sector ${G.stage}`;
+  const lead = h ? `<b>${NODE[h.type].name}.</b> ${NODE[h.type].desc}${canJump(h) ? ' Click to jump.' : ''}`
+    : exitNode(cur) ? (G.map.done ? 'The gate is open.' : `The ${NODE[cur.type].name.toLowerCase()} blocks the way out.`)
+    : `Pick a lit beacon to jump to. ${G.stage%3===0 ? 'A flagship guards this sector.' : `Flagship in sector ${Math.ceil(G.stage/3)*3}.`}`;
+  $('mapInfo').innerHTML = lead + `<br>Cargo <b>${cargo}</b> block${cargo===1 ? '' : 's'}` + (nb ? `, <b style="color:var(--foe)">${nb} damaged</b>` : '') + '.';
+  let lbl = '';
+  if (exitNode(cur)) lbl = G.map.done ? `Jump to sector ${G.stage+1}` : `Engage ${NODE[cur.type].name.toLowerCase()}`;
+  else if (cur.type==='shop') lbl = 'Open shop';
+  else if (cur.type==='event' && !cur.used) lbl = 'Answer the signal';
+  $('mapGo').hidden = !lbl; $('mapGo').textContent = lbl;
 }
 let hudCache = {};
 function setTxt(id, v){ if (hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
 function syncHud(){
-  const S = G.mode==='build' ? scaleOf(G.stage) : G.S;
-  setTxt('hudStage', `Stage ${G.stage}`);
+  const S = G.mode==='combat' ? G.S : scaleOf(G.stage);
+  setTxt('hudStage', `Sector ${G.stage}`);
   setTxt('hudScale', `Scale ×${S.toFixed(2)}`);
   setTxt('hudCredits', String(Math.round(G.credits)));
-  if (G.mode!=='build' && G.player){
+  const B = G.mode==='combat' && G.boss && G.boss.alive ? G.boss : null;
+  if (hudCache.boss !== !!B){ hudCache.boss = !!B; $('bossWrap').hidden = !B; }
+  if (B){
+    setTxt('bossName', B.flag ? `${B.station ? 'Starbase' : 'Flagship'} · phase ${B.phaseN}` : 'Capital ship');
+    const bw = (100*B.blocks.size/B.n0).toFixed(0)+'%';
+    if (hudCache.bw !== bw){ hudCache.bw = bw; $('bossBar').style.width = bw; }
+  }
+  if (G.mode!=='build' && G.mode!=='map' && G.mode!=='title' && G.player){
     const alive = G.ships.filter(s => s.alive && s.team==='e' && !s.fodder).length;
-    setTxt('hudWave', `Wave ${G.waveIdx}/${G.waves.length} · ${alive} hostile${alive===1 ? '' : 's'}`);
+    setTxt('hudWave', `${NODE[G.fight].name} · wave ${G.waveIdx}/${G.waves.length} · ${alive} hostile${alive===1 ? '' : 's'}`);
     const core = G.player.blocks.get(CORE), pct = core ? Math.max(0, core.hp/core.max) : 0;
     const w = (pct*100).toFixed(0)+'%';
     const ew = (Math.max(0, G.player.en/G.player.enMax)*100).toFixed(0)+'%';
@@ -2070,22 +2800,29 @@ function syncHud(){
     if (hudCache.core !== w){ hudCache.core = w; const bar = $('coreBar'); bar.style.width = w; bar.style.background = pct < .35 ? 'var(--foe)' : ''; }
   }
 }
-function showOverlay(title, html, actions){
+function showOverlay(title, html, actions, wide=false){
   $('ovTitle').textContent = title; $('ovText').innerHTML = html;
+  $('ovTitle').closest('.card').classList.toggle('wide', wide);
   const a = $('ovActions'); a.innerHTML = '';
   for (const [label, fn, cls] of actions){ const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', fn); a.append(b); }
   $('overlay').hidden = false; a.firstChild?.focus();
 }
 function hideOverlay(){ $('overlay').hidden = true; }
+// shop and hangar buttons inside the overlay text
+$('ovText').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b || b.disabled) return;
+  const [k, v] = b.dataset.act.split(':');
+  if (ACT[k](v)) return;
+  save(); openShop(G.shopNode);
+});
 let toastTimer = 0;
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1600); }
 
-// Blueprints: three saved designs in this browser. Loading sells the current ship for a full refund and buys the blueprint,
-// leaving out blocks that are still locked (and anything that would no longer connect to the core).
+// Blueprints: three saved designs in this browser. Loading strips the ship back to its core, then rebuilds the blueprint
+// from cargo and credits, leaving out whatever you don't have (and anything that would no longer connect to the core).
 const BP = 'oom-bp-v1';
 const bpGet = () => { try { const v = JSON.parse(localStorage.getItem(BP) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
 const bpPut = v => { try { localStorage.setItem(BP, JSON.stringify(v)); } catch {} };
-const designCost = d => { let c = 0; for (const t of d.values()) c += T[t].cost; return c; };
 function renderBps(){
   const v = bpGet(), el = $('bps'); let h = '';
   for (let n=0; n<3; n++){
@@ -2099,49 +2836,59 @@ function bpSave(n){
 }
 function bpLoad(n){
   const b = bpGet()[n]; if (!b) return;
-  const d = new Map(b.d.filter(([k,t]) => T[t] && !locked(HEAD_OF[t] || t)));
-  d.set(CORE,'core');
-  const seen = new Set([CORE]), q = [CORE];
-  while (q.length){ const c = q.pop(); for (const nb of NB){ const m = c+nb; if (d.has(m) && !seen.has(m)){ seen.add(m); q.push(m); } } }
-  for (const k of [...d.keys()]) if (!seen.has(k)) d.delete(k);
-  const need = designCost(d), have = G.credits + designCost(G.design);
-  if (need > have){ toast(`Need ${need - have} more credits for that blueprint`); return; }
+  if (G.broken.size){ toast('Repair or remove damaged blocks first'); return; }
   undoStack.push(snap());
-  G.credits = have - need; G.design = d; G.dirs = new Map(b.o.filter(([k]) => d.has(k)));
-  sfx('upgrade'); toast(d.size < b.d.length ? `Loaded slot ${n+1} without ${b.d.length - d.size} locked blocks` : `Loaded slot ${n+1}`); syncUI();
+  for (const k of [...G.design.keys()]) if (k!==CORE) removeCell(k);
+  const want = new Map(b.d.filter(([,t]) => T[t])), dirs = new Map(b.o), missing = {};
+  // nearest cells first, so whatever runs out is the outer edge of the design
+  const heads = [...want].filter(([k,t]) => k!==CORE && !HEAD_OF[t]).sort(([a],[c]) => Math.hypot(KI(a),KJ(a)) - Math.hypot(KI(c),KJ(c)));
+  for (const [k,t] of heads){
+    const o = dirs.get(k) || 0, cells = cellsFor(KI(k), KJ(k), t, T[t].rot ? o : 0);
+    if (cells.some(([a,c]) => G.design.has(K(a,c)))) continue;
+    if (PLATE(t) ? T[t].cost > G.credits : !(G.inv[t] > 0)){ missing[t] = (missing[t]||0) + 1; continue; }
+    if (PLATE(t)) G.credits -= T[t].cost; else G.inv[t]--;
+    for (const [a,c,ct] of cells){ G.design.set(K(a,c), ct); if (T[ct].rot) G.dirs.set(K(a,c), o); }
+  }
+  // drop anything left floating, back into cargo
+  const seen = new Set([CORE]), q = [CORE];
+  while (q.length){ const c = q.pop(); for (const nb of NB){ const m = c+nb; if (G.design.has(m) && !seen.has(m)){ seen.add(m); q.push(m); } } }
+  for (const k of [...G.design.keys()]) if (!seen.has(k)) removeCell(k);
+  const miss = Object.keys(missing);
+  sfx('upgrade'); toast(miss.length ? `Loaded slot ${n+1}, short of ${miss.map(t => `${missing[t]} ${T[t].name.toLowerCase()}`).join(', ')}` : `Loaded slot ${n+1}`); syncUI();
 }
 $('bps').addEventListener('click', e => {
   const s = e.target.closest('button'); if (!s) return;
   if (s.dataset.save) bpSave(+s.dataset.save); else if (s.dataset.load) bpLoad(+s.dataset.load);
 });
-function upgrade(){
-  const t = G.sel; if (t==='sell' || G.mode!=='build') return;
-  const L = lvOf(t); if (L >= MAXLV) return;
-  const c = upCost(t); if (c > G.credits){ toast(`Need ${c} credits`); return; }
-  // credits spent on a level can't come back through undo
-  G.credits -= c; G.lv[t] = L+1; undoStack.length = 0; sfx('upgrade'); toast(`${T[t].name} is now level ${L+1}`); syncUI();
-}
-// progress lives in this browser's localStorage; every read and write is guarded so a blocked store just means no saving
-const SAVE = 'oom-save-v1';
+// The run lives in this browser's localStorage, apart from the hangar's data and upgrades, which outlive every run.
+// Every read and write is guarded so a blocked store just means no saving.
+const RUN = 'oom-run-v1', METAK = 'oom-meta-v1';
 function save(){
-  try { localStorage.setItem(SAVE, JSON.stringify(saveData())); } catch {}
+  if (!G.stats) return;
+  try { localStorage.setItem(RUN, JSON.stringify(saveData())); } catch {}
 }
 function load(d){
   try {
-    d = d || JSON.parse(localStorage.getItem(SAVE) || 'null'); if (!d || !Array.isArray(d.design) || !(d.stage >= 1)) return false;
-    G.stage = d.stage; G.credits = d.credits; G.design = new Map(d.design); G.dirs = new Map(d.v === 2 ? d.dirs : d.dirs.map(([k,o]) => [k,o*2])); G.lv = d.lv || {};
-    G.mir = d.mir ?? (d.mirror === false ? 0 : 1); G.spanT = d.spanT || 0; G.span0 = d.span0 || 0; G.spanStage = d.spanStage;
+    d = d || JSON.parse(localStorage.getItem(RUN) || 'null');
+    if (!d || d.v !== 3 || !Array.isArray(d.design) || !d.map || !d.stats) return false;
+    G.stage = d.stage; G.credits = d.credits; G.design = new Map(d.design); G.dirs = new Map(d.dirs); G.lv = d.lv || {};
+    G.mir = d.mir ?? 1; G.spanT = d.spanT || 0; G.span0 = d.span0 || 0; G.spanStage = d.spanStage;
+    G.inv = d.inv || {}; G.dmg = d.dmg || {}; G.grp = d.grp || {}; G.auto = d.auto || [false,false,false,true,false]; G.broken = new Set(d.broken || []); G.map = d.map; G.stats = d.stats; G.node = curNode();
     return true;
   } catch { return false; }
 }
-const saveData = () => ({stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, v:2, mir:G.mir, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage});
+const saveData = () => ({v:3, stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, mir:G.mir, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage,
+  inv:G.inv, dmg:G.dmg, grp:G.grp, auto:G.auto, broken:[...G.broken], map:G.map, stats:G.stats});
+function clearRun(){ G.stats = null; try { localStorage.removeItem(RUN); } catch {} }
+function saveMeta(){ try { localStorage.setItem(METAK, JSON.stringify(G.meta)); } catch {} }
+function loadMeta(){ try { const m = JSON.parse(localStorage.getItem(METAK) || 'null'); if (m && typeof m.data==='number') G.meta = {data:m.data, lv:m.lv || {}}; } catch {} }
 $('saveNow').addEventListener('click', () => {
-  try { localStorage.setItem(SAVE, JSON.stringify(saveData())); toast('Game saved'); } catch { toast('This browser blocks saving: use Export'); }
+  try { localStorage.setItem(RUN, JSON.stringify(saveData())); saveMeta(); toast('Game saved'); } catch { toast('This browser blocks saving: use Export'); }
 });
-// a save file carries the progress and the blueprints
+// a save file carries the run, the hangar and the blueprints
 $('saveExp').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({game:'orders-of-magnitude', save:saveData(), bp:bpGet()})], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `orders-of-magnitude-stage${G.stage}.json`;
+  const blob = new Blob([JSON.stringify({game:'orders-of-magnitude', save:saveData(), meta:G.meta, bp:bpGet()})], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `orders-of-magnitude-sector${G.stage}.json`;
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast('Save file exported');
 });
@@ -2150,17 +2897,24 @@ $('saveFile').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   let d; try { d = JSON.parse(await f.text()); } catch {}
   if (!d || d.game !== 'orders-of-magnitude' || !d.save){ toast('Not an Orders of Magnitude save file'); return; }
-  if (!confirm(`Load the stage ${d.save.stage} save? It replaces your current progress.`)) return;
+  if (d.save.v !== 3){ toast('That save is from before the roguelite update'); return; }
+  if (!confirm(`Load the sector ${d.save.stage} save? It replaces your current run.`)) return;
   if (!load(d.save)){ toast('That save file is damaged'); return; }
+  if (d.meta && typeof d.meta.data==='number'){ G.meta = {data:d.meta.data, lv:d.meta.lv || {}}; saveMeta(); }
   if (Array.isArray(d.bp)) bpPut(d.bp);
-  undoStack.length = 0; sfx('upgrade'); toast(`Loaded stage ${G.stage} save`); syncUI();
+  undoStack.length = 0; sfx('upgrade'); toast(`Loaded sector ${G.stage} save`); toMap();
 });
-$('reset').addEventListener('click', () => {
-  if (!confirm('Erase your saved progress and start again from stage 1?')) return;
-  try { localStorage.removeItem(SAVE); } catch {}
-  location.reload();
+const abandon = () => { if (confirm('Abandon this run? You keep the data it has earned so far.')) runOver('abandoned'); };
+$('reset').addEventListener('click', abandon);
+$('mapAbandon').addEventListener('click', abandon);
+$('repair').addEventListener('click', () => {
+  const n = repair(1); if (!n){ toast('Not enough credits'); return; }
+  // credits spent on repairs can't come back through undo
+  undoStack.length = 0; sfx('upgrade'); toast(G.broken.size ? `Repaired ${n}, ${G.broken.size} still damaged` : 'Ship repaired'); syncUI();
 });
-$('upg').addEventListener('click', upgrade);
+$('mapGo').addEventListener('click', mapAction);
+$('toDock').addEventListener('click', toDrydock);
+$('legend').innerHTML = Object.entries(NODE).filter(([t]) => t!=='start' && t!=='ambush').map(([,N]) => `<li><b style="color:${N.col}">${N.g}</b>${N.name}</li>`).join('');
 const zoomBtn = f => { const L = layoutBuild(); zoomAt(L.cx, L.cy, f); };
 $('zIn').addEventListener('click', () => zoomBtn(1.4));
 $('zOut').addEventListener('click', () => zoomBtn(1/1.4));
@@ -2175,15 +2929,35 @@ function setAuto(v, save=true){
   const b = $('aimBtn'); b.textContent = v ? 'Auto on' : 'Auto off'; b.setAttribute('aria-pressed', v);
 }
 $('aimBtn').addEventListener('click', () => setAuto(!G.aimAuto));
+// combat camera: the player's zoom multiplies the automatic framing and is remembered
+function camZoom(f){ G.camMul = clamp(G.camMul*f, .45, 3); try { localStorage.setItem('oom-cam', String(G.camMul)); } catch {} }
+try { G.camMul = clamp(+localStorage.getItem('oom-cam') || 1, .45, 3); } catch {}
+$('zoomIn').addEventListener('click', () => camZoom(.8));
+$('zoomOut').addEventListener('click', () => camZoom(1.25));
+// weapon groups: the drydock assigns types to groups, and combat toggles each group's auto fire (keys 1-5)
+function toggleGroup(n){ G.auto[n-1] = !G.auto[n-1]; toast(`Group ${n}: ${G.auto[n-1] ? 'auto fire' : 'fires with you'}`); renderGroups(); save(); }
+const shipWeapons = () => PAL.filter(t => isWeapon(t) && onShip(t));
+function renderGroups(){
+  const ws = shipWeapons(), on = n => G.auto[n-1];
+  $('grps').innerHTML = ws.length ? '<p class="sub">Set each weapon\'s group. Groups on <b>auto</b> fire on their own at the nearest hostile; the rest fire with you. Keys <b>1-5</b> toggle auto in a fight.</p>' +
+    ws.map(t => `<div class="grow"><span>${T[t].name}</span>${[1,2,3,4,5].map(n => `<button type="button" class="gb" data-g="${t}:${n}" aria-pressed="${grpOf(t)===n}">${n}</button>`).join('')}</div>`).join('') +
+    `<div class="grow"><span>Auto</span>${[1,2,3,4,5].map(n => `<button type="button" class="gb" data-a="${n}" aria-pressed="${on(n)}">${n}</button>`).join('')}</div>`
+    : '<p class="sub">No weapons on the ship.</p>';
+  $('groups').innerHTML = [1,2,3,4,5].map(n => {
+    const names = ws.filter(t => grpOf(t)===n).map(t => T[t].name); if (!names.length) return '';
+    return `<button type="button" class="gb grpc" data-a="${n}" aria-pressed="${on(n)}"><kbd>${n}</kbd> ${names.join(', ')} · ${on(n) ? 'AUTO' : 'manual'}</button>`;
+  }).join('');
+}
+for (const id of ['grps','groups']) $(id).addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.g){ const [t,n] = b.dataset.g.split(':'); G.grp[t] = +n; renderGroups(); save(); }
+  else if (b.dataset.a) toggleGroup(+b.dataset.a);
+});
 try { setAuto(localStorage.getItem('oom-auto') === '1', false); } catch { setAuto(false, false); }
 function cycleMirror(){ G.mir = (G.mir + 1) % 4; syncUI(); }
 $('mirror').addEventListener('click', cycleMirror);
 $('rot').addEventListener('click', rotate);
-$('launch').addEventListener('click', () => {
-  const st = designStats(), n = st.badT + st.badW + st.badE;
-  startStage();
-  if (n) toast(`${n} block${n>1?'s':''} can't fire or thrust: marked ✕ in drydock`);
-});
+$('launch').addEventListener('click', toMap);
 const splash = $('splash');
 function endSplash(){ if (!splash.isConnected) return; splash.remove(); removeEventListener('keydown', skipKey, true); }
 function skipKey(e){ e.stopImmediatePropagation(); e.preventDefault(); endSplash(); }
@@ -2192,7 +2966,7 @@ splash.addEventListener('pointerdown', e => { e.stopPropagation(); endSplash(); 
 splash.addEventListener('animationend', e => { if (e.target === splash) endSplash(); });
 if (innerWidth < 760){ $('help').open = false; $('statsBox').open = false; }
 
-load(); buildPalette(); syncUI();
+loadMeta(); load(); buildPalette(); showTitle();
 requestAnimationFrame(frame);
 })();
 </script>
