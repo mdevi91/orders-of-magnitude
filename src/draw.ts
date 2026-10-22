@@ -1,32 +1,35 @@
-// @ts-nocheck
-import { BCOL, BEAM, COL, ESH, GCOL, MAXLV, T, grpOf, isWeapon, lvOf, shRad } from './catalog';
+import { BCOL, BEAM, COL, ESH, GCOL, MAXLV, T, def, grpOf, isWeapon, lvOf, shRad } from './catalog';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { BS, FA, FACE, K, KI, KJ, TAU, angDiff, clamp, rand } from './grid';
 import { laneFwd } from './physics';
 import { wpos } from './ships';
 import { G, buildR, spanFor } from './state';
 import { JOY_R } from './update';
+import type { BlockType, Bullet, Cell, Facing, Key, Ship, Stick, Team } from './types';
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 
 // ---------- drawing ----------
 // VGA-style metal sprites: each block is a bevelled plate (light top-left, shadow bottom-right) with its part drawn on top.
 // Palettes are [highlight, base, shadow].
-export const MET = {
+type Ctx = CanvasRenderingContext2D;
+/** [highlight, base, shadow] */
+type Pal3 = [string, string, string];
+export const MET: Record<'p'|'e', {hull: Pal3; armor: Pal3; dark: Pal3}> = {
   p:{hull:['#d4dbe6','#8590a1','#454c5a'], armor:['#b4bcc8','#5f6878','#2b3039'], dark:['#7d8796','#3d4350','#1c1f26']},
   e:{hull:['#e08a62','#9a4630','#4a1c12'], armor:['#b8705a','#6a3024','#30120c'], dark:['#8a4a3a','#4a2018','#200a06']},
 };
-export function plate(X,x,y,m){
+export function plate(X: Ctx, x: number, y: number, m: Pal3){
   X.fillStyle = m[1]; X.fillRect(x-5,y-5,10,10);
   X.fillStyle = m[0]; X.fillRect(x-5,y-5,10,1.3); X.fillRect(x-5,y-5,1.3,10);
   X.fillStyle = m[2]; X.fillRect(x-5,y+3.7,10,1.3); X.fillRect(x+3.7,y-5,1.3,10);
 }
-export function orb(X,x,y,r,cols){ for (let n=0; n<cols.length; n++){ X.fillStyle = cols[n]; X.beginPath(); X.arc(x - n*r*.12, y - n*r*.12, r*(1 - n/cols.length), 0, TAU); X.fill(); } }
-export function barrel(X,x,y,ca,sa,len,w,m){
+export function orb(X: Ctx, x: number, y: number, r: number, cols: string[]){ for (let n=0; n<cols.length; n++){ X.fillStyle = cols[n]; X.beginPath(); X.arc(x - n*r*.12, y - n*r*.12, r*(1 - n/cols.length), 0, TAU); X.fill(); } }
+export function barrel(X: Ctx, x: number, y: number, ca: number, sa: number, len: number, w: number, m: Pal3){
   const px = -sa*w/2, py = ca*w/2;
   X.fillStyle = m[2]; X.beginPath(); X.moveTo(x+px,y+py); X.lineTo(x+px+ca*len,y+py+sa*len); X.lineTo(x-px+ca*len,y-py+sa*len); X.lineTo(x-px,y-py); X.closePath(); X.fill();
   X.fillStyle = m[0]; X.beginPath(); X.moveTo(x+px*.3,y+py*.3); X.lineTo(x+px*.3+ca*len,y+py*.3+sa*len); X.lineTo(x-px*.4+ca*len,y-py*.4+sa*len); X.lineTo(x-px*.4,y-py*.4); X.closePath(); X.fill();
 }
-export function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
+export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: number, aim: number, hit: boolean, ratio: number, detail: boolean, firing?: boolean){
   const M = MET[team==='e' ? 'e' : 'p'], bx = x, by = y;
   if (t==='sell'){
     X.fillStyle = '#ff3d2a'; X.save(); X.translate(x,y); X.rotate(Math.PI/4); X.fillRect(-5,-1.2,10,2.4); X.fillRect(-1.2,-5,2.4,10); X.restore(); return;
@@ -39,13 +42,13 @@ export function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
   const base = t==='armor' ? M.armor : t==='hull' ? M.hull : M.dark;
   plate(X,x,y,base);
   if (hit){ X.fillStyle = '#ffffff'; X.globalAlpha = .85; X.fillRect(x-5,y-5,10,10); X.globalAlpha = 1; return; }
-  const d = T[t], rot = o ? o*Math.PI/4 : 0;
+  const d = def(t), rot = o ? o*Math.PI/4 : 0;
   if (rot){ X.save(); X.translate(x,y); X.rotate(rot); x = 0; y = 0; }
   let ang = aim - rot;
-  const arc = team==='p' && d && d.gun ? d.gun.arc : 0;
+  const arc = team==='p' && d && d.gun ? d.gun.arc || 0 : 0;
   if (arc) ang = -Math.PI/2 + clamp(angDiff(ang,-Math.PI/2), -arc, arc);
-  const ca = Math.cos(ang), sa = Math.sin(ang), gun = team!=='e' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
-  switch (t){
+  const ca = Math.cos(ang), sa = Math.sin(ang), gun: Pal3 = team!=='e' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
+  switch (t as string){
     case 'hull':
       X.fillStyle = base[2]; X.fillRect(x-.5,y-3,1,6); break;
     case 'armor':
@@ -157,14 +160,14 @@ export function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
   // battle damage: scorch the plate as it loses hit points
   if (ratio < .7){ X.globalAlpha = (1-ratio)*.6; X.fillStyle = '#000000'; X.fillRect(bx-5,by-5,10,10); X.globalAlpha = 1; }
   // level pips: one gold chevron per level above 1, plus a gold trim at max level
-  if (team==='p' && T[t]){
+  if (team==='p' && d){
     const L = lvOf(t);
     X.fillStyle = '#ffc46b'; for (let q=1; q<L; q++) X.fillRect(bx-4+(q-1)*2.1, by+1.8, 1.6, 1.4);
     if (L >= MAXLV){ X.globalAlpha = .7; X.fillRect(bx-5,by-5,10,.8); X.globalAlpha = 1; }
   }
 }
-export function drawShip(s){
-  const z = G.zoom, p = G.player;
+export function drawShip(s: Ship){
+  const z = G.zoom, p = G.player!;
   ctx.save();
   ctx.translate((s.x-G.camX)*z + W/2 + (G.camOX||0), (s.y-G.camY)*z + H/2 + (G.camOY||0)); ctx.rotate(s.a); ctx.scale(z,z);
   ctx.lineWidth = 1/z;
@@ -181,11 +184,11 @@ export function drawShip(s){
   ctx.restore();
 }
 // deep-space backdrop: three parallax star layers and a few nebula clouds, all in screen space
-export const STARS = [[.04,240,'#4a5270'],[.12,110,'#9aa8d0'],[.3,45,'#ffffff']].map(([f,n,c]) =>
+export const STARS = ([[.04,240,'#4a5270'],[.12,110,'#9aa8d0'],[.3,45,'#ffffff']] as const).map(([f,n,c]) =>
   Array.from({length:n}, () => ({x:Math.random(), y:Math.random(), f, c, tw:Math.random()*Math.PI*2})));
-export const NEB = [[.2,.3,'60,20,110'],[.75,.6,'10,60,120'],[.5,.95,'110,20,60'],[.95,.1,'20,90,90']];
-export function drawSpace(cx, cy, z){
-  const wrap = (v,m) => ((v % m) + m) % m, NW = W*1.6, NH = H*1.6;
+export const NEB = [[.2,.3,'60,20,110'],[.75,.6,'10,60,120'],[.5,.95,'110,20,60'],[.95,.1,'20,90,90']] as const;
+export function drawSpace(cx: number, cy: number, z: number){
+  const wrap = (v: number, m: number) => ((v % m) + m) % m, NW = W*1.6, NH = H*1.6;
   for (const [nx,ny,rgb] of NEB){
     const X = wrap(nx*NW - cx*z*.02, NW) - W*.3, Y = wrap(ny*NH - cy*z*.02, NH) - H*.3, R = Math.max(W,H)*.45;
     const g = ctx.createRadialGradient(X,Y,0,X,Y,R);
@@ -198,9 +201,9 @@ export function drawSpace(cx, cy, z){
     if (st.f > .2 && Math.sin(G.time*2 + st.tw) > .7){ ctx.globalAlpha = .5; ctx.fillRect(X-1,Y,3,1); ctx.fillRect(X,Y-1,1,3); ctx.globalAlpha = 1; }
   }
 }
-export function niceStep(z){ let sp = 10; if (!(z > 0)) return sp; while (sp*z < 12) sp *= 10; return sp; }
+export function niceStep(z: number){ let sp = 10; if (!(z > 0)) return sp; while (sp*z < 12) sp *= 10; return sp; }
 export function renderCombat(){
-  const S = G.S, p = G.player;
+  const S = G.S, p = G.player!;
   // never so far out that a block shrinks under two pixels; off-screen hostiles get edge arrows
   G.zoom = Math.max(.2, Math.min(W,H)/((G.fit || G.span || spanFor(p.r, S))*G.camMul));
   const z = G.zoom, hw = W/2/z, hh = H/2/z;
@@ -209,7 +212,7 @@ export function renderCombat(){
   cy = G.AH < 2*hh ? G.AH/2 : clamp(cy, hh, G.AH-hh);
   G.camX = cx; G.camY = cy;
   const ox = G.shake > .3 ? Math.round(rand(-G.shake,G.shake)) : 0, oy = G.shake > .3 ? Math.round(rand(-G.shake,G.shake)) : 0;
-  const sx = x => (x-cx)*z + W/2 + ox, sy = y => (y-cy)*z + H/2 + oy;
+  const sx = (x: number) => (x-cx)*z + W/2 + ox, sy = (y: number) => (y-cy)*z + H/2 + oy;
   G.camOX = ox; G.camOY = oy;
 
   drawSpace(cx, cy, z);
@@ -269,7 +272,7 @@ export function renderCombat(){
   for (const e of G.ships){
     if (!e.alive || e.team!=='e' || !e.shields || !e.shields.length) continue;
     for (const sb of e.shields){
-      const B = sb.bub; if (B.down > 0 || B.hp <= 0) continue;
+      const B = sb.bub!; if (B.down > 0 || B.hp <= 0) continue;
       const [wx,wy] = wpos(e,sb), fl = G.time - B.flash < .08;
       ctx.globalAlpha = fl ? 1 : .2 + .5*B.hp/B.max; ctx.strokeStyle = fl ? '#ffffff' : '#ff9a5a'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(sx(wx), sy(wy), ESH.rad*z, 0, TAU); ctx.stroke();
@@ -287,7 +290,7 @@ export function renderCombat(){
       ctx.globalAlpha = .7 + .3*Math.random(); ctx.strokeStyle = '#eaffe4'; ctx.lineWidth = 1; ctx.stroke();
     }
     for (const s of p.shields){
-      const B = s.bub; if (B.down > 0 || B.hp <= 0) continue;
+      const B = s.bub!; if (B.down > 0 || B.hp <= 0) continue;
       const [wx,wy] = wpos(p,s), fl = G.time - B.flash < .08, X = sx(wx), Y = sy(wy), r = shRad()*z, k = B.hp/B.max;
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = fl ? .16 : .04 + .05*k; ctx.fillStyle = '#5fd3ff'; ctx.beginPath(); ctx.arc(X, Y, r, 0, TAU); ctx.fill();
@@ -325,7 +328,7 @@ export function renderCombat(){
   // sparks and bullets on top, snapped to whole pixels: coloured block with a white hot centre
   for (const f of G.fx) if (f.k==='spk'){ ctx.globalAlpha = f.life/f.max; ctx.fillStyle = f.col; ctx.fillRect(Math.round(sx(f.x)), Math.round(sy(f.y)), 1, 1); }
   ctx.globalAlpha = 1;
-  const drawB = arr => {
+  const drawB = (arr: Bullet[]) => {
     for (const b of arr){
       const X = Math.round(sx(b.x)), Y = Math.round(sy(b.y)), s = Math.max(1, Math.round(b.r*z));
       if (X < -s*4 || Y < -s*4 || X > W+s*4 || Y > H+s*4) continue;
@@ -379,7 +382,7 @@ export function renderCombat(){
   ctx.globalAlpha = 1;
 
   // touch sticks: cyan moves, gold aims
-  for (const [J,col] of [[G.joy,'#5fd8ff'],[G.aimJoy,'#ffc46b']]){
+  for (const [J,col] of [[G.joy,'#5fd8ff'],[G.aimJoy,'#ffc46b']] as [Stick | null, string][]){
     if (!J) continue;
     const {x0,y0} = J, jx = J.x-x0, jy = J.y-y0, jl = Math.hypot(jx,jy), k = jl > JOY_R ? JOY_R/jl : 1;
     ctx.globalAlpha = .45; ctx.strokeStyle = '#e8ecf2'; ctx.lineWidth = 1;
@@ -408,7 +411,7 @@ export function renderCombat(){
     ctx.fillText(b.sub.toUpperCase(), Math.round(W/2), y + big + 6); ctx.globalAlpha = 1;
   }
 }
-export function fmtM(m){ return m >= 1000 ? (m/1000)+' km' : m+' m'; }
+export function fmtM(m: number){ return m >= 1000 ? (m/1000)+' km' : m+' m'; }
 
 export function layoutBuild(){
   const pr = $('panel').getBoundingClientRect(), top = ($('hud').getBoundingClientRect().bottom + 6)/PX;
@@ -420,12 +423,12 @@ export function layoutBuild(){
   cs = cs >= 4 ? Math.round(cs) : Math.max(1, cs);
   return {cx:Math.round((x0+x1)/2 + G.bpx), cy:Math.round((y0+y1)/2 + G.bpy), cs, n};
 }
-export const designType = k => G.design.get(k);
+export const designType = (k: Key) => G.design.get(k);
 // Share of a design turret's firing arc that has a clear line out of the hull (same ray walk as laneClear).
-export const aimsOut = t => T[t].gun && !T[t].gun.homing && !T[t].gun.lob && t!=='core';
+export const aimsOut = (t: Cell) => { const g = def(t)?.gun; return !!g && !g.homing && !g.lob && t!=='core'; };
 export const designR = () => { let R = 0; for (const k of G.design.keys()) R = Math.max(R, Math.hypot(KI(k),KJ(k))); return R; };
 // Cells a ray from (i,j) travels before meeting another design block, or Infinity if it gets out.
-export function rayOut(i,j,a,R){
+export function rayOut(i: number, j: number, a: number, R: number){
   const dx = Math.cos(a), dy = Math.sin(a);
   for (let s=.7; s<R+1.75; s+=.45){
     const ci = Math.round(i + dx*s), cj = Math.round(j + dy*s);
@@ -433,14 +436,16 @@ export function rayOut(i,j,a,R){
   }
   return Infinity;
 }
-export const ARC_N = 16, arcRays = (o,t) => Array.from({length:ARC_N}, (_,n) => FA[o] - T[t].gun.arc + 2*T[t].gun.arc*n/(ARC_N-1));
-export function arcClear(i,j,o,t){
+/** The turret's arc swing, for a block that has a gun. */
+const arcOf = (t: Cell) => def(t)?.gun?.arc || 0;
+export const ARC_N = 16, arcRays = (o: Facing, t: Cell) => Array.from({length:ARC_N}, (_,n) => FA[o] - arcOf(t) + 2*arcOf(t)*n/(ARC_N-1));
+export function arcClear(i: number, j: number, o: Facing, t: Cell){
   const R = designR(); let ok = 0;
   for (const a of arcRays(o,t)) if (rayOut(i,j,a,R) === Infinity) ok++;
   return ok/ARC_N;
 }
 // Drydock overlay: a turret's arc as rays (cyan clear, red stopped by own hull); lasers and railguns as a line along their facing.
-export function drawArc(i,j,o,t,alpha,R,len){
+export function drawArc(i: number, j: number, o: Facing, t: Cell, alpha: number, R: number, len: number){
   const x = i*BS, y = j*BS;
   ctx.globalAlpha = alpha; ctx.lineWidth = ctx.lineWidth || 1;
   if (aimsOut(t)){
@@ -449,9 +454,9 @@ export function drawArc(i,j,o,t,alpha,R,len){
       ctx.strokeStyle = h === Infinity ? '#5fd8ff' : '#ff5a3a';
       ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); ctx.stroke();
     }
-    ctx.strokeStyle = '#5fd8ff'; ctx.beginPath(); ctx.arc(x, y, len*BS, FA[o] - T[t].gun.arc, FA[o] + T[t].gun.arc); ctx.stroke();
+    ctx.strokeStyle = '#5fd8ff'; ctx.beginPath(); ctx.arc(x, y, len*BS, FA[o] - arcOf(t), FA[o] + arcOf(t)); ctx.stroke();
   } else if (BEAM(t)){
-    const a = FA[o], h = rayOut(i,j,a,R), L = Math.min(h, t==='laser' ? T.laser.laser.range/BS : len*1.6)*BS;
+    const a = FA[o], h = rayOut(i,j,a,R), L = Math.min(h, t==='laser' ? T.laser.laser!.range/BS : len*1.6)*BS;
     ctx.strokeStyle = h === Infinity ? (t==='laser' ? '#2ac83a' : '#b89aff') : '#ff5a3a';
     ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); ctx.stroke();
   }
@@ -527,7 +532,7 @@ export function renderBuild(){
     for (const [i,j,o] of spots){
       if (G.sel==='sell'){ ctx.globalAlpha = .9; drawBlock(ctx,'sell',0,'p',i*BS,j*BS,0,false,1,true,false); continue; }
       const ok = placeCheck(i,j,G.sel,o) === true, oo = T[G.sel].rot ? o : 0;
-      for (const [ci,cj,ct] of cellsFor(i,j,G.sel,oo)){
+      for (const [ci,cj,ct] of cellsFor<BlockType>(i,j,G.sel,oo)){
         ctx.globalAlpha = .55; drawBlock(ctx,ct,oo,'p',ci*BS,cj*BS,FA[oo],false,1,true,false);
         if (ct===G.sel && (aimsOut(ct) || BEAM(ct))) drawArc(ci, cj, oo, ct, .75, aR, aLen);
         if (!ok){ ctx.globalAlpha = .8; ctx.strokeStyle = '#ff7a66'; ctx.strokeRect(ci*BS-5,cj*BS-5,10,10); }

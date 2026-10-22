@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { setAuto, setBrush, shipWeapons, toggleGroup } from './groups';
 import { G } from './state';
 import { toast } from './ui';
@@ -6,7 +5,7 @@ import { $ } from './view';
 
 // ---------- tutorial ----------
 // One tip the first time each screen or mechanic comes up, remembered in this browser. Skip turns them all off.
-export const TUT = {
+export const TUT: Record<string, [title: string, text: string]> = {
   title:['Welcome', 'Fly a tiny ship through nine sectors and build it up as you go. Start a <b>New run</b>. Data from finished runs buys permanent hangar upgrades here.'],
   map:['Star map', 'Click a beacon linked to yours to jump there: <b>!</b> fight, <b>$</b> shop, <b>?</b> signal, <b>*</b> wreckage, <b>+</b> repair dock. Reach the gate on the far right to leave the sector. <b>Open drydock</b> (or <b>D</b>) to rebuild between jumps.'],
   combat:['Fighting', '<b>W/S</b> thrust, <b>A/D</b> turn the ship. Hold <b>Shift</b> and the ship turns toward the mouse while <b>A/D</b> slide sideways. Aim with the mouse and click or hold <b>Space</b> to fire; <b>T</b> turns on auto-aim. On touch, drag to move. The mouse wheel or <b>+ / −</b> zooms. Destroy every hostile to win. Lose the core and the run is over.'],
@@ -19,9 +18,9 @@ export const TUT = {
   sector:['New sector', 'Each sector is harder, and your block limit grows. Every third sector ends in a flagship or a starbase.'],
   data:['Data', 'Every run earns data, even a lost one. Spend it in the hangar on permanent upgrades, then try again.'],
 };
-export let tutSeen = {}, tutOff = false, tutQ = [];
+export let tutSeen: Record<string, boolean> = {}, tutOff = false, tutQ: string[] = [];
 export const tutSave = () => { try { localStorage.setItem('oom-tut', JSON.stringify({seen:tutSeen, off:tutOff})); } catch {} };
-export function tut(id){
+export function tut(id: string){
   if (tutOff || tutSeen[id] || tutQ.includes(id)) return;
   tutQ.push(id); if (tutQ.length === 1) tutShow();
 }
@@ -35,11 +34,11 @@ export function tutShow(){
 // wiring that runs once at start-up
 export function init(){
   try { const s = JSON.parse(localStorage.getItem('oom-tut') || '{}'); tutSeen = s.seen || {}; tutOff = !!s.off; } catch {}
-  $('tutOk').addEventListener('click', () => { tutSeen[tutQ.shift()] = true; tutSave(); tutShow(); });
+  $('tutOk').addEventListener('click', () => { const id = tutQ.shift(); if (id) tutSeen[id] = true; tutSave(); tutShow(); });
   $('tutSkip').addEventListener('click', () => { tutOff = true; tutQ = []; tutSave(); tutShow(); });
   $('tutReset').addEventListener('click', () => { tutSeen = {}; tutOff = false; tutSave(); toast('Tutorial tips will show again'); tut('dock'); if (shipWeapons().length) tut('groups'); });
   for (const id of ['grps','groups']) $(id).addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
+    const b = (e.target as Element).closest('button'); if (!b) return;
     if (b.dataset.b) setBrush(+b.dataset.b===G.grpBrush ? 0 : +b.dataset.b);
     else if (b.dataset.a) toggleGroup(+b.dataset.a);
   });

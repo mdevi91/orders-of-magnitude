@@ -1,9 +1,10 @@
 # Orders of Magnitude
 
-Single-file browser game (canvas, pixel-art blueprint style), hosted on Firebase.
+Browser game (canvas, pixel-art blueprint style) in TypeScript, built with Vite, hosted on Firebase.
 
-- `src/orders-of-magnitude.html` — **source of truth**. Artifact-style page: starts at `<title>`, no doctype/head/body. All CSS and JS inline.
-- `public/index.html` — build output. Do not edit by hand.
-- `build.sh src/orders-of-magnitude.html` — wraps source into a full document and syntax-checks the inline script with `node --check`.
-- Deploy: `firebase deploy --only hosting` (sites `orders-of-magnitude` and redirect site `orders-of-magnitude-game`).
-- Tests: `node test/run.js [name ...]` builds, injects each `test/*.test.js` into the game's scope and runs it in headless Chrome (`CHROME=` to pick a browser). `difficulty` is a bot balance probe: it logs win rates per sector and fight type; rerun it after balance changes.
+- `index.html` — page shell and markup. `src/styles.css` — all styles.
+- `src/*.ts` — the game, one module per area: `catalog` (blocks, weapons, craft), `state` (the `G` game state), `ships`/`physics`/`bullets`, `fights`/`update`/`craft` (combat), `starmap`/`loot`/`events`/`shop`/`runs` (the run), `draw`/`mapdraw`/`loop` (rendering), `editor`/`input`/`controls`/`ui`/`groups`/`tutorial`/`save`/`blueprints`/`audio`. Shared shapes live in `src/types.ts`. Start-up wiring sits in each module's `init()`, called in order from `main.ts`.
+- Strict TypeScript: `npm run typecheck`. Avoid module-level code that reads another module's exports at load time (import cycles); put it in `init()` instead.
+- `npm run build` — typecheck, then build into `public/` (generated, not committed). `npm run dev` for a live dev server.
+- Deploy: `npm run build && firebase deploy --only hosting` (sites `orders-of-magnitude` and redirect site `orders-of-magnitude-game`).
+- Tests: `npm test` (or `node test/run.js [name ...]`) builds in test mode, serves it locally and runs each `test/*.test.js` in headless Chrome inside `with (OOM)`, so every module export is in scope (`CHROME=` to pick a browser). Tests can't reassign module bindings; change state through `G` or the game's functions. `difficulty` is a bot balance probe: it logs win rates per sector and fight type; rerun it after balance changes.

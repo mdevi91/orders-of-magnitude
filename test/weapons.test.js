@@ -26,3 +26,12 @@ for (const t of W){
 const b = {fall:true, life0:1};
 ok('falloff', [[1,1],[.5,1],[.25,.75],[0,.5]].every(([life,want]) => Math.abs(fallOff({...b, life}) - want) < 1e-9));
 ok('homing shots never fade', fallOff({fall:false, life0:1, life:0}) === 1);
+// every weapon also works on auto fire, with no player input (an auto laser used to throw and freeze the fight)
+for (const t of W){
+  const R = rangeOf(t)*G.SC;
+  fresh(); armed(t);
+  G.auto = [true,true,true,true,true]; G.fireHeld = false; G.aimJoy = null;
+  const e = dummy(t==='mine' ? 70 : R*.6 + 25);
+  sim(8);
+  ok(`${t} hits on auto fire`, hpLost(e) > 0, `damage ${Math.round(hpLost(e))}`);
+}

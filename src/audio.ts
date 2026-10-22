@@ -1,33 +1,33 @@
-// @ts-nocheck
 import { $ } from './view';
 
 // ---------- sound: tiny WebAudio synth, no files ----------
-export let AC = null, master = null, muted = false, noiseBuf = null;
+export let AC: AudioContext | null = null, master: GainNode | null = null, muted = false, noiseBuf: AudioBuffer | null = null;
 export function audio(){
   if (!AC){
     try {
-      AC = new (window.AudioContext || window.webkitAudioContext)();
-      master = AC.createGain(); master.gain.value = .22; master.connect(AC.destination);
-      noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+      const ac = AC = new (window.AudioContext || (window as unknown as {webkitAudioContext: typeof AudioContext}).webkitAudioContext)();
+      master = ac.createGain(); master.gain.value = .22; master.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
       const ch = noiseBuf.getChannelData(0); for (let n=0; n<ch.length; n++) ch[n] = Math.random()*2 - 1;
     } catch { AC = null; return null; }
   }
   if (AC.state === 'suspended') AC.resume();
   return AC;
 }
-export function tone(type, f0, f1, dur, vol, at=0){
-  const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain();
+// tone and noise only run from sfx(), which checks the context is up
+export function tone(type: OscillatorType, f0: number, f1: number, dur: number, vol: number, at=0){
+  const ac = AC!, t = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20,f1), t+dur);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t+dur);
-  o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+.02);
+  o.connect(g); g.connect(master!); o.start(t); o.stop(t+dur+.02);
 }
-export function noise(dur, vol, f0, f1=f0, at=0){
-  const t = AC.currentTime + at, src = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain();
+export function noise(dur: number, vol: number, f0: number, f1=f0, at=0){
+  const ac = AC!, t = ac.currentTime + at, src = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain();
   src.buffer = noiseBuf; fl.type = 'lowpass'; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(Math.max(40,f1), t+dur);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t+dur);
-  src.connect(fl); fl.connect(g); g.connect(master); src.start(t, Math.random()*.5); src.stop(t+dur+.02);
+  src.connect(fl); fl.connect(g); g.connect(master!); src.start(t, Math.random()*.5); src.stop(t+dur+.02);
 }
-export const SFX = {
+export const SFX: Record<string, (v: number) => void> = {
   shot:    v => tone('square', 900, 450, .05, .08*v),
   cannon:  v => { tone('square', 200, 70, .12, .16*v); noise(.08, .12*v, 1400, 300); },
   gatling: v => noise(.03, .07*v, 5000, 2000),
@@ -51,14 +51,14 @@ export const SFX = {
   clear:   v => [523,659,784,1046].forEach((f,n) => tone('square', f, f*1.01, .16, .08, n*.12)),
   die:     v => { tone('sawtooth', 420, 40, 1.2, .2); noise(1.2, .3, 1500, 60); },
 };
-export const GAP = {gatling:.05, laser:.08, eshot:.07, hit:.04, shield:.05, boom:.05, lowEn:.7, place:.03, pd:.05, shot:.03};
-export const lastSfx = {};
-export function sfx(n, v=1){
+export const GAP: Record<string, number> = {gatling:.05, laser:.08, eshot:.07, hit:.04, shield:.05, boom:.05, lowEn:.7, place:.03, pd:.05, shot:.03};
+export const lastSfx: Record<string, number> = {};
+export function sfx(n: string, v=1){
   if (muted || !AC || AC.state !== 'running') return;
   const now = AC.currentTime; if (lastSfx[n] && now - lastSfx[n] < (GAP[n] ?? .02)) return;
   lastSfx[n] = now; try { SFX[n](v); } catch {}
 }
-export function setMute(m){ muted = m; try { localStorage.setItem('oom-mute', m ? '1' : '0'); } catch {} $('muteBtn').textContent = m ? '♪ off' : '♪ on'; }
+export function setMute(m: boolean){ muted = m; try { localStorage.setItem('oom-mute', m ? '1' : '0'); } catch {} $('muteBtn').textContent = m ? '♪ off' : '♪ on'; }
 
 // wiring that runs once at start-up
 export function init(){

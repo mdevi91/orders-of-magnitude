@@ -1,10 +1,11 @@
-// @ts-nocheck
 import { BS } from './grid';
 import { metaLv } from './runs';
 import { G } from './state';
+import type { BlockDef, BlockType, Cell, CraftDef, CraftKind, EnemyCell, EnemyGun, EnemyGunDef, Key, PartDef } from './types';
 
 // ---------- block catalogue ----------
-export const T = {
+// BLOCKS keeps its literal keys (they become the BlockType union); T is the same table read as BlockDefs.
+export const BLOCKS = {
   core:   {name:'Core', cost:0, hp:80, mass:3, thrust:4, torque:12, gun:{range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI}, desc:'Your heart. Lose it and the stage is lost. Gives a little thrust in every direction.'},
   hull:   {name:'Hull', key:'1', unlock:1, cost:4, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
   armor:  {name:'Armor', key:'2', unlock:1, cost:10, hp:70, mass:3, desc:'Three times the toughness of hull. Heavy.'},
@@ -34,20 +35,25 @@ export const T = {
   fbay_b: {name:'Fighter bay', cost:0, hp:20, mass:1.5, rot:true},
   bbay_b: {name:'Bomber bay', cost:0, hp:24, mass:2, rot:true},
   mirv_b: {name:'MIRV', cost:0, hp:18, mass:2.5},
-};
+} satisfies Record<string, BlockDef>;
+export const T: Record<BlockType, BlockDef> = BLOCKS;
+/** The catalogue entry for a cell, if the player can build it (enemy-only cells such as carrier bays have none). */
+export const def = (t: Cell): BlockDef | undefined => T[t as BlockType];
 // multi-cell parts: len cells trailing behind the head along its facing, w columns wide extending to the head's starboard
-export const PARTS = {rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}};
-export const HEAD_OF = {rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv'};
-export const isPart = t => !!(t && (PARTS[t] || HEAD_OF[t]));
-export const BEAM = t => t==='rail' || t==='laser';
+export const PARTS: Partial<Record<Cell, PartDef>> = {rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}};
+export const HEAD_OF: Partial<Record<Cell, BlockType>> = {rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv'};
+export const isPart = (t: Cell | undefined) => !!(t && (PARTS[t] || HEAD_OF[t]));
+export const BEAM = (t: Cell) => t==='rail' || t==='laser';
 // Hangar craft flown out of the bays. hp scales the craft's blocks; it circles its target at target radius*over + orbit.
 export const CRAFT = {
   fbay:{design:[[0,0,'core'],[0,-1,'gatling'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']], hp:.28, spd:320, agi:3, turn:6, orbit:60, over:1, orbSpd:1.1, range:220, sortie:30, rearm:3, rebuild:15, sfx:'gatling',
     gun:{cd:.35, spd:720, dmg:5.2, spread:.05, r:1.6, fx:'line'}},
   bbay:{design:[[0,0,'core'],[0,-1,'armor'],[-1,0,'armor'],[1,0,'armor'],[-2,0,'hull'],[2,0,'hull'],[-1,1,'engine'],[1,1,'engine'],[0,1,'hull']], hp:.45, spd:170, agi:1.4, turn:2.2, orbit:10, over:.5, orbSpd:.5, range:60, sortie:30, rearm:3, rebuild:25, sfx:'cannon',
     gun:{cd:1.6, spd:200, dmg:30, spread:.05, r:3, fx:'flak', life:2, fuse:6, blast:32}},
-};
-export const ET = {core:{hp:45}, engine:{hp:12}, hull:{hp:18}, armor:{hp:55}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}, pd:{hp:12}};
+} satisfies Record<string, CraftDef>;
+/** Is this cell a hangar that launches craft? */
+export const isCraft = (t: Cell): t is CraftKind => t in CRAFT;
+export const ET = {core:{hp:45}, engine:{hp:12}, hull:{hp:18}, armor:{hp:55}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}, pd:{hp:12}} satisfies Record<string, {hp:number}>;
 // Enemy turrets: the player's weapons, slowed down to enemy scale. They unlock on the same stages as the player's.
 // cd is per gun; gatlings fire bursts of `burst` shots `gap` apart; rails show a sight line for the last `aim` seconds.
 export const EW = {
@@ -56,46 +62,50 @@ export const EW = {
   missile:{unlock:3, w:1.5, range:1000, cd:8, spd:120, dmg:22, r:1.2, kind:'emiss', spread:.5},
   flak:   {unlock:4, w:2, range:460, cd:4.4, spd:170, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4},
   rail:   {unlock:7, w:1, range:1100, cd:6.5, spd:320, dmg:36, r:1.5, kind:'snipe', aim:.9},
-};
-export function pickWeapon(stage){
-  const ks = Object.keys(EW).filter(k => EW[k].unlock <= stage);
+} satisfies Record<string, EnemyGunDef>;
+/** An enemy turret's stats, if the cell is one. */
+export const ewOf = (t: Cell): EnemyGunDef | undefined => (EW as Record<string, EnemyGunDef>)[t];
+export function pickWeapon(stage: number): EnemyGun {
+  const ks = (Object.keys(EW) as EnemyGun[]).filter(k => EW[k].unlock <= stage);
   let r = Math.random()*ks.reduce((a,k) => a + EW[k].w, 0);
   for (const k of ks) if ((r -= EW[k].w) < 0) return k;
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL = ['hull','armor','cannon','gatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','gen','battery','sell'];
-export const COL = {
+export const PAL: BlockType[] = ['hull','armor','cannon','gatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','gen','battery','sell'];
+export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', gatling:'#a8ecff', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
      fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', tesla:'#c8b0ff', torpedo:'#ffe08a', mine:'#ffb27a'},
   e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
+  a:{},
 }; // hangar craft
-export const BCOL = {pellet:'#fff0a0', ion:'#5fe0ff', torp:'#ffd04a', mine:'#ff7a3a', shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
+export const BCOL: Record<string, string> = {pellet:'#fff0a0', ion:'#5fe0ff', torp:'#ffd04a', mine:'#ff7a3a', shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
 // Hull and armor are plating: bought with credits in drydock. Every other block comes out of cargo.
-export const PLATE = t => t==='hull' || t==='armor';
-export const onShip = t => { for (const v of G.design.values()) if (v===t) return true; return false; };
-export const owned = t => t==='sell' || PLATE(t) || (G.inv[t]||0) > 0 || onShip(t);
+export const PLATE = (t: Cell) => t==='hull' || t==='armor';
+export const onShip = (t: BlockType) => { for (const v of G.design.values()) if (v===t) return true; return false; };
+export const owned = (t: BlockType) => t==='sell' || PLATE(t) || (G.inv[t]||0) > 0 || onShip(t);
 // sectors map onto the old stage tiers: which blocks drop and which weapons enemies carry
-export const tierOf = s => Math.floor(s*1.5 + 1);
+export const tierOf = (s: number) => Math.floor(s*1.5 + 1);
 // block levels: bought per type at shops, each level +35% to the block's main stat
 export const MAXLV = 5;
 // Weapon groups, Starsector style: every weapon on the ship (keyed by its head cell) sits in one of five groups, starting in its type's default;
 // a group on auto fires on its own at the nearest hostile.
-export const WGRP = {cannon:1, gatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4};
+export const WGRP: Partial<Record<Cell, number>> = {cannon:1, gatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4};
 export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
-export const isWeapon = t => !!WGRP[t];
-export const grpOf = (k,t) => G.grp[k] || WGRP[t] || 1;
-export const lvOf = t => G.lv[t.replace('_b','')] || 1;
-export const LV = t => 1 + .35*(lvOf(t)-1);
+export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t];
+export const grpOf = (k: Key, t: Cell) => G.grp[k] || WGRP[t] || 1;
+// a part's body cells share the level of its head
+export const lvOf = (t: Cell) => G.lv[(HEAD_OF[t] || t) as BlockType] || 1;
+export const LV = (t: Cell) => 1 + .35*(lvOf(t)-1);
 export const priceMul = () => (1 + .08*(G.stage-1))*(1 - .08*metaLv('trade'));
-export const upCost = t => Math.round(Math.max(30, T[t].cost*3)*lvOf(t)*priceMul());
+export const upCost = (t: BlockType) => Math.round(Math.max(30, T[t].cost*3)*lvOf(t)*priceMul());
 // fixing one destroyed cell; multi-cell parts spread their price over their cells
-export const repCost = t => { const h = HEAD_OF[t] || t; return Math.max(1, Math.ceil(T[h].cost*.3/(PARTS[h] ? PARTS[h].len*(PARTS[h].w||1) : 1))); };
+export const repCost = (t: BlockType) => { const h = HEAD_OF[t] || t, P = PARTS[h]; return Math.max(1, Math.ceil(T[h].cost*.3/(P ? P.len*(P.w||1) : 1))); };
 // shield bubble radius: covers blocks up to 1 + level cells away (2 at Lv1, 4 at Lv3)
 export const shRad = () => (1 + Math.min(4, lvOf('shield')) + .5)*BS;
 
 // wiring that runs once at start-up
 export function init(){
-  COL.a = COL.p;
+  COL.a = COL.p; // hangar craft wear the player's colours
 }

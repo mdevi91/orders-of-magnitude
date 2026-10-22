@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { audio, sfx } from './audio';
 import { PAL, T } from './catalog';
 import { cycleMirror, zoomBtn } from './controls';
@@ -12,18 +11,20 @@ import { canJump, curNode, jumpTo, mapAction, toDrydock, toMap } from './starmap
 import { G, buildR } from './state';
 import { select, syncMapPanel, syncUI, toast } from './ui';
 import { keys } from './update';
+import type { BlockType, Facing, Key } from './types';
 import { $, PX, W, cv } from './view';
 
 // Drydock zoom about a canvas point: the cell under (x,y) stays put.
-export function zoomAt(x, y, f){
+export function zoomAt(x: number, y: number, f: number){
   const L = layoutBuild(), u = (x-L.cx)/L.cs, v = (y-L.cy)/L.cs;
   G.bz = clamp(G.bz*f, .3, 8);
   const M = layoutBuild(); G.bpx += x - (M.cx + u*M.cs); G.bpy += y - (M.cy + v*M.cs);
 }
 // Undo: one entry per press-drag-release in the drydock (design, facings and credits).
-export const undoStack = [];
-export const snap = () => ({d:[...G.design], o:[...G.dirs], c:G.credits, inv:{...G.inv}, br:[...G.broken]});
-export const sameSnap = (a,b) => JSON.stringify([a.d,a.o]) === JSON.stringify([b.d,b.o]);
+interface Snap { d: [Key, BlockType][]; o: [Key, Facing][]; c: number; inv: typeof G.inv; br: Key[] }
+export const undoStack: Snap[] = [];
+export const snap = (): Snap => ({d:[...G.design], o:[...G.dirs], c:G.credits, inv:{...G.inv}, br:[...G.broken]});
+export const sameSnap = (a: Snap, b: Snap) => JSON.stringify([a.d,a.o]) === JSON.stringify([b.d,b.o]);
 export function dropUndoMark(){ undoMark = null; }
 export function commitUndoMark(){
   if (undoMark && !sameSnap(undoMark, snap())){ undoStack.push(undoMark); if (undoStack.length > 60) undoStack.shift(); }
@@ -33,15 +34,16 @@ export function undo(){
   const u = undoStack.pop(); if (!u){ toast('Nothing to undo'); return; }
   G.design = new Map(u.d); G.dirs = new Map(u.o); G.credits = u.c; G.inv = u.inv; G.broken = new Set(u.br); sfx('place'); syncUI();
 }
-export const ptrs = new Map();
-export let pinch = null, panning = null, pending = null, undoMark = null;
-export const endPtr = e => {
+export const ptrs = new Map<number, {x: number; y: number}>();
+export let pinch: {d: number; mx: number; my: number} | null = null, panning: {x: number; y: number; bpx: number; bpy: number} | null = null,
+  pending: {i: number; j: number} | null = null, undoMark: Snap | null = null;
+export const endPtr = (e: PointerEvent) => {
   ptrs.delete(e.pointerId);
   if (e.pointerType!=='touch') G.fireHeld = false;
   if (G.joy && G.joy.id===e.pointerId) G.joy = null;
   if (G.aimJoy && G.aimJoy.id===e.pointerId) G.aimJoy = null;
   if (G.mode==='build'){
-    if (pending && !pinch) buildAction(pending.i, pending.j, G.drag, true);
+    if (pending && !pinch && G.drag) buildAction(pending.i, pending.j, G.drag, true);
     pending = null; panning = null;
     if (pinch && ptrs.size < 2) pinch = null;
     if (G.drag || undoMark) commitUndoMark();
@@ -134,7 +136,7 @@ export function init(){
       const gd = /^Digit([1-5])$/.exec(e.code); if (gd) setBrush(+gd[1]);
       if (e.code==='Escape' || e.code==='Enter') setBrush(0);
     } else if (G.mode==='build'){
-      const key = e.key.toLowerCase(), t = PAL.find(t => T[t].key === key); if (t) select(t);
+      const key = e.key.toLowerCase(), t = PAL.find(p => T[p].key === key); if (t) select(t);
       if (e.code==='KeyR') rotate();
       if (e.code==='Equal' || e.code==='NumpadAdd') zoomBtn(1.25);
       if (e.code==='Minus' || e.code==='NumpadSubtract') zoomBtn(.8);

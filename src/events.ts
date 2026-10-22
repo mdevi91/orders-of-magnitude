@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { T, lvOf } from './catalog';
 import { startFight } from './fights';
 import { rand } from './grid';
@@ -7,11 +6,15 @@ import { save } from './save';
 import { goOn } from './starmap';
 import { G } from './state';
 import { tut } from './tutorial';
+import type { FightKind, MapNode } from './types';
 import { showOverlay } from './ui';
 
 // ---------- signals: random events ----------
 // Each choice returns the outcome text, or {fight, text} to start a fight. A third element hides the choice when it returns false.
-export const EVENTS = [
+/** An outcome: text to show, or a fight to start with its opening line. */
+type Outcome = string | {fight: FightKind; text: string};
+type Choice = [label: string, run: () => Outcome, shown?: () => boolean];
+export const EVENTS: {title: string; text: string; choices: Choice[]}[] = [
   {title:'Drifting cargo pod', text:'A sealed pod tumbles past, still beeping.', choices:[
     ['Tractor it in', () => chance(.75) ? 'It holds a spare part.' + lootText([giveLoot(1.3)]) : `It was rigged. <b>${damageRandom(2)}</b> blocks damaged.`],
     ['Leave it', () => 'You let it drift.']]},
@@ -66,7 +69,7 @@ export const EVENTS = [
     }],
     ['Leave it', () => 'You leave it alone.']]},
   {title:'Refugee convoy', text:'Refugees ask for credits to buy fuel.', choices:[
-    ['Give 30 cr', () => { G.credits -= 30; G.stats.bonus = (G.stats.bonus||0) + 3; return 'They thank you. Word of it spreads: <b class="gold">+3 data</b> at the end of the run.'; }, () => G.credits >= 30],
+    ['Give 30 cr', () => { G.credits -= 30; G.stats!.bonus = (G.stats!.bonus||0) + 3; return 'They thank you. Word of it spreads: <b class="gold">+3 data</b> at the end of the run.'; }, () => G.credits >= 30],
     ['Move on', () => 'You fly on.']]},
   {title:'Scrap cloud', text:'Wreckage from an old battle.', choices:[
     ['Collect', () => { const cr = inc(rand(15,30) + 4*G.stage); G.credits += cr; return `<b class="gold">+${cr}</b> credits of scrap.`; }]]},
@@ -85,13 +88,13 @@ export const EVENTS = [
     ['Pay 40 cr', () => { G.credits -= 40; return 'They let you through.'; }, () => G.credits >= 40],
     ['Refuse', () => ({fight:'ambush', text:'They open fire.'})]]},
 ];
-export function runEvent(n){
+export function runEvent(n: MapNode){
   tut('signal');
   if (n.ev == null) n.ev = (Math.random()*EVENTS.length)|0;
   const E = EVENTS[n.ev];
-  const acts = E.choices.filter(c => !c[2] || c[2]()).map(([label, fn]) => [label, () => {
+  const acts = E.choices.filter(c => !c[2] || c[2]()).map(([label, fn]): [string, () => void] => [label, () => {
     n.used = true; const r = fn(); save();
-    if (r && r.fight) showOverlay(E.title, r.text, [['Fight', () => startFight(r.fight)]]);
+    if (typeof r !== 'string') showOverlay(E.title, r.text, [['Fight', () => startFight(r.fight)]]);
     else showOverlay(E.title, r, [[G.pendingNode ? 'Continue' : 'Star map', goOn]]);
   }]);
   showOverlay(E.title, E.text, acts);

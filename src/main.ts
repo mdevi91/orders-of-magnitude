@@ -1,4 +1,3 @@
-// @ts-nocheck
 import './styles.css';
 import { init as init_audio } from './audio';
 import { init as init_blueprints } from './blueprints';
@@ -28,11 +27,11 @@ init_tutorial();
 
 const splash = $('splash');
 function endSplash(){ if (!splash.isConnected) return; splash.remove(); removeEventListener('keydown', skipKey, true); }
-function skipKey(e){ e.stopImmediatePropagation(); e.preventDefault(); endSplash(); }
+function skipKey(e: KeyboardEvent){ e.stopImmediatePropagation(); e.preventDefault(); endSplash(); }
 addEventListener('keydown', skipKey, true);
 splash.addEventListener('pointerdown', e => { e.stopPropagation(); endSplash(); });
 splash.addEventListener('animationend', e => { if (e.target === splash) endSplash(); });
-if (innerWidth < 760){ $('help').open = false; $('statsBox').open = false; }
+if (innerWidth < 760){ $<HTMLDetailsElement>('help').open = false; $<HTMLDetailsElement>('statsBox').open = false; }
 
 loadMeta(); load(); buildPalette(); showTitle();
 requestAnimationFrame(frame);
@@ -40,5 +39,8 @@ requestAnimationFrame(frame);
 // test builds expose every module to the test runner (see test/run.js)
 if (import.meta.env.MODE === 'test'){
   const all = Object.values(import.meta.glob(['./*.ts', '!./main.ts'], { eager: true }));
-  window.OOM = new Proxy({}, { has: (_, k) => all.some(m => k in m), get: (_, k) => { for (const m of all) if (k in m) return m[k]; } });
+  (window as unknown as {OOM: object}).OOM = new Proxy({}, {
+    has: (_, k) => all.some(m => k in (m as object)),
+    get: (_, k) => { for (const m of all) if (k in (m as object)) return (m as Record<string | symbol, unknown>)[k]; },
+  });
 }

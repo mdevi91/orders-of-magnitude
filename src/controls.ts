@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { audio, muted, setMute, sfx } from './audio';
 import { layoutBuild } from './draw';
 import { rotate } from './editor';
@@ -6,13 +5,13 @@ import { togglePause } from './fights';
 import { undo, undoStack, zoomAt } from './input';
 import { repair } from './loot';
 import { runOver } from './runs';
-import { NODE, mapAction, toDrydock, toMap } from './starmap';
+import { NODE, mapAction, nodeDef, toDrydock, toMap } from './starmap';
 import { G } from './state';
 import { syncUI, toast } from './ui';
 import { $ } from './view';
 
 export const abandon = () => { if (confirm('Abandon this run? You keep the data it has earned so far.')) runOver('abandoned'); };
-export const zoomBtn = f => { const L = layoutBuild(); zoomAt(L.cx, L.cy, f); };
+export const zoomBtn = (f: number) => { const L = layoutBuild(); zoomAt(L.cx, L.cy, f); };
 export function cycleMirror(){ G.mir = (G.mir + 1) % 4; syncUI(); }
 
 // wiring that runs once at start-up
@@ -26,7 +25,7 @@ export function init(){
   });
   $('mapGo').addEventListener('click', mapAction);
   $('toDock').addEventListener('click', toDrydock);
-  $('legend').innerHTML = Object.entries(NODE).filter(([t]) => t!=='start' && t!=='ambush').map(([,N]) => `<li><b style="color:${N.col}">${N.g}</b>${N.name}</li>`).join('');
+  $('legend').innerHTML = (Object.keys(NODE) as (keyof typeof NODE)[]).filter(t => t!=='start' && t!=='ambush').map(t => { const N = nodeDef(t); return `<li><b style="color:${N.col}">${N.g}</b>${N.name}</li>`; }).join('');
   $('zIn').addEventListener('click', () => zoomBtn(1.4));
   $('zOut').addEventListener('click', () => zoomBtn(1/1.4));
   $('undo').addEventListener('click', undo);

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { updateFx } from './craft';
 import { drawSpace, renderBuild, renderCombat } from './draw';
 import { renderMap } from './mapdraw';
@@ -8,7 +7,7 @@ import { update } from './update';
 import { H, W, ctx, hctx, hi } from './view';
 
 export let lastT = performance.now();
-export function frame(now){
+export function frame(now: number){
   // schedule first, so an error in one frame can never stop the loop
   requestAnimationFrame(frame);
   const dt = Math.min(.033, (now-lastT)/1000); lastT = now;

@@ -1,24 +1,30 @@
-// @ts-nocheck
 import { sfx } from './audio';
-import { COL, CRAFT, ESH, ET, EW, LV, PARTS, T, pickWeapon } from './catalog';
+import { COL, ESH, ET, LV, PARTS, T, def, ewOf, isCraft, pickWeapon } from './catalog';
 import { BS, CORE, K, KI, KJ, NB, rand } from './grid';
 import { laneFwd, partComplete, physics } from './physics';
 import { metaLv } from './runs';
 import { G } from './state';
-import { keys } from './update';
+import type { Block, Cell, EnemyCell, Facing, Key, Physics, Ship, Team } from './types';
 import { REDUCE } from './view';
 
+const NO_PHYSICS: Physics = {mass:0, inertia:0, torque:0, coreT:0, jetCW:0, jetCCW:0, F:{px:0, nx:0, py:0, ny:0}, engines:[]};
+
 // ---------- ships ----------
-export function makeShip(design, team, x, y, hpMul=1, dirs=null){
-  const s = {team, x, y, vx:0, vy:0, a:0, c:1, sn:0, blocks:new Map(), alive:true, hpMul};
+export function makeShip(design: Map<Key, Cell>, team: Team, x: number, y: number, hpMul=1, dirs: Map<Key, Facing> | null = null): Ship {
+  const s: Ship = {team, x, y, vx:0, vy:0, a:0, c:1, sn:0, blocks:new Map(), alive:true, hpMul, r:0,
+    guns:[], pds:[], rails:[], lasers:[], shields:[], bays:[], epd:[], teslas:[],
+    ph:NO_PHYSICS, en:0, enMax:0, enRegen:0, w:0,
+    boss:false, elite:false, flag:false, station:false, fodder:false, craft:false, n0:design.size, phaseN:1, sc:G.SC,
+    fireMul:1, ft:0, phase:0, spin:1, orb:0, orbSpd:0, pref:0, vmax:0, turn:0, value:0, tgt:null, sights:null,
+    kind:null, bay:null, sortie:0, aimA:0, cd:0, pick:0};
   for (const [k,t] of design){
-    const hp = (team==='e' ? ET[t].hp : T[t].hp*LV(t)*(team==='p' && t==='core' ? 1 + .25*metaLv('core') : 1)) * hpMul;
-    const b = {t, i:KI(k), j:KJ(k), o:dirs ? dirs.get(k)||0 : 0, hp, max:hp, cd:Math.random()*.4, hit:-1};
+    const hp = (team==='e' ? ET[t as EnemyCell].hp : def(t)!.hp!*LV(t)*(team==='p' && t==='core' ? 1 + .25*metaLv('core') : 1)) * hpMul;
+    const b: Block = {t, i:KI(k), j:KJ(k), o:dirs ? dirs.get(k)||0 : 0, hp, max:hp, cd:Math.random()*.4, hit:-1};
     s.blocks.set(k, b);
   }
   recalc(s); return s;
 }
-export function recalc(s){
+export function recalc(s: Ship){
   let r = 0; s.guns = []; s.pds = []; s.rails = []; s.lasers = []; s.shields = []; s.bays = []; s.epd = []; s.teslas = [];
   for (const b of s.blocks.values()) r = Math.max(r, Math.hypot(b.i,b.j)*BS + BS*.75);
   s.r = r;
@@ -27,35 +33,37 @@ export function recalc(s){
     // enemies: guns, shield bubbles, carrier bays; each generator speeds up their fire
     let gens = 0;
     for (const b of s.blocks.values()){
-      if (EW[b.t]) s.guns.push(b); else if (b.t==='bay') s.bays.push(b); else if (b.t==='gen') gens++; else if (b.t==='pd') s.epd.push(b);
+      if (ewOf(b.t)) s.guns.push(b); else if (b.t==='bay') s.bays.push(b); else if (b.t==='gen') gens++; else if (b.t==='pd') s.epd.push(b);
       else if (b.t==='shield'){ s.shields.push(b); if (!b.bub){ const max = ESH.hp*s.hpMul; b.bub = {hp:max, max, down:0, last:-9, flash:-9}; } }
     }
     s.fireMul = 1 + .2*Math.min(gens, 2); return;
   }
-  const typeAt = k => s.blocks.get(k)?.t;
+  const typeAt = (k: Key) => s.blocks.get(k)?.t;
   s.ph = physics(s.blocks.values(), typeAt);
   for (const b of s.blocks.values()){
-    const d = T[b.t];
+    const d = def(b.t)!;
     // a MIRV fires only while its whole launcher is intact
     if (d.gun && !(PARTS[b.t] && !partComplete(typeAt, b.i, b.j, b.t, b.o))) s.guns.push(b);
     if (d.pd) s.pds.push(b);
     if (d.tesla) s.teslas.push(b);
     if (b.t==='shield') s.shields.push(b);
     if (PARTS[b.t] && !d.gun && partComplete(typeAt, b.i, b.j, b.t, b.o)){
-      if (CRAFT[b.t]){ s.bays.push(b); if (b.bt == null) b.bt = 1.5; continue; }
+      if (isCraft(b.t)){ s.bays.push(b); if (b.bt == null) b.bt = 1.5; continue; }
       b.lane = laneFwd(typeAt, b.i, b.j, b.o);
       (b.t==='rail' ? s.rails : s.lasers).push(b);
     }
   }
   // energy: the core gives a little; generators add recharge, batteries add storage
   let cap = 40, regen = 6;
-  for (const b of s.blocks.values()){ if (b.t==='gen') regen += T.gen.en.regen*LV('gen'); if (b.t==='battery') cap += T.battery.en.cap*LV('battery'); }
-  s.enMax = cap; s.enRegen = regen; s.en = Math.min(s.en ?? cap, cap);
+  for (const b of s.blocks.values()){ if (b.t==='gen') regen += T.gen.en!.regen!*LV('gen'); if (b.t==='battery') cap += T.battery.en!.cap!*LV('battery'); }
+  // a fresh ship starts with full batteries; losing a battery later only trims what is stored
+  const fresh = s.enMax === 0;
+  s.enMax = cap; s.enRegen = regen; s.en = fresh ? cap : Math.min(s.en, cap);
   // each shield block keeps its own bubble state
-  for (const b of s.shields) if (!b.bub){ const max = T.shield.sh.hp*LV('shield'); b.bub = {hp:max, max, down:0, last:-9, flash:-9}; }
+  for (const b of s.shields) if (!b.bub){ const max = T.shield.sh!.hp*LV('shield'); b.bub = {hp:max, max, down:0, last:-9, flash:-9}; }
 }
-export function genDesign(n, boss, stage, maxGuns=99){
-  const d = new Map([[CORE,'core']]), keys = [CORE];
+export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
+  const d = new Map<Key, EnemyCell>([[CORE,'core']]), keys = [CORE];
   const pa = Math.min(.3, .08 + .025*stage), pg = boss ? .12 : .15;
   let tries = 0;
   while (d.size < n && tries++ < n*30){
@@ -64,15 +72,15 @@ export function genDesign(n, boss, stage, maxGuns=99){
     if (d.has(nk)) continue;
     const i = KI(nk), j = KJ(nk);
     if (Math.abs(i) > 40 || Math.abs(j) > 40) continue;
-    const r = Math.random(), t = r < pg ? pickWeapon(stage) : r < pg+pa ? 'armor' : 'hull';
+    const r = Math.random(), t: EnemyCell = r < pg ? pickWeapon(stage) : r < pg+pa ? 'armor' : 'hull';
     d.set(nk,t); keys.push(nk);
     if (i !== 0){ const mk = K(-i,j); if (!d.has(mk)){ d.set(mk,t); keys.push(mk); } }
   }
-  if (![...d.values()].some(t => EW[t])) d.set(keys[1] ?? K(0,-1), pickWeapon(stage));
+  if (![...d.values()].some(t => ewOf(t))) d.set(keys[1] ?? K(0,-1), pickWeapon(stage));
   // later stages fit enemies with the player's systems: shields, generators (buried inside) and carrier bays (on the rim)
   if (d.size >= 8){
-    const nbs = k => NB.filter(o => d.has(k+o)).length;
-    const conv = (t, count, inner) => {
+    const nbs = (k: Key) => NB.filter(o => d.has(k+o)).length;
+    const conv = (t: EnemyCell, count: number, inner: boolean) => {
       for (let c=0; c<count; c++){
         const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && (inner ? nbs(k)===4 : nbs(k) <= 2));
         if (!pool.length) return;
@@ -87,16 +95,18 @@ export function genDesign(n, boss, stage, maxGuns=99){
     if (stage >= 5) conv('pd', Math.min(5, Math.floor(d.size/45) + (boss ? 1 : 0)), false);
   }
   // a few heavy guns read better than a wall of small ones: extra weapons become armor, mirror twins together
-  let guns = [...d.keys()].filter(k => EW[d.get(k)]);
+  let guns = [...d.keys()].filter(k => ewOf(d.get(k)!));
   while (guns.length > Math.max(1, maxGuns)){
     const k = guns[(Math.random()*guns.length)|0], mk = K(-KI(k), KJ(k));
-    d.set(k,'armor'); if (EW[d.get(mk)] && guns.length > maxGuns + 1) d.set(mk,'armor');
-    guns = guns.filter(g => EW[d.get(g)]);
+    d.set(k,'armor'); if (d.has(mk) && ewOf(d.get(mk)!) && guns.length > maxGuns + 1) d.set(mk,'armor');
+    guns = guns.filter(g => ewOf(d.get(g)!));
   }
   return d;
 }
-export function wpos(s,b){ const lx=b.i*BS, ly=b.j*BS; return [s.x + lx*s.c - ly*s.sn, s.y + lx*s.sn + ly*s.c]; }
-export function hitShip(s,x,y,r){
+/** World position of a block on a ship. */
+export function wpos(s: Ship, b: {i: number; j: number}): [number, number] { const lx=b.i*BS, ly=b.j*BS; return [s.x + lx*s.c - ly*s.sn, s.y + lx*s.sn + ly*s.c]; }
+/** The ship's block nearest (x,y) within r, or -1. */
+export function hitShip(s: Ship, x: number, y: number, r: number): Key {
   const dx = x-s.x, dy = y-s.y, rr = s.r + r;
   if (dx*dx + dy*dy > rr*rr) return -1;
   const lx = (dx*s.c + dy*s.sn)/BS, ly = (-dx*s.sn + dy*s.c)/BS;
@@ -111,7 +121,7 @@ export function hitShip(s,x,y,r){
   return best;
 }
 // Own-hull check for a turret shot: walks the ray out of the ship and fails on any other block.
-export function laneClear(s,b,worldAng){
+export function laneClear(s: Ship, b: Block, worldAng: number){
   const la = worldAng - s.a, dx = Math.cos(la), dy = Math.sin(la), maxT = s.r/BS + 1;
   for (let t=.7; t<maxT; t+=.45){
     const ci = Math.round(b.i + dx*t), cj = Math.round(b.j + dy*t);
@@ -119,15 +129,16 @@ export function laneClear(s,b,worldAng){
   }
   return true;
 }
+export interface RayHit { e: Ship; k: Key; t: number }
 // Enemy blocks along a ray, nearest first. With first=true only the nearest block per ship is kept.
-export function rayHits(ox,oy,dx,dy,len,first){
-  const out = [];
+export function rayHits(ox: number, oy: number, dx: number, dy: number, len: number, first: boolean){
+  const out: RayHit[] = [];
   for (const e of G.ships){
     if (!e.alive || e.team!=='e') continue;
     const rx = e.x-ox, ry = e.y-oy, t = rx*dx + ry*dy;
     if (t < -e.r || t - e.r > len) continue;
     if (Math.abs(rx*dy - ry*dx) > e.r) continue;
-    const seen = new Set();
+    const seen = new Set<Key>();
     for (let q = Math.max(0, t-e.r); q <= Math.min(len, t+e.r); q += BS*.4){
       const k = hitShip(e, ox+dx*q, oy+dy*q, .1);
       if (k >= 0 && !seen.has(k)){ seen.add(k); out.push({e, k, t:q}); if (first) break; }
@@ -136,12 +147,12 @@ export function rayHits(ox,oy,dx,dy,len,first){
   out.sort((a,b) => a.t-b.t);
   return first ? out.slice(0,1) : out;
 }
-export function damage(s,k,dmg){
+export function damage(s: Ship, k: Key, dmg: number){
   const b = s.blocks.get(k); if (!b) return;
   b.hp -= dmg; b.hit = G.time;
   if (b.hp <= 0) destroyBlock(s,k,b);
 }
-export function destroyBlock(s,k,b){
+export function destroyBlock(s: Ship, k: Key, b: Block){
   s.blocks.delete(k); debris(s,b,true);
   if (s.team==='p') G.lost.add(k);
   if (b.t==='core'){ killShip(s); return; }
@@ -152,37 +163,37 @@ export function destroyBlock(s,k,b){
     if (!s.alive) return;
   }
   const seen = new Set([CORE]), q = [CORE];
-  while (q.length){ const c = q.pop(); for (const d of NB){ const n = c+d; if (s.blocks.has(n) && !seen.has(n)){ seen.add(n); q.push(n); } } }
+  while (q.length){ const c = q.pop()!; for (const d of NB){ const n = c+d; if (s.blocks.has(n) && !seen.has(n)){ seen.add(n); q.push(n); } } }
   for (const [kk,bb] of s.blocks) if (!seen.has(kk)){ s.blocks.delete(kk); debris(s,bb,false); }
   recalc(s);
 }
-export function killShip(s){
+export function killShip(s: Ship){
   s.alive = false;
   for (const b of s.blocks.values()) debris(s,b,false,1.6);
   s.blocks.clear();
   G.fx.push({k:'ring', x:s.x, y:s.y, r:s.r*1.8 + 20*G.SC, life:.7, max:.7, col:s.team==='p' ? '#ffffff' : '#ff9a7a'});
   if (s.team==='e'){
     sfx(s.boss ? 'big' : 'boom', Math.min(1.5, .4 + s.r/60));
-    G.credits += s.value; G.earned += s.value; G.stats.kills++;
+    G.credits += s.value; G.earned += s.value; if (G.stats) G.stats.kills++;
     G.fx.push({k:'txt', x:s.x, y:s.y, vy:-30*G.SC, text:'+'+s.value, life:1.4, max:1.4});
   } else if (s.team==='p'){ G.deadT = 1.6; sfx('die'); }
   else sfx('boom', .6);
 }
-export function debris(s,b,burst,kick=1){
+export function debris(s: Ship, b: Block, burst: boolean, kick=1){
   if (G.fx.length > 1800) return;
   const [x,y] = wpos(s,b), v = 70*G.SC*kick;
-  G.fx.push({k:'deb', x, y, vx:s.vx*.5 + rand(-v,v), vy:s.vy*.5 + rand(-v,v), a:s.a, va:rand(-4,4), life:rand(1,2.2), max:2.2, col:COL[s.team][b.t]});
+  G.fx.push({k:'deb', x, y, vx:s.vx*.5 + rand(-v,v), vy:s.vy*.5 + rand(-v,v), a:s.a, va:rand(-4,4), life:rand(1,2.2), max:2.2, col:COL[s.team][b.t] || '#888888'});
   if (burst) for (let n=0; n<4; n++) G.fx.push({k:'spk', x, y, vx:rand(-1,1)*160*G.SC, vy:rand(-1,1)*160*G.SC, life:rand(.15,.4), max:.4, col:'#ffffff'});
 }
-export function boomAt(x,y,r,life){ G.fx.push({k:'boom', x, y, r, life, max:life}); }
-export function sparks(x,y,ang,n,spd,cols){
+export function boomAt(x: number, y: number, r: number, life: number){ G.fx.push({k:'boom', x, y, r, life, max:life}); }
+export function sparks(x: number, y: number, ang: number, n: number, spd: number, cols: string[]){
   for (let q=0; q<n; q++){
     const a = ang + rand(-1.3,1.3), v = rand(.3,1)*spd;
     G.fx.push({k:'spk', x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rand(.25,.6), max:.6, col:cols[q % cols.length]});
   }
 }
 // Cannon shell hit: splash onto neighbouring blocks, knockback, fireball, flying sparks, smoke, screen shake.
-export function impact(b,e,k){
+export function impact(b: {x: number; y: number; vx: number; vy: number; dmg: number}, e: Ship, k: Key){
   const SC = G.SC, ang = Math.atan2(b.vy,b.vx), x = b.x, y = b.y;
   if (e.alive) for (const d of NB) if (e.blocks.has(k+d)) damage(e, k+d, b.dmg*.4);
   const kick = 55*SC/Math.sqrt(e.blocks.size + 1);

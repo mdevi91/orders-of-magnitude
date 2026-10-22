@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { drawSpace } from './draw';
 import { TAU, clamp } from './grid';
-import { NODE, canJump, curNode, exitNode } from './starmap';
+import { canJump, curNode, exitNode, nodeDef } from './starmap';
 import { G } from './state';
+import type { MapNode } from './types';
 import { $, FONT, H, PX, W, ctx } from './view';
 
 // ---------- star map drawing ----------
@@ -12,15 +12,16 @@ export function layoutMap(){
   if (pr.width && pr.left/PX > W*.45) x1 = (pr.left - 8)/PX; else if (pr.height) y1 = (pr.top - 12)/PX;
   return {x0, y0, x1, y1};
 }
-export const nodeXY = (n, L) => [Math.round(L.x0 + 14 + n.x*(L.x1 - L.x0 - 28)), Math.round(L.y0 + 4 + n.y*(L.y1 - L.y0 - 8))];
-export function mapNodeAt(x, y){
-  const L = layoutMap(); let best = null, bd = 13*13;
-  for (const n of G.map.nodes){ const [X,Y] = nodeXY(n,L), d = (X-x)**2 + (Y-y)**2; if (d < bd){ bd = d; best = n; } }
+type MapLayout = ReturnType<typeof layoutMap>;
+export const nodeXY = (n: MapNode, L: MapLayout) => [Math.round(L.x0 + 14 + n.x*(L.x1 - L.x0 - 28)), Math.round(L.y0 + 4 + n.y*(L.y1 - L.y0 - 8))];
+export function mapNodeAt(x: number, y: number){
+  const L = layoutMap(); let best: MapNode | null = null, bd = 13*13;
+  for (const n of G.map!.nodes){ const [X,Y] = nodeXY(n,L), d = (X-x)**2 + (Y-y)**2; if (d < bd){ bd = d; best = n; } }
   return best;
 }
 export function renderMap(){
   drawSpace(G.time*14, 0, 1);
-  const L = layoutMap(), M = G.map, cur = curNode(), seen = new Set(M.seen);
+  const L = layoutMap(), M = G.map!, cur = curNode(), seen = new Set(M.seen);
   // lanes: gold where you have flown, pulsing cyan where you can jump next
   ctx.lineWidth = 1;
   for (const n of M.nodes) for (const id of n.links){
@@ -34,7 +35,7 @@ export function renderMap(){
   ctx.globalAlpha = 1;
   ctx.font = FONT(8); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const n of M.nodes){
-    const [X,Y] = nodeXY(n,L), N = NODE[n.type], big = exitNode(n), r = big ? 9 : 6, open = canJump(n);
+    const [X,Y] = nodeXY(n,L), N = nodeDef(n.type), big = exitNode(n), r = big ? 9 : 6, open = canJump(n);
     ctx.globalAlpha = seen.has(n.id) && n!==cur ? .4 : 1;
     ctx.fillStyle = '#05060c'; ctx.beginPath(); ctx.arc(X,Y,r,0,TAU); ctx.fill();
     ctx.strokeStyle = N.col; ctx.lineWidth = G.mapHover===n ? 2 : 1; ctx.beginPath(); ctx.arc(X,Y,r,0,TAU); ctx.stroke();
@@ -48,7 +49,7 @@ export function renderMap(){
   ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(cx+.5, top); ctx.lineTo(cx-3.5, top-5); ctx.lineTo(cx+4.5, top-5); ctx.closePath(); ctx.fill();
   const h = G.mapHover;
   if (h){
-    const [X,Y] = nodeXY(h,L), N = NODE[h.type], t = N.name.toUpperCase(), w = Math.ceil(ctx.measureText(t).width) + 8;
+    const [X,Y] = nodeXY(h,L), N = nodeDef(h.type), t = N.name.toUpperCase(), w = Math.ceil(ctx.measureText(t).width) + 8;
     const ty = Y - L.y0 > 28 ? Y - 22 : Y + 22, tx = Math.round(clamp(X, L.x0 + w/2, L.x1 - w/2) - w/2);
     ctx.fillStyle = '#05060c'; ctx.fillRect(tx, ty-7, w, 14); ctx.strokeStyle = N.col; ctx.lineWidth = 1; ctx.strokeRect(tx+.5, ty-6.5, w-1, 13);
     ctx.fillStyle = N.col; ctx.fillText(t, tx + w/2 + 1, ty+1);

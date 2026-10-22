@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { K } from './grid';
 import { undoStack } from './input';
 import { clearRun, save, saveMeta } from './save';
@@ -6,11 +5,13 @@ import { row } from './shop';
 import { curNode, genMap, toMap } from './starmap';
 import { G } from './state';
 import { tut } from './tutorial';
+import type { BlockType } from './types';
 import { showOverlay, syncUI } from './ui';
 
 // ---------- runs and the hangar ----------
 // Data is earned at the end of every run and buys permanent upgrades here.
-export const META = [
+interface MetaDef { id: string; name: string; desc: string; max: number; cost: number }
+export const META: MetaDef[] = [
   {id:'cash', name:'Seed money', desc:'+40 starting credits.', max:3, cost:4},
   {id:'core', name:'Hardened core', desc:'Core +25% hit points.', max:3, cost:5},
   {id:'arms', name:'Armory', desc:'Start with one more random weapon.', max:2, cost:6},
@@ -18,8 +19,8 @@ export const META = [
   {id:'frame', name:'Reinforced frame', desc:'+15 block limit.', max:3, cost:5},
   {id:'proto', name:'Prototype access', desc:'Loot and shops reach one tier further.', max:2, cost:8},
 ];
-export function metaLv(id){ return G.meta.lv[id] || 0; }
-export const metaCost = m => 2*m.cost*(metaLv(m.id) + 1);
+export function metaLv(id: string){ return G.meta.lv[id] || 0; }
+export const metaCost = (m: MetaDef) => 2*m.cost*(metaLv(m.id) + 1);
 export function showTitle(){
   tut('title');
   G.mode = 'title'; G.ships = []; G.pb = []; G.eb = []; G.fx = []; syncUI();
@@ -31,16 +32,16 @@ export function showTitle(){
 export function newRun(){
   G.stage = 1; G.pendingNode = null; G.bounty = 0; G.lv = {}; G.broken = new Set(); G.fresh = new Set(); G.spanT = G.span0 = 0; G.spanStage = null;
   G.design = new Map(); G.dirs = new Map();
-  [[0,0,'core'],[0,-1,'cannon'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']].forEach(([i,j,t]) => G.design.set(K(i,j),t));
+  ([[0,0,'core'],[0,-1,'cannon'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']] as const).forEach(([i,j,t]) => G.design.set(K(i,j),t));
   G.dirs.set(K(0,-1),0); G.dirs.set(K(0,1),0);
   G.inv = {cannon:1, engine:2, gen:1, battery:1}; G.dmg = {}; G.grp = {}; G.auto = [false,false,false,true,false];
-  for (let q=0; q<metaLv('arms'); q++){ const t = ['cannon','gatling','missile','flak'][(Math.random()*4)|0]; G.inv[t] = (G.inv[t]||0) + 1; }
+  for (let q=0; q<metaLv('arms'); q++){ const t = (['cannon','gatling','missile','flak'] as BlockType[])[(Math.random()*4)|0]; G.inv[t] = (G.inv[t]||0) + 1; }
   G.credits = 80 + 40*metaLv('cash');
   G.stats = {kills:0, nodes:0, elites:0, flags:0, sectors:0, bonus:0, won:false};
   G.map = genMap(1); G.node = curNode(); undoStack.length = 0;
   toMap(); save();
 }
-export function runOver(why){
+export function runOver(why: 'dead' | 'won' | 'abandoned'){
   const st = G.stats; if (!st) return;
   const data = st.sectors*3 + st.elites + st.flags*8 + Math.floor(st.nodes/3) + (st.bonus||0) + (st.won ? 10 : 0);
   G.meta.data += data; saveMeta(); clearRun(); tut('data');

@@ -164,7 +164,7 @@ details li b{color:var(--paper);font-weight:400}
 .grow span{flex:1;min-width:0;color:var(--paper)}
 .gb{font:inherit;font-size:16px;min-width:26px;padding:1px 6px;background:var(--well);color:var(--muted);border:var(--px) solid var(--lo);cursor:pointer}
 .gb[aria-pressed="true"]{color:var(--ink);background:var(--gold);border-color:var(--gold)}
-#groups{position:fixed;z-index:5;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 56px);display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:calc(100% - 32px)}
+#groups{position:fixed;z-index:5;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 84px);display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:calc(100% - 32px)}
 #groups .grpc{text-align:left}
 #groups .grpc[aria-pressed="false"]{color:var(--paper);background:rgba(20,24,30,.85)}
 #groups kbd{font-size:12px}
