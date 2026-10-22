@@ -229,7 +229,7 @@ details li b{color:var(--paper);font-weight:400}
     <summary>Controls</summary>
     <ul>
       <li><b>Build:</b> click or drag to place. Right-click or the Sell tool removes a block for a full refund. Blocks must touch your ship. New blocks unlock as you clear stages.</li>
-      <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button turns the next turret or engine in 45° steps, and lasers and railguns in 90° steps. Tap a placed block of the selected type to turn it in place. Turrets cover an arc around their facing. Lasers and railguns fire along it and can swing up to 5° either side to aim.</li>
+      <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button turns the next turret or engine in 45° steps, and lasers, railguns and hangar bays in 90° steps. Tap a placed block of the selected type to turn it in place. Turrets cover an arc around their facing. Lasers and railguns fire along it and can swing up to 5° either side to aim.</li>
       <li><b>Engines</b> push away from their exhaust, which must be open. Most of your speed comes from the direction your engines face. Off-centre engines also help the ship turn.</li>
       <li><b>Line of fire:</b> guns can't shoot through your own hull, so put them where they can see out. A red ✕ marks a block that can't fire or thrust; a gold mark means a turret is mostly boxed in.</li>
       <li><b>Fly:</b> WASD or arrows. Hold Shift to slow down.</li>
@@ -238,6 +238,8 @@ details li b{color:var(--paper);font-weight:400}
       <li><b>Shields</b> each project a bubble that stops enemy shots from every side, protecting blocks up to 2 cells away (3 at Lv2, 4 at Lv3). Overlap them to cover a big hull. If it pops it is down for 5 s, and it recharges after 2.5 s without hits. A red dashed line means a sniper is about to fire.</li>
       <li><b>Touch:</b> left half of the screen is a move stick, right half aims. Without the aim stick the ship aims at the nearest enemy.</li>
       <li><b>Drydock view:</b> mouse wheel, pinch, or the − + buttons zoom; middle-drag or two fingers pan; Fit resets. <kbd>Ctrl</kbd>+<kbd>Z</kbd> or Undo takes back a change. Blueprints keep up to three designs.</li>
+      <li><b>Hangar bays</b> launch a fighter (1×4 bay) or bomber (2×6 bay) out of their front end. The craft fights on its own, flies home every 30 s to rearm and repair, then launches again. If it is shot down the bay builds a new one, which takes longer.</li>
+      <li><b>Missiles</b> blow up in a wide blast. <b>MIRVs</b> split into five homing warheads near their target.</li>
       <li><b>Flak</b> shells burst near enemy ships: area damage, and the blast clears enemy bullets.</li>
       <li><b>Enemies</b> grow shields (orange bubbles; railguns and lasers go straight through), generators that explode when hit and make them fire faster, and carrier bays that launch fighters.</li>
       <li><b>Damage</b> knocks blocks off. Anything cut off from the core drifts away. Lose the core and the stage is lost. Drydock repairs everything for free.</li>
@@ -315,7 +317,8 @@ const T = {
   armor:  {name:'Armor', key:'2', unlock:1, cost:10, hp:70, mass:3, desc:'Three times the toughness of hull. Heavy.'},
   cannon: {name:'Cannon', key:'3', unlock:1, cost:33, hp:20, mass:1.5, rot:true, gun:{cd:.5, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 18 damage per second. Covers 50° either side of its facing.'},
   gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{cd:.09, en:.5, spd:760, dmg:2.2, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
-  missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{cd:2.2, en:8, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight. Launch in any direction and fly over your own hull.'},
+  missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{cd:2.9, en:8, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
+  mirv:   {name:'MIRV', key:'v', unlock:5, cost:130, hp:18, mass:2.5, gun:{cd:4.5, en:16, spd:190, dmg:11, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:5}, desc:'Heavy carrier missile that splits into 5 homing warheads near its target, each with its own blast. Launches in any direction and flies over your own hull.'},
   flak:   {name:'Flak', key:'f', unlock:3, cost:45, hp:18, mass:1.5, rot:true, gun:{cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', life:1.4, fuse:22, blast:26}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
   laser:  {name:'Laser', key:'6', unlock:4, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:70, range:150, en:10}, desc:'2 blocks long. Continuous beam along its facing, swinging 5° to aim. Short range, and hits hardest up close.'},
   rail:   {name:'Railgun', key:'7', unlock:5, cost:150, hp:28, mass:2, rot:true, rail:{cd:2.6, pool:130, en:25}, desc:'3 blocks long. Fires along its facing and pierces block after block. Swings 5° to aim; line up the ship to shoot.'},
@@ -325,22 +328,37 @@ const T = {
   pd:     {name:'Point defense', key:'q', unlock:4, cost:40, hp:16, mass:1.5, pd:{cd:.32, range:85, en:1}, desc:'Shoots down enemy bullets that come close.'},
   gen:    {name:'Generator', key:'g', unlock:1, cost:25, hp:14, mass:2, en:{regen:8}, desc:'Makes 8 energy per second. Weapons and shields run on energy. Safe deep inside the hull.'},
   battery:{name:'Battery', key:'b', unlock:2, cost:15, hp:12, mass:1.5, en:{cap:60}, desc:'Stores 60 energy for bursts of fire. Safe deep inside the hull.'},
+  fbay:   {name:'Fighter bay', key:'h', unlock:4, cost:95, hp:20, mass:1.5, rot:true, desc:'1×4 hangar. Launches a fighter out of its front end that dogfights nearby enemies. Every 30 s it docks to rearm and repair, then flies out again. A lost fighter takes 15 s to replace.'},
+  bbay:   {name:'Bomber bay', key:'j', unlock:6, cost:240, hp:24, mass:2, rot:true, desc:'2×6 hangar. Launches a slow, tough bomber that passes over enemy hulls dropping heavy area bombs. Every 30 s it docks to rearm and repair, then flies out again. A lost bomber takes 25 s to replace.'},
   sell:   {name:'Sell', key:'x', cost:0, desc:'Remove a block for a full refund. Right-click does the same.'},
   rail_b: {name:'Railgun', cost:0, hp:28, mass:2, rot:true},
   laser_b:{name:'Laser', cost:0, hp:24, mass:1.5, rot:true},
+  fbay_b: {name:'Fighter bay', cost:0, hp:20, mass:1.5, rot:true},
+  bbay_b: {name:'Bomber bay', cost:0, hp:24, mass:2, rot:true},
 };
-const PARTS = {rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}};
-const HEAD_OF = {rail_b:'rail', laser_b:'laser'};
+// multi-cell parts: len cells trailing behind the head along its facing, w columns wide extending to the head's starboard
+const PARTS = {rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}};
+const HEAD_OF = {rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay'};
 const isPart = t => !!(t && (PARTS[t] || HEAD_OF[t]));
+const BEAM = t => t==='rail' || t==='laser';
+// Hangar craft flown out of the bays. hp scales the craft's blocks; it circles its target at target radius*over + orbit.
+const CRAFT = {
+  fbay:{design:[[0,0,'core'],[0,-1,'gatling'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']], hp:.5, spd:320, agi:3, turn:6, orbit:60, over:1, orbSpd:1.1, range:220, sortie:30, rearm:3, rebuild:15, sfx:'gatling',
+    gun:{cd:.2, spd:720, dmg:3, spread:.05, r:1.6, fx:'line'}},
+  bbay:{design:[[0,0,'core'],[0,-1,'armor'],[-1,0,'armor'],[1,0,'armor'],[-2,0,'hull'],[2,0,'hull'],[-1,1,'engine'],[1,1,'engine'],[0,1,'hull']], hp:.8, spd:170, agi:1.4, turn:2.2, orbit:10, over:.5, orbSpd:.5, range:60, sortie:30, rearm:3, rebuild:25, sfx:'cannon',
+    gun:{cd:1.6, spd:200, dmg:30, spread:.05, r:3, fx:'flak', life:2, fuse:6, blast:32}},
+};
 const ET = {core:{hp:45}, hull:{hp:18}, armor:{hp:55}, gun:{hp:15}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}};
 const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-const PAL = ['hull','armor','cannon','gatling','missile','flak','laser','rail','engine','gyro','shield','pd','gen','battery','sell'];
+const PAL = ['hull','armor','cannon','gatling','missile','mirv','flak','laser','rail','fbay','bbay','engine','gyro','shield','pd','gen','battery','sell'];
 const COL = {
-  p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', gatling:'#a8ecff', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', gyro:'#8ff0c8',
-     laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a'},
+  p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', gatling:'#a8ecff', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', gyro:'#8ff0c8',
+     laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
+     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050'},
   e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', gun:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630'},
 };
-const BCOL = {shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', flak:'#ff9a3a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a'};
+COL.a = COL.p; // hangar craft
+const BCOL = {shot:'#ffe84a', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a'};
 const locked = t => (T[t].unlock || 1) > G.stage;
 // block levels: bought per type in drydock, each level +35% to the block's main stat
 const MAXLV = 3;
@@ -394,9 +412,8 @@ function physics(cells, typeAt){
 }
 const dirSpeed = (ph,lx,ly) => speedOf(ph.coreT + ph.F.px*Math.max(0,lx) + ph.F.nx*Math.max(0,-lx) + ph.F.py*Math.max(0,ly) + ph.F.ny*Math.max(0,-ly), ph.mass);
 function partComplete(typeAt, i, j, t, o){
-  const P = PARTS[t], [fx,fy] = FACE[o];
-  for (let n=1; n<P.len; n++) if (typeAt(K(i-fx*n, j-fy*n)) !== P.body) return false;
-  return true;
+  const P = PARTS[t];
+  return cellsFor(i,j,t,o).every(([a,b], n) => !n || typeAt(K(a,b)) === P.body);
 }
 function laneFwd(typeAt, i, j, o){
   const [fx,fy] = FACE[o];
@@ -408,19 +425,20 @@ function laneFwd(typeAt, i, j, o){
 function makeShip(design, team, x, y, hpMul=1, dirs=null){
   const s = {team, x, y, vx:0, vy:0, a:0, c:1, sn:0, blocks:new Map(), alive:true, hpMul};
   for (const [k,t] of design){
-    const hp = (team==='p' ? T[t].hp*LV(t) : ET[t].hp) * hpMul;
+    const hp = (team==='e' ? ET[t].hp : T[t].hp*LV(t)) * hpMul;
     const b = {t, i:KI(k), j:KJ(k), o:dirs ? dirs.get(k)||0 : 0, hp, max:hp, cd:Math.random()*.4, hit:-1};
     s.blocks.set(k, b);
   }
   recalc(s); return s;
 }
 function recalc(s){
-  let r = 0; s.guns = []; s.pds = []; s.rails = []; s.lasers = []; s.shields = [];
+  let r = 0; s.guns = []; s.pds = []; s.rails = []; s.lasers = []; s.shields = []; s.bays = [];
   for (const b of s.blocks.values()) r = Math.max(r, Math.hypot(b.i,b.j)*BS + BS*.75);
   s.r = r;
+  if (s.team==='a') return; // hangar craft fly and shoot from updateCraft
   if (s.team !== 'p'){
     // enemies: guns, shield bubbles, carrier bays; each generator speeds up their fire
-    s.bays = []; let gens = 0;
+    let gens = 0;
     for (const b of s.blocks.values()){
       if (b.t==='gun') s.guns.push(b); else if (b.t==='bay') s.bays.push(b); else if (b.t==='gen') gens++;
       else if (b.t==='shield'){ s.shields.push(b); if (!b.bub){ const max = ESH.hp*s.hpMul; b.bub = {hp:max, max, down:0, last:-9, flash:-9}; } }
@@ -435,6 +453,7 @@ function recalc(s){
     if (d.pd) s.pds.push(b);
     if (b.t==='shield') s.shields.push(b);
     if (PARTS[b.t] && partComplete(typeAt, b.i, b.j, b.t, b.o)){
+      if (!BEAM(b.t)){ s.bays.push(b); if (b.bt == null) b.bt = 1.5; continue; }
       b.lane = laneFwd(typeAt, b.i, b.j, b.o);
       (b.t==='rail' ? s.rails : s.lasers).push(b);
     }
@@ -547,7 +566,8 @@ function killShip(s){
     sfx(s.boss ? 'big' : 'boom', Math.min(1.5, .4 + s.r/60));
     G.credits += s.value; G.earned += s.value;
     G.fx.push({k:'txt', x:s.x, y:s.y, vy:-30*G.SC, text:'+'+s.value, life:1.4, max:1.4});
-  } else { G.deadT = 1.6; sfx('die'); }
+  } else if (s.team==='p'){ G.deadT = 1.6; sfx('die'); }
+  else sfx('boom', .6);
 }
 function debris(s,b,burst,kick=1){
   if (G.fx.length > 1800) return;
@@ -589,9 +609,32 @@ function flakBurst(b){
   }
   for (const x of G.eb) if (!x.dead && Math.hypot(x.x-b.x, x.y-b.y) < b.blast) x.dead = true;
 }
+// Missile warhead: wide blast that hits every block within 1.6 cells of the impact, falling off from the centre.
+function missileBlast(b,e,k){
+  const SC = G.SC, rad = 1.6*BS, x = b.x, y = b.y;
+  for (const [kk,bb] of [...e.blocks]){
+    if (!e.alive || kk===k || !e.blocks.has(kk)) continue;
+    const [wx,wy] = wpos(e,bb), d = Math.hypot(wx-x, wy-y);
+    if (d < rad + BS*.5) damage(e, kk, b.dmg*.6*(1 - .5*d/(rad + BS*.5)));
+  }
+  boomAt(x, y, 20*SC, .4); sfx('boom', .8);
+  sparks(x, y, Math.atan2(-b.vy,-b.vx), 14, 260*SC, ['#ffffff','#ffe08a','#ff8a4a']);
+  for (let n=0; n<4; n++) G.fx.push({k:'smoke', x:x + rand(-6,6)*SC, y:y + rand(-6,6)*SC, vx:rand(-14,14)*SC, vy:rand(-14,14)*SC, r:rand(6,11)*SC, life:rand(.7,1.2), max:1.2});
+  if (!REDUCE) G.shake = Math.min(4, G.shake + 1.4);
+}
+// MIRV carrier: splits into homing warheads fanned out around its heading, spread over the nearest enemies.
+function mirvSplit(b, enemies){
+  b.dead = true; boomAt(b.x, b.y, 8*G.SC, .15); sfx('missile', .8);
+  const ts = [...enemies].filter(e => e.alive).sort((p,q) => Math.hypot(p.x-b.x,p.y-b.y) - Math.hypot(q.x-b.x,q.y-b.y)).slice(0,3);
+  const head = Math.atan2(b.vy,b.vx), sub = {spd:T.mirv.gun.spd*1.4, r:2.2, dmg:0, homing:true};
+  for (let n=0; n<b.mirv; n++){
+    pBullet(b.x, b.y, head + (n - (b.mirv-1)/2)*.45, sub, ts.length ? ts[n % ts.length] : null);
+    G.pb[G.pb.length-1].dmg = b.dmg;
+  }
+}
 function pBullet(x,y,ang,gun,target,mul=1){
   const sp = gun.spd*G.SC;
-  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC, life:gun.homing ? 6 : gun.life || 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, kind:gun.homing ? 'miss' : gun.fx || 'shot'});
+  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC, life:gun.homing ? 6 : gun.life || 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0, kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot'});
 }
 function eBullet(x,y,ang,mul,kind,dmg=10,rMul=1){
   sfx('eshot');
@@ -600,8 +643,8 @@ function eBullet(x,y,ang,mul,kind,dmg=10,rMul=1){
   G.eb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:3.4*G.SC*rMul, dmg, life:8, kind});
 }
 // Where to shoot so a bullet of speed sp meets the player, assuming the player keeps its velocity.
-function leadAngle(wx,wy,sp,amount){
-  const p = G.player, d = Math.hypot(p.x-wx, p.y-wy), t = d/sp*amount;
+function leadAngle(wx,wy,sp,amount,p=G.player){
+  const d = Math.hypot(p.x-wx, p.y-wy), t = d/sp*amount;
   return Math.atan2(p.y + p.vy*t - wy, p.x + p.vx*t - wx);
 }
 // A shield bubble stops an enemy shot heading inward once it is inside the bubble. Returns true when absorbed.
@@ -748,7 +791,7 @@ function update(dt){
   G.time += dt;
   const p = G.player, SC = G.SC;
   for (const s of G.ships){ s.c = Math.cos(s.a); s.sn = Math.sin(s.a); }
-  const enemies = G.ships.filter(s => s.alive && s.team==='e');
+  const enemies = G.ships.filter(s => s.alive && s.team==='e'), allies = G.ships.filter(s => s.alive && s.team==='a');
 
   // aim
   let ax, ay;
@@ -862,11 +905,20 @@ function update(dt){
     if (best && spend(T.pd.pd.en)){ sfx('pd'); best.dead = true; d.cd = T.pd.pd.cd/LV('pd'); G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09}); }
     else d.cd = .05;
   }
+  // hangar bays: launch a craft, take it back after its sortie, send it out again; a lost craft takes longer to replace
+  if (p.alive) for (const b of p.bays){
+    if (b.ally && !b.ally.alive){ b.ally = null; b.bt = CRAFT[b.t].rebuild; }
+    if (!b.ally && (b.bt -= dt) <= 0) launchCraft(p,b);
+  }
+  for (const A of allies) if (A.alive) updateCraft(A, dt, enemies);
 
   // enemies
   for (const e of enemies){
     const dx = p.x-e.x, dy = p.y-e.y;
     const want = Math.atan2(dx,-dy);
+    // aimed guns switch to a hangar craft that comes much closer than the player
+    let td = Math.hypot(dx,dy)*.6; e.tgt = p;
+    for (const A of allies){ const d = Math.hypot(A.x-e.x, A.y-e.y); if (A.alive && d < td){ td = d; e.tgt = A; } }
     e.a += clamp(angDiff(want,e.a), -e.turn*dt, e.turn*dt);
     e.orb += e.orbSpd*dt;
     const tx = clamp(p.x + Math.cos(e.orb)*e.pref, 0, G.AW), ty = clamp(p.y + Math.sin(e.orb)*e.pref, 0, G.AH);
@@ -911,6 +963,7 @@ function update(dt){
         b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp;
       }
       b.tr.push(b.x, b.y); if (b.tr.length > 36) b.tr.splice(0, 2);
+      if (b.mirv && (b.life < 5.2 || (b.target && Math.hypot(b.target.x-b.x, b.target.y-b.y) < b.target.r + 90*SC))){ mirvSplit(b, enemies); continue; }
       if (Math.random() < .18) G.fx.push({k:'smoke', x:b.x, y:b.y, vx:rand(-6,6)*SC, vy:rand(-6,6)*SC, r:2.2*SC, life:rand(.5,.9), max:.9});
     }
     const steps = Math.min(3, Math.ceil(b.sp*dt/(BS*.8)));
@@ -921,7 +974,7 @@ function update(dt){
         if (e.shields.length && shieldBlock(e,b)){ b.dead = true; break; }
         const k = hitShip(e,b.x,b.y,b.kind==='flak' ? b.fuse : b.r);
         if (k >= 0 && b.kind==='flak'){ flakBurst(b); break; }
-        if (k >= 0){ damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
+        if (k >= 0){ damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); if (b.homing) missileBlast(b,e,k); G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }
     }
     b.life -= dt;
@@ -933,10 +986,15 @@ function update(dt){
     const steps = b.sp*dt > 6 ? 2 : 1;
     for (let s=0; s<steps && !b.dead; s++){
       b.x += b.vx*dt/steps; b.y += b.vy*dt/steps;
-      if (!p.alive) continue;
-      if (shieldBlock(p,b)){ b.dead = true; break; }
-      const k = hitShip(p,b.x,b.y,b.r);
-      if (k >= 0){ damage(p,k,b.dmg); sfx('hit'); b.dead = true; G.fx.push({k:'spk', x:b.x, y:b.y, vx:0, vy:0, life:.2, max:.2, col:BCOL[b.kind]}); if (b.kind==='snipe') boomAt(b.x,b.y,8*SC,.2); }
+      if (p.alive){
+        if (shieldBlock(p,b)){ b.dead = true; break; }
+        const k = hitShip(p,b.x,b.y,b.r);
+        if (k >= 0){ damage(p,k,b.dmg); sfx('hit'); b.dead = true; G.fx.push({k:'spk', x:b.x, y:b.y, vx:0, vy:0, life:.2, max:.2, col:BCOL[b.kind]}); if (b.kind==='snipe') boomAt(b.x,b.y,8*SC,.2); break; }
+      }
+      for (const A of allies){
+        const k = A.alive ? hitShip(A,b.x,b.y,b.r) : -1;
+        if (k >= 0){ damage(A,k,b.dmg); b.dead = true; G.fx.push({k:'spk', x:b.x, y:b.y, vx:0, vy:0, life:.2, max:.2, col:BCOL[b.kind]}); break; }
+      }
     }
     b.life -= dt;
     if (b.life <= 0 || b.x < -mX || b.y < -mX || b.x > G.AW+mX || b.y > G.AH+mX) b.dead = true;
@@ -968,6 +1026,47 @@ function update(dt){
     }
   }
 }
+// ---------- hangar craft ----------
+function launchCraft(p,b){
+  const C = CRAFT[b.t], [wx,wy] = wpos(p,b), dir = p.a + FA[b.o], v = C.spd*G.SC*.6;
+  const A = makeShip(new Map(C.design.map(([i,j,t]) => [K(i,j),t])), 'a', wx, wy, C.hp*LV(b.t));
+  A.a = dir + Math.PI/2; A.c = Math.cos(A.a); A.sn = Math.sin(A.a); A.aimA = dir;
+  A.vx = p.vx + Math.cos(dir)*v; A.vy = p.vy + Math.sin(dir)*v;
+  A.kind = b.t; A.bay = b; A.sortie = C.sortie; A.cd = .5; A.pick = 0; A.orb = rand(0,TAU);
+  for (const x of A.blocks.values()) if (x.t==='engine') x.firing = true;
+  b.ally = A; G.ships.push(A); sfx('launch');
+}
+// Out on sortie the craft circles the nearest enemy and shoots it (or escorts the player); when the sortie ends it flies home and docks.
+function updateCraft(A, dt, enemies){
+  const p = G.player, C = CRAFT[A.kind], SC = G.SC;
+  A.sortie -= dt; A.cd -= dt;
+  // bay gone or ship lost: nowhere to land, so keep fighting
+  if (A.sortie <= 0 && !(p.alive && p.bays.includes(A.bay))) A.sortie = 10;
+  let tx, ty, home = A.sortie <= 0;
+  if (home){
+    [tx,ty] = wpos(p,A.bay);
+    if (Math.hypot(tx-A.x, ty-A.y) < BS*1.5){ A.alive = false; A.bay.ally = null; A.bay.bt = C.rearm; sfx('dock'); return; }
+  } else {
+    if (!A.tgt || !A.tgt.alive || (A.pick -= dt) <= 0){
+      A.pick = 1.5; A.tgt = null; let bd = 1e18;
+      for (const e of enemies){ const d = (e.x-A.x)**2 + (e.y-A.y)**2; if (e.alive && d < bd){ bd = d; A.tgt = e; } }
+    }
+    const o = A.tgt || p, R = A.tgt ? o.r*C.over + C.orbit*SC : p.r + 40*SC;
+    A.orb += C.orbSpd*dt; tx = o.x + Math.cos(A.orb)*R; ty = o.y + Math.sin(A.orb)*R;
+    if (A.tgt){
+      const e = A.tgt, ang = Math.atan2(e.y-A.y, e.x-A.x); A.aimA = ang;
+      if (A.cd <= 0 && Math.hypot(e.x-A.x, e.y-A.y) < e.r + C.range*SC){
+        A.cd = C.gun.cd; pBullet(A.x, A.y, ang + (Math.random()-.5)*2*C.gun.spread, C.gun, e, LV(A.kind)); sfx(C.sfx, .5);
+      }
+    } else A.aimA = A.a - Math.PI/2;
+  }
+  // heading home it matches the player's drift so it can catch the bay
+  const ex = tx-A.x, ey = ty-A.y, el = Math.hypot(ex,ey) || 1, v = Math.min(C.spd*SC*(home ? 1.6 : 1), el*(home ? 3 : 2));
+  const bx = home ? p.vx : 0, by = home ? p.vy : 0;
+  A.vx += (ex/el*v + bx - A.vx)*Math.min(1, dt*C.agi*(home ? 2 : 1)); A.vy += (ey/el*v + by - A.vy)*Math.min(1, dt*C.agi*(home ? 2 : 1));
+  A.x = clamp(A.x + A.vx*dt, 0, G.AW); A.y = clamp(A.y + A.vy*dt, 0, G.AH);
+  if (A.vx*A.vx + A.vy*A.vy > 4) A.a += clamp(angDiff(Math.atan2(A.vx,-A.vy), A.a), -C.turn*dt, C.turn*dt);
+}
 function fireRail(p, wx, wy, face){
   const SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = 3000*G.S;
   let pool = T.rail.rail.pool*LV('rail'), end = len;
@@ -995,7 +1094,7 @@ function enemyFire(e,dt){
       const n = Math.min(isBoss ? 10 : 6, e.guns.length);
       for (let q=0; q<n; q++){
         const g = e.guns[(q*7 + e.vol) % e.guns.length], [wx,wy] = wpos(e,g);
-        eBullet(wx, wy, leadAngle(wx,wy,115*e.sc,.8), 1.05*e.sc/G.SC, 'aim', e.fodder ? 4 : 10, e.sc/G.SC);
+        eBullet(wx, wy, leadAngle(wx,wy,115*e.sc,.8,isBoss ? p : e.tgt || p), 1.05*e.sc/G.SC, 'aim', e.fodder ? 4 : 10, e.sc/G.SC);
       }
       e.vol++;
     }
@@ -1058,7 +1157,7 @@ function barrel(X,x,y,ca,sa,len,w,m){
   X.fillStyle = m[0]; X.beginPath(); X.moveTo(x+px*.3,y+py*.3); X.lineTo(x+px*.3+ca*len,y+py*.3+sa*len); X.lineTo(x-px*.4+ca*len,y-py*.4+sa*len); X.lineTo(x-px*.4,y-py*.4); X.closePath(); X.fill();
 }
 function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
-  const M = MET[team==='p' ? 'p' : 'e'], bx = x, by = y;
+  const M = MET[team==='e' ? 'e' : 'p'], bx = x, by = y;
   if (t==='sell'){
     X.fillStyle = '#ff3d2a'; X.save(); X.translate(x,y); X.rotate(Math.PI/4); X.fillRect(-5,-1.2,10,2.4); X.fillRect(-1.2,-5,2.4,10); X.restore(); return;
   }
@@ -1074,7 +1173,7 @@ function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
   let ang = aim - rot;
   const arc = team==='p' && d && d.gun ? d.gun.arc : 0;
   if (arc) ang = -Math.PI/2 + clamp(angDiff(ang,-Math.PI/2), -arc, arc);
-  const ca = Math.cos(ang), sa = Math.sin(ang), gun = team==='p' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
+  const ca = Math.cos(ang), sa = Math.sin(ang), gun = team!=='e' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
   switch (t){
     case 'hull':
       X.fillStyle = base[2]; X.fillRect(x-.5,y-3,1,6); break;
@@ -1095,6 +1194,11 @@ function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
     case 'missile':
       X.fillStyle = '#20242c'; X.fillRect(x-3.5,y-3.5,7,7);
       for (const dx of [-1.7,1.7]){ X.fillStyle = '#d8dde6'; X.fillRect(x+dx-.8,y-2.6,1.6,5); X.fillStyle = '#ff3d2a'; X.fillRect(x+dx-.8,y-3.2,1.6,1.4); }
+      break;
+    case 'mirv':
+      X.fillStyle = '#20242c'; X.fillRect(x-3.5,y-3.5,7,7);
+      X.fillStyle = '#d8dde6'; X.fillRect(x-1.6,y-2.4,3.2,5.4); X.fillStyle = '#ff7ad8'; X.fillRect(x-1.6,y-3.6,3.2,1.6);
+      X.fillStyle = '#ffffff'; X.fillRect(x-.5,y-3.6,1,.8); X.fillStyle = '#5a6270'; X.fillRect(x-3,y+1.6,1.2,1.4); X.fillRect(x+1.8,y+1.6,1.2,1.4);
       break;
     case 'engine':
       X.fillStyle = '#20242c'; X.fillRect(x-3.6,y-1,7.2,5.2); X.fillStyle = '#5a6270'; X.fillRect(x-3.6,y-1,7.2,1.2);
@@ -1137,6 +1241,18 @@ function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
       X.fillStyle = on ? '#ffd04a' : '#7a5a10'; for (let q=-3; q<4; q+=2.4){ X.fillRect(x-3.6,y+q,1.2,1.2); X.fillRect(x+2.4,y+q,1.2,1.2); }
       break;
     }
+    case 'fbay': case 'bbay': {
+      // hangar mouth on the fore edge with blinking running lights and a launch chevron
+      const lit = t==='fbay' ? '#5fd8ff' : '#ffc46b', on = Math.sin(G.time*5) > 0;
+      X.fillStyle = '#0a0b0e'; X.fillRect(x-4,y-5,8,8.4); X.fillStyle = '#20242c'; X.fillRect(x-4,y+3.4,8,1.6);
+      X.fillStyle = on ? lit : '#2a3a4a'; X.fillRect(x-4.6,y-4.8,1.2,1.2); X.fillRect(x+3.4,y-4.8,1.2,1.2);
+      X.fillStyle = lit; X.fillRect(x-.6,y-2.8,1.2,1.2); X.fillRect(x-1.8,y-1.6,1.2,1.2); X.fillRect(x+.6,y-1.6,1.2,1.2);
+      break;
+    }
+    case 'fbay_b': case 'bbay_b':
+      X.fillStyle = '#16191f'; X.fillRect(x-4,y-5,8,10);
+      X.fillStyle = t==='fbay_b' ? '#3a8ab0' : '#a07830'; X.fillRect(x-.5,y-3.5,1,2.6); X.fillRect(x-.5,y+1,1,2.6);
+      break;
     case 'battery':
       X.fillStyle = '#142a14'; X.fillRect(x-3.6,y-3,7.2,6);
       for (let q=0; q<3; q++){ X.fillStyle = '#3ac84a'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,4.6); X.fillStyle = '#b8ffb0'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,.9); }
@@ -1160,7 +1276,7 @@ function drawShip(s){
   ctx.translate((s.x-G.camX)*z + W/2 + (G.camOX||0), (s.y-G.camY)*z + H/2 + (G.camOY||0)); ctx.rotate(s.a); ctx.scale(z,z);
   ctx.lineWidth = 1/z;
   const detail = BS*z >= 6;
-  const aim = (s.team==='p' ? Math.atan2(G.aim.y-s.y, G.aim.x-s.x) : Math.atan2(p.y-s.y, p.x-s.x)) - s.a;
+  const aim = (s.team==='p' ? Math.atan2(G.aim.y-s.y, G.aim.x-s.x) : s.team==='a' ? s.aimA : Math.atan2(p.y-s.y, p.x-s.x)) - s.a;
   for (const b of s.blocks.values())
     drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, detail, b.firing);
   ctx.restore();
@@ -1308,6 +1424,12 @@ function renderCombat(){
         }
         ctx.globalAlpha = 1;
       }
+      if (b.kind==='miss' || b.kind==='mirv'){
+        const ang = Math.atan2(b.vy,b.vx), w = b.kind==='mirv' ? .75 : .5;
+        ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, s*2.2, Math.max(.6, s*w), ang, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(X + Math.cos(ang)*s*1.6), Math.round(Y + Math.sin(ang)*s*1.6), 1, 1);
+        continue;
+      }
       if (b.kind==='line' || b.kind==='oval' || b.kind==='snipe'){
         const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang);
         if (b.kind==='line'){
@@ -1413,7 +1535,7 @@ function drawArc(i,j,o,t,alpha,R,len){
       ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); ctx.stroke();
     }
     ctx.strokeStyle = '#5fd8ff'; ctx.beginPath(); ctx.arc(x, y, len*BS, FA[o] - T[t].gun.arc, FA[o] + T[t].gun.arc); ctx.stroke();
-  } else if (PARTS[t]){
+  } else if (BEAM(t)){
     const a = FA[o], h = rayOut(i,j,a,R), L = Math.min(h, t==='laser' ? T.laser.laser.range/BS : len*1.6)*BS;
     ctx.strokeStyle = h === Infinity ? (t==='laser' ? '#2ac83a' : '#b89aff') : '#ff5a3a';
     ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); ctx.stroke();
@@ -1455,12 +1577,12 @@ function renderBuild(){
   ctx.globalAlpha = .35; ctx.strokeStyle = '#5fd3ff'; ctx.setLineDash([4/sc,3/sc]);
   for (const [k,t] of G.design) if (t==='shield'){ ctx.beginPath(); ctx.arc(KI(k)*BS, KJ(k)*BS, shRad(), 0, TAU); ctx.stroke(); }
   ctx.setLineDash([]); ctx.globalAlpha = 1;
-  for (const [k,t] of G.design) if (aimsOut(t) || PARTS[t]) drawArc(KI(k), KJ(k), G.dirs.get(k) || 0, t, t===G.sel ? .35 : .14, aR, aLen);
+  for (const [k,t] of G.design) if (aimsOut(t) || BEAM(t)) drawArc(KI(k), KJ(k), G.dirs.get(k) || 0, t, t===G.sel ? .35 : .14, aR, aLen);
   for (const [k,t] of G.design){
     const i = KI(k), j = KJ(k), o = G.dirs.get(k) || 0;
     drawBlock(ctx, t, o, 'p', i*BS, j*BS, FA[o], false, 1, detail, false);
     // warnings: engine exhaust covered, or a beam weapon looking into its own hull
-    const bad = (t==='engine' && designType(K(i-FACE[o][0], j-FACE[o][1]))) || (PARTS[t] && !laneFwd(designType, i, j, o));
+    const bad = (t==='engine' && designType(K(i-FACE[o][0], j-FACE[o][1]))) || (BEAM(t) && !laneFwd(designType, i, j, o));
     const fc = aimsOut(t) ? arcClear(i, j, o, t) : 1;
     if (!bad && fc < .4 && fc > 0){ ctx.fillStyle = '#ffc46b'; ctx.fillRect(i*BS+1.5, j*BS-4.5, 3, 3); }
     if (bad || fc === 0){ ctx.strokeStyle = '#ff7a66'; ctx.beginPath(); ctx.moveTo(i*BS-4,j*BS-4); ctx.lineTo(i*BS+4,j*BS+4); ctx.moveTo(i*BS+4,j*BS-4); ctx.lineTo(i*BS-4,j*BS+4); ctx.stroke(); }
@@ -1468,13 +1590,13 @@ function renderBuild(){
   // ghost
   const h = G.hover;
   if (h && Math.max(Math.abs(h.i),Math.abs(h.j)) <= R){
-    const spots = mirrorSpots(h.i,h.j,G.rot);
+    const spots = placeSpots(h.i,h.j,G.rot,G.sel);
     for (const [i,j,o] of spots){
       if (G.sel==='sell'){ ctx.globalAlpha = .9; drawBlock(ctx,'sell',0,'p',i*BS,j*BS,0,false,1,true,false); continue; }
       const ok = placeCheck(i,j,G.sel,o) === true, oo = T[G.sel].rot ? o : 0;
       for (const [ci,cj,ct] of cellsFor(i,j,G.sel,oo)){
         ctx.globalAlpha = .55; drawBlock(ctx,ct,oo,'p',ci*BS,cj*BS,FA[oo],false,1,true,false);
-        if (ct===G.sel && (aimsOut(ct) || PARTS[ct])) drawArc(ci, cj, oo, ct, .75, aR, aLen);
+        if (ct===G.sel && (aimsOut(ct) || BEAM(ct))) drawArc(ci, cj, oo, ct, .75, aR, aLen);
         if (!ok){ ctx.globalAlpha = .8; ctx.strokeStyle = '#ff7a66'; ctx.strokeRect(ci*BS-5,cj*BS-5,10,10); }
       }
       ctx.globalAlpha = 1;
@@ -1499,11 +1621,25 @@ function frame(now){
 }
 
 // ---------- building ----------
-// Cells a placement covers: the clicked cell plus, for railguns and lasers, body cells trailing behind the facing.
+// Cells a placement covers: the clicked cell plus, for multi-cell parts, body cells trailing behind the facing (and to starboard if wide).
 function cellsFor(i,j,t,o){
   const out = [[i,j,t]], P = PARTS[t];
-  if (P){ const [fx,fy] = FACE[o]; for (let n=1; n<P.len; n++) out.push([i-fx*n, j-fy*n, P.body]); }
+  if (P){
+    const [fx,fy] = FACE[o], [sx,sy] = FACE[(o+2)%8];
+    for (let m=0; m<(P.w||1); m++) for (let n=0; n<P.len; n++) if (n || m) out.push([i-fx*n+sx*m, j-fy*n+sy*m, P.body]);
+  }
   return out;
+}
+// Mirror twins of a placement. A wide part extends to one side of its head, so its twin's head is found by mirroring the whole footprint.
+function placeSpots(i,j,o,t){
+  const spots = mirrorSpots(i,j,o);
+  if (!(PARTS[t] && PARTS[t].w > 1)) return spots;
+  const own = cellsFor(i,j,t,o);
+  return spots.map(([a,b,mo]) => {
+    const si = a===i ? 1 : -1, sj = b===j ? 1 : -1, cells = own.map(([x,y]) => [si*x, sj*y]), set = new Set(cells.map(([x,y]) => K(x,y)));
+    const h = cells.find(([x,y]) => cellsFor(x,y,t,mo).every(([u,v]) => set.has(K(u,v))));
+    return h ? [h[0], h[1], mo] : [a,b,mo];
+  });
 }
 function placeCheck(i,j,t,o){
   if (locked(t)) return `${T[t].name} unlocks at stage ${T[t].unlock}`;
@@ -1511,8 +1647,8 @@ function placeCheck(i,j,t,o){
   for (const [a,b] of cells) if (Math.max(Math.abs(a),Math.abs(b)) > R) return 'Outside the build grid';
   const k = K(i,j), cur = G.design.get(k);
   if (cur==='core') return 'The core stays where it is';
-  if (isPart(cur)) return 'Sell that weapon first';
-  if (PARTS[t]) for (const [a,b] of cells) if (G.design.has(K(a,b))) return 'A railgun or laser needs empty cells';
+  if (isPart(cur)) return `Sell that ${T[cur].name.toLowerCase()} first`;
+  if (PARTS[t]) for (const [a,b] of cells) if (G.design.has(K(a,b))) return `${T[t].name} needs ${cells.length} empty cells`;
   if (cur===t && (!T[t].rot || (G.dirs.get(k)||0)===oo)) return 'Already placed';
   const cost = T[t].cost - (cur ? T[cur].cost : 0);
   if (cost > G.credits) return `Not enough credits for ${T[t].name.toLowerCase()}`;
@@ -1532,12 +1668,15 @@ function tryPlace(i,j,t,o){
   }
   return true;
 }
-// A body cell belongs to the head that sits ahead of it along the shared facing.
+// A body cell belongs to the head that sits ahead of it (and to port, for wide parts) along the shared facing.
 function headOf(i,j){
   const k = K(i,j), t = G.design.get(k);
   if (!HEAD_OF[t]) return [i,j];
-  const o = G.dirs.get(k)||0, [fx,fy] = FACE[o], ht = HEAD_OF[t];
-  for (let m=1; m<PARTS[ht].len; m++){ const hk = K(i+fx*m, j+fy*m); if (G.design.get(hk)===ht && (G.dirs.get(hk)||0)===o) return [i+fx*m, j+fy*m]; }
+  const o = G.dirs.get(k)||0, [fx,fy] = FACE[o], [sx,sy] = FACE[(o+2)%8], ht = HEAD_OF[t], P = PARTS[ht];
+  for (let m=0; m<(P.w||1); m++) for (let n=0; n<P.len; n++){
+    const a = i+fx*n-sx*m, b = j+fy*n-sy*m, hk = K(a,b);
+    if (G.design.get(hk)===ht && (G.dirs.get(hk)||0)===o) return [a,b];
+  }
   return [i,j];
 }
 function removeCell(k){ const t = G.design.get(k); G.design.delete(k); G.dirs.delete(k); G.credits += T[t].cost; }
@@ -1564,7 +1703,7 @@ function buildAction(i,j,mode,tap){
   if (mode!=='sell' && tap && spinAt(i,j)){ G.drag = null; syncUI(); return; }
   if (mode==='sell'){ for (const [a,b] of mirrorSpots(i,j,0)) sellAt(a,b); }
   else {
-    const [first, ...rest] = mirrorSpots(i,j,G.rot), r = tryPlace(first[0],first[1],G.sel,first[2]);
+    const [first, ...rest] = placeSpots(i,j,G.rot,G.sel), r = tryPlace(first[0],first[1],G.sel,first[2]);
     for (const [a,b,mo] of rest) tryPlace(a,b,G.sel,mo);
     if (r !== true && r !== 'Already placed') toast(r);
   }
@@ -1617,6 +1756,8 @@ const SFX = {
   boom:    v => { noise(.45*v + .15, .22*Math.min(1.5,v), 1800, 90); tone('sine', 90, 35, .3, .14*v); },
   big:     v => { noise(1.3, .4, 1200, 50); tone('sine', 70, 25, 1.1, .35); },
   ram:     v => noise(.09, .14*v, 2500, 400),
+  launch:  v => { noise(.4, .1*v, 500, 3000); tone('square', 300, 900, .2, .04*v); },
+  dock:    v => [880,660].forEach((f,n) => tone('square', f, f, .06, .05*v, n*.07)),
   lowEn:   v => tone('square', 180, 170, .09, .06*v),
   place:   v => tone('square', 700, 700, .025, .05*v),
   upgrade: v => [523,659,784].forEach((f,n) => tone('square', f, f, .09, .07, n*.07)),
@@ -1777,22 +1918,23 @@ function select(t){
 function designStats(){
   const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), o:G.dirs.get(k)||0}));
   const ph = physics(cells, designType);
-  let dps = 0, hp = 0, pd = 0, sh = 0, badW = 0, badT = 0, weakT = 0, eGen = 6, eCap = 40, eUse = 0;
+  let dps = 0, hp = 0, pd = 0, sh = 0, fb = 0, bb = 0, badW = 0, badT = 0, weakT = 0, eGen = 6, eCap = 40, eUse = 0;
   for (const c of cells){
     const d = T[c.t], m = LV(c.t); hp += d.hp*m;
     if (aimsOut(c.t)){ const fc = arcClear(c.i, c.j, c.o, c.t); if (fc === 0) badT++; else if (fc < .4) weakT++; }
-    if (d.gun) dps += d.gun.dmg*m/d.gun.cd;
+    if (d.gun) dps += d.gun.dmg*(d.gun.mirv || 1)*m/d.gun.cd;
     if (d.gun && d.gun.en) eUse += d.gun.en/d.gun.cd;
     if (c.t==='laser') eUse += d.laser.en; if (c.t==='rail') eUse += d.rail.en/d.rail.cd; if (c.t==='pd') eUse += d.pd.en/d.pd.cd*m;
     if (c.t==='gen') eGen += d.en.regen*m; if (c.t==='battery') eCap += d.en.cap*m;
     if (d.pd) pd++;
     if (c.t==='shield') sh++;
-    if (PARTS[c.t]){
+    if (CRAFT[c.t]){ dps += CRAFT[c.t].gun.dmg/CRAFT[c.t].gun.cd*m; if (c.t==='fbay') fb++; else bb++; }
+    if (BEAM(c.t)){
       if (!laneFwd(designType, c.i, c.j, c.o)) badW++;
       else dps += (c.t==='rail' ? d.rail.pool/d.rail.cd : d.laser.dps*.6)*m;
     }
   }
-  return {n:cells.length, hp, dps, pd, sh, badW, badT, weakT, eGen, eCap, eUse, badE:ph.engines.filter(e => !e.active).length,
+  return {n:cells.length, hp, dps, pd, sh, fb, bb, badW, badT, weakT, eGen, eCap, eUse, badE:ph.engines.filter(e => !e.active).length,
     fore:dirSpeed(ph,0,-1), side:Math.max(dirSpeed(ph,1,0), dirSpeed(ph,-1,0)), aft:dirSpeed(ph,0,1),
     turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia, ph.mass)};
 }
@@ -1827,6 +1969,7 @@ function syncUI(){
     `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Speed side / aft</dt><dd>${ms(st.side)} / ${ms(st.aft)}</dd>` +
     `<dt>Energy</dt><dd class="${st.eUse > st.eGen ? 'gold' : ''}">+${Math.round(st.eGen)}/s · uses ${Math.round(st.eUse)}/s · ${Math.round(st.eCap)}</dd>` +
     `<dt>Turn rate</dt><dd>${Math.round(st.turn*180/Math.PI)}°/s</dd><dt>Shields / PD</dt><dd>${st.sh} / ${st.pd}</dd>` +
+    (st.fb || st.bb ? `<dt>Fighters / bombers</dt><dd>${st.fb} / ${st.bb}</dd>` : '') +
     (warn ? `<dt class="warn">Blocked</dt><dd class="warn">${warn}</dd>` : '') +
     (st.weakT ? `<dt class="gold">Boxed in</dt><dd class="gold">${st.weakT} turret${st.weakT>1?'s':''}</dd>` : '');
   $('launch').textContent = `Launch stage ${s}`;
