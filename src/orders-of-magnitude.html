@@ -156,6 +156,9 @@ details li b{color:var(--paper);font-weight:400}
 .gtab .gn{text-align:center;color:var(--line)}
 .gtab .gb{min-width:0;height:24px;padding:0}
 .gtab .ga{font-size:12px}
+.gtab .gk{color:var(--gc)}
+.gtab .gk[aria-pressed="true"]{background:var(--gc);border-color:var(--gc);color:var(--ink)}
+.gl{margin:3px 0 0;color:var(--paper);line-height:1.15}
 .ghd{font-size:15px;color:var(--muted);text-shadow:1px 1px 0 #000}
 #tut{position:fixed;z-index:12;left:max(16px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 56px);width:min(330px,calc(100% - 32px));padding:12px 14px;display:flex;flex-direction:column;gap:8px;
   background:linear-gradient(to bottom,#3a404b,#262a32);border:var(--px) solid;border-color:var(--gold) var(--lo) var(--lo) var(--gold);box-shadow:4px 4px 0 #000}
@@ -273,7 +276,7 @@ details li b{color:var(--paper);font-weight:400}
       <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button turns the next turret or engine in 45° steps, and lasers, railguns and hangar bays in 90° steps. Tap a placed block of the selected type to turn it in place. Turrets cover an arc around their facing. Lasers and railguns fire along it and can swing up to 5° either side to aim.</li>
       <li><b>Engines</b> push away from their exhaust, which must be open. Most of your speed comes from the direction your engines face. Off-centre engines also help the ship turn.</li>
       <li><b>Line of fire:</b> guns can't shoot through your own hull, so put them where they can see out. A red ✕ marks a block that can't fire or thrust; a gold mark means a turret is mostly boxed in.</li>
-      <li><b>Fly:</b> WASD or arrows. Hold Shift to slow down.</li>
+      <li><b>Fly:</b> W/S thrust along the nose, A/D turn the ship. Hold Shift and the ship turns toward the mouse while A/D slide sideways. On touch, drag to move.</li>
       <li><b>Aim:</b> your ship turns its nose toward the cursor. Big ships turn slowly; gyros help. Hold the mouse button or <kbd>Space</kbd> to fire. <kbd>T</kbd> or the Auto button switches to auto-aim: the ship targets the nearest enemy and fires on its own. Point defense always fires on its own.</li>
       <li><b>Energy:</b> weapons use energy to fire and shields use it to recharge. The core makes a little; Generators add more and Batteries store it. Both are safe deep inside the hull. When energy runs out, weapons wait. The gold Energy stat means full fire uses more than you make.</li>
       <li><b>Shields</b> each project a bubble that stops enemy shots from every side, protecting blocks up to 2 cells away (3 at Lv2, 4 at Lv3). Overlap them to cover a big hull. If it pops it is down for 5 s, and it recharges after 2.5 s without hits. Enemies carry the same weapons you unlock. A red dashed line means an enemy railgun is about to fire.</li>
@@ -284,7 +287,7 @@ details li b{color:var(--paper);font-weight:400}
       <li><b>Flak</b> shells burst near enemy ships: area damage, and the blast clears enemy bullets.</li>
       <li><b>Enemies</b> grow point defense that shoots down missiles, shields (orange bubbles; railguns and lasers go straight through), generators that explode when hit and make them fire faster, and carrier bays that launch fighters and bombers. Some sectors end in a starbase instead of a flagship.</li>
       <li><b>Damage</b> knocks blocks off. Anything cut off from the core drifts away for the rest of the fight but comes back afterwards.</li>
-      <li><b>Weapon groups:</b> each weapon type sits in one of five groups (set them under Weapon groups). In a fight, <kbd>1</kbd>-<kbd>5</kbd> or the buttons bottom left put a group on auto: it fires on its own at the nearest hostile while the rest fire with you.</li>
+      <li><b>Weapon groups:</b> every weapon sits in one of five groups: under Weapon groups, pick a number and click weapons on the ship. In a fight, <kbd>1</kbd>-<kbd>5</kbd> or the buttons bottom left put a group on auto: it fires on its own at the nearest hostile while the rest fire with you.</li>
       <li><b>Camera:</b> mouse wheel, <kbd>+</kbd>/<kbd>−</kbd> or the HUD buttons zoom the fight view in and out.</li>
       <li><kbd>P</kbd> pauses.</li>
       <li><button id="tutReset" class="rot" type="button">Replay the tutorial tips</button></li>
@@ -368,25 +371,25 @@ function mirrorSpots(i,j,o){
 
 // ---------- block catalogue ----------
 const T = {
-  core:   {name:'Core', cost:0, hp:80, mass:3, thrust:4, torque:12, gun:{cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI}, desc:'Your heart. Lose it and the stage is lost. Gives a little thrust in every direction.'},
+  core:   {name:'Core', cost:0, hp:80, mass:3, thrust:4, torque:12, gun:{range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI}, desc:'Your heart. Lose it and the stage is lost. Gives a little thrust in every direction.'},
   hull:   {name:'Hull', key:'1', unlock:1, cost:4, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
   armor:  {name:'Armor', key:'2', unlock:1, cost:10, hp:70, mass:3, desc:'Three times the toughness of hull. Heavy.'},
-  cannon: {name:'Cannon', key:'3', unlock:1, cost:33, hp:20, mass:1.5, rot:true, gun:{cd:.5, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 18 damage per second. Covers 50° either side of its facing.'},
-  gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{cd:.15, en:.8, spd:760, dmg:3.6, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
-  missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{cd:2.9, en:8, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
-  mirv:   {name:'MIRV', key:'v', unlock:8, cost:180, hp:18, mass:2.5, gun:{cd:7, en:22, spd:190, dmg:7, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:3}, desc:'2×2 launcher. A slow carrier missile that splits into 3 homing warheads near its target, each with its own blast. Enemy point defense can shoot them down.'},
-  flak:   {name:'Flak', key:'f', unlock:4, cost:45, hp:18, mass:1.5, rot:true, gun:{cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', life:1.4, fuse:22, blast:26}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
-  scatter:{name:'Scatter gun', key:'c', unlock:2, cost:40, hp:18, mass:1.5, rot:true, gun:{cd:1.1, en:4, spd:520, dmg:3.2, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32, life:.6}, desc:'Turret. Blasts 7 pellets in a wide cone: about 20 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
-  ion:    {name:'Ion cannon', key:'i', unlock:5, cost:85, hp:18, mass:1.5, rot:true, gun:{cd:1.4, en:9, spd:420, dmg:6, spread:.03, r:2.6, arc:.8, fx:'ion', ion:true}, desc:'Turret. Ion bolts do 5× damage to shield bubbles and jam the ship they hit: its guns stop for 1.5 s (a moment for capital ships). Weak against hull. Covers 46° either side of its facing.'},
+  cannon: {name:'Cannon', key:'3', unlock:1, cost:33, hp:20, mass:1.5, rot:true, gun:{range:360, cd:.5, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 18 damage per second. Covers 50° either side of its facing.'},
+  gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{range:220, cd:.15, en:1, spd:760, dmg:3.6, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
+  missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{range:1100, cd:2.9, en:8, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
+  mirv:   {name:'MIRV', key:'v', unlock:8, cost:180, hp:18, mass:2.5, gun:{range:1000, cd:7, en:22, spd:190, dmg:7, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:3}, desc:'2×2 launcher. A slow carrier missile that splits into 3 homing warheads near its target, each with its own blast. Enemy point defense can shoot them down.'},
+  flak:   {name:'Flak', key:'f', unlock:4, cost:45, hp:18, mass:1.5, rot:true, gun:{range:460, cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', fuse:22, blast:26, nofall:true}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
+  scatter:{name:'Scatter gun', key:'c', unlock:2, cost:40, hp:18, mass:1.5, rot:true, gun:{range:170, cd:1.1, en:4, spd:520, dmg:3.2, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32}, desc:'Turret. Blasts 7 pellets in a wide cone: about 20 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
+  ion:    {name:'Ion cannon', key:'i', unlock:5, cost:85, hp:18, mass:1.5, rot:true, gun:{range:380, cd:1.4, en:9, spd:420, dmg:6, spread:.03, r:2.6, arc:.8, fx:'ion', ion:true}, desc:'Turret. Ion bolts do 5× damage to shield bubbles and jam the ship they hit: its guns stop for 1.5 s (a moment for capital ships). Weak against hull. Covers 46° either side of its facing.'},
   tesla:  {name:'Tesla coil', key:'z', unlock:6, cost:120, hp:22, mass:2, tesla:{cd:.9, range:110, dmg:14, jumps:3, en:6}, desc:'Arcs lightning to the nearest enemy block within 11 m, then jumps to 2 more blocks close by. Reaches in every direction, through your own hull, and zaps enemy fighters and missiles too.'},
-  torpedo:{name:'Torpedo', key:'o', unlock:7, cost:140, hp:22, mass:2.5, rot:true, gun:{cd:5, en:18, spd:150, dmg:70, spread:.01, r:3.4, arc:.35, fx:'torp', life:7}, desc:'Slow, unguided heavy torpedo fired along its facing (20° either side to aim): 70 damage and a wide blast. Point defense cannot stop it.'},
-  mine:   {name:'Mine layer', key:'n', unlock:4, cost:60, hp:18, mass:1.5, gun:{cd:2.4, en:5, spd:70, dmg:20, spread:.5, r:2.4, arc:Math.PI, fx:'mine', life:20, fuse:24, blast:34, lob:true}, desc:'Drops proximity mines that drift to a stop and wait up to 20 s, bursting when an enemy comes near. Launched over your own hull in any direction.'},
+  torpedo:{name:'Torpedo', key:'o', unlock:7, cost:140, hp:22, mass:2.5, rot:true, gun:{range:1000, cd:5, en:22, spd:150, dmg:70, spread:.01, r:3.4, arc:.35, fx:'torp', nofall:true}, desc:'Slow, unguided heavy torpedo fired along its facing (20° either side to aim): 70 damage and a wide blast. Point defense cannot stop it.'},
+  mine:   {name:'Mine layer', key:'n', unlock:4, cost:60, hp:18, mass:1.5, gun:{range:320, cd:2.4, en:5, spd:70, dmg:20, spread:.5, r:2.4, arc:Math.PI, fx:'mine', life:20, fuse:24, blast:34, lob:true}, desc:'Drops proximity mines that drift to a stop and wait up to 20 s, bursting when an enemy comes near. Launched over your own hull in any direction.'},
   laser:  {name:'Laser', key:'6', unlock:6, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:70, range:150, en:10}, desc:'2 blocks long. Continuous beam along its facing, swinging 5° to aim. Short range, and hits hardest up close.'},
-  rail:   {name:'Railgun', key:'7', unlock:7, cost:150, hp:28, mass:2, rot:true, rail:{cd:2.6, pool:130, en:25}, desc:'3 blocks long. Fires along its facing and pierces block after block. Swings 5° to aim; line up the ship to shoot.'},
+  rail:   {name:'Railgun', key:'7', unlock:7, cost:150, hp:28, mass:2, rot:true, rail:{cd:2.6, pool:130, en:45, range:1100}, desc:'3 blocks long. Fires along its facing and pierces block after block. Swings 5° to aim; line up the ship to shoot.'},
   engine: {name:'Engine', key:'8', unlock:1, cost:16, hp:14, mass:1, rot:true, thrust:6, desc:'Pushes toward its facing. Exhaust needs an open cell behind it.'},
   gyro:   {name:'Gyro', key:'9', unlock:1, cost:30, hp:18, mass:1.5, torque:25, desc:'Turns the ship faster. Blocks far from the core make turning slower.'},
-  shield: {name:'Shield', key:'0', unlock:4, cost:60, hp:18, mass:1.5, sh:{hp:60, regen:15, delay:2.5, down:5, en:.4}, desc:'Projects a bubble that stops shots from any side, covering blocks up to 2 cells away (+1 per level). Stops 60 damage, then pops for 5 s.'},
-  pd:     {name:'Point defense', key:'q', unlock:5, cost:40, hp:16, mass:1.5, pd:{cd:.32, range:85, en:1}, desc:'Shoots down enemy bullets that come close.'},
+  shield: {name:'Shield', key:'0', unlock:4, cost:60, hp:18, mass:1.5, sh:{hp:45, regen:10, delay:3.5, down:7, en:.6}, desc:'Projects a bubble that stops shots from any side, covering blocks up to 2 cells away (+1 per level). Stops 45 damage, then pops for 7 s.'},
+  pd:     {name:'Point defense', key:'q', unlock:5, cost:40, hp:16, mass:1.5, pd:{cd:.45, range:85, en:2}, desc:'Shoots down enemy missiles, flak and gatling rounds that come close. Cannon slugs, rail rounds and capital-ship orbs are too heavy to stop.'},
   gen:    {name:'Generator', key:'g', unlock:1, cost:25, hp:14, mass:2, en:{regen:8}, desc:'Makes 8 energy per second. Weapons and shields run on energy. Safe deep inside the hull.'},
   battery:{name:'Battery', key:'b', unlock:1, cost:15, hp:12, mass:1.5, en:{cap:60}, desc:'Stores 60 energy for bursts of fire. Safe deep inside the hull.'},
   fbay:   {name:'Fighter bay', key:'h', unlock:9, cost:95, hp:20, mass:1.5, rot:true, desc:'1×4 hangar. Launches a fighter out of its front end that dogfights nearby enemies. Every 30 s it docks to rearm and repair, then flies out again. A lost fighter takes 15 s to replace.'},
@@ -414,11 +417,11 @@ const ET = {core:{hp:45}, engine:{hp:12}, hull:{hp:18}, armor:{hp:55}, cannon:{h
 // Enemy turrets: the player's weapons, slowed down to enemy scale. They unlock on the same stages as the player's.
 // cd is per gun; gatlings fire bursts of `burst` shots `gap` apart; rails show a sight line for the last `aim` seconds.
 const EW = {
-  cannon: {unlock:1, w:3, cd:3.8, spd:200, dmg:14, r:1.5, kind:'eoval', spread:.04},
-  gatling:{unlock:2, w:3, cd:3.2, burst:3, gap:.12, spd:280, dmg:5, r:.8, kind:'egat', spread:.07},
-  missile:{unlock:3, w:1.5, cd:8, spd:120, dmg:22, r:1.2, kind:'emiss', spread:.5},
-  flak:   {unlock:4, w:2, cd:4.4, spd:170, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4},
-  rail:   {unlock:7, w:1, cd:6.5, spd:320, dmg:36, r:1.5, kind:'snipe', aim:.9},
+  cannon: {unlock:1, w:3, range:360, cd:3.8, spd:200, dmg:14, r:1.5, kind:'eoval', spread:.04},
+  gatling:{unlock:2, w:3, range:240, cd:3.2, burst:3, gap:.12, spd:280, dmg:5, r:.8, kind:'egat', spread:.07},
+  missile:{unlock:3, w:1.5, range:1000, cd:8, spd:120, dmg:22, r:1.2, kind:'emiss', spread:.5},
+  flak:   {unlock:4, w:2, range:460, cd:4.4, spd:170, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4},
+  rail:   {unlock:7, w:1, range:1100, cd:6.5, spd:320, dmg:36, r:1.5, kind:'snipe', aim:.9},
 };
 function pickWeapon(stage){
   const ks = Object.keys(EW).filter(k => EW[k].unlock <= stage);
@@ -444,11 +447,12 @@ const owned = t => t==='sell' || PLATE(t) || (G.inv[t]||0) > 0 || onShip(t);
 const tierOf = s => Math.floor(s*1.5 + 1);
 // block levels: bought per type at shops, each level +35% to the block's main stat
 const MAXLV = 5;
-// Weapon groups, Starsector style: every weapon type belongs to one of five groups; a group on auto fires on its own at the nearest hostile.
+// Weapon groups, Starsector style: every weapon on the ship (keyed by its head cell) sits in one of five groups, starting in its type's default;
+// a group on auto fires on its own at the nearest hostile.
 const WGRP = {cannon:1, gatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4};
+const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
 const isWeapon = t => !!WGRP[t];
-const grpOf = t => G.grp[t] || WGRP[t] || 1;
-const autoOf = t => !!G.auto[grpOf(t)-1];
+const grpOf = (k,t) => G.grp[k] || WGRP[t] || 1;
 const lvOf = t => G.lv[t.replace('_b','')] || 1;
 const LV = t => 1 + .35*(lvOf(t)-1);
 const priceMul = () => (1 + .08*(G.stage-1))*(1 - .08*metaLv('trade'));
@@ -537,7 +541,7 @@ function recalc(s){
       if (EW[b.t]) s.guns.push(b); else if (b.t==='bay') s.bays.push(b); else if (b.t==='gen') gens++; else if (b.t==='pd') s.epd.push(b);
       else if (b.t==='shield'){ s.shields.push(b); if (!b.bub){ const max = ESH.hp*s.hpMul; b.bub = {hp:max, max, down:0, last:-9, flash:-9}; } }
     }
-    s.fireMul = 1 + .3*Math.min(gens, 3); return;
+    s.fireMul = 1 + .2*Math.min(gens, 2); return;
   }
   const typeAt = k => s.blocks.get(k)?.t;
   s.ph = physics(s.blocks.values(), typeAt);
@@ -588,7 +592,7 @@ function genDesign(n, boss, stage, maxGuns=99){
       }
     };
     // capped, so a huge hull is not a wall of shields or a gun-speeding reactor farm
-    if (stage >= 3 && (boss || Math.random() < .6)) conv('shield', Math.min(4, Math.floor(d.size/30) + (boss ? 1 : 0)) || 1, false);
+    if (stage >= 3 && (boss || Math.random() < .6)) conv('shield', Math.min(2, Math.floor(d.size/30) + (boss ? 1 : 0)) || 1, false);
     if (stage >= 4) conv('gen', Math.min(3, Math.floor(d.size/35) + (boss ? 1 : 0)), true);
     if ((boss && stage >= 5) || (d.size >= 40 && stage >= 6 && Math.random() < .25)) conv('bay', boss ? 2 : 1, false);
     if (stage >= 5) conv('pd', Math.min(5, Math.floor(d.size/45) + (boss ? 1 : 0)), false);
@@ -738,12 +742,19 @@ function mirvSplit(b, enemies){
     G.pb[G.pb.length-1].dmg = b.dmg;
   }
 }
+// Shots keep full damage over the first half of their range, then fade to half at the end of it.
+const fallOff = b => b.fall ? 1 - .5*clamp((1 - b.life/b.life0)*2 - 1, 0, 1) : 1;
+// Reach of a weapon in world units at scale 1 (times G.SC in a fight)
+const rangeOf = t => { const d = T[t]; return d.gun ? d.gun.range : d.laser ? d.laser.range : d.rail ? d.rail.range : d.tesla ? d.tesla.range : 0; };
 function pBullet(x,y,ang,gun,target,mul=1){
   const sp = gun.spd*G.SC;
-  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC, life:gun.homing ? 6 : gun.life || 3, homing:!!gun.homing, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0, kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot'});
+  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC, life:gun.homing ? 6 : gun.life || (gun.range ? gun.range/gun.spd : 3), fall:!!gun.range && !gun.homing && !gun.lob && !gun.nofall, homing:!!gun.homing, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0, kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot'});
+  const b = G.pb[G.pb.length-1]; b.life0 = b.life;
 }
 // every enemy shot flies this much faster than its base speed
 const EB_SPD = 1.2;
+// what point defense can shoot down: light or guided rounds only
+const PD_KINDS = new Set(['emiss','egat','eflak']);
 function eBullet(x,y,ang,mul,kind,dmg=10,rMul=1){
   sfx('eshot');
   if (G.eb.length > 300) return null;
@@ -771,31 +782,31 @@ function shieldBlock(p,b){
 }
 
 // ---------- fights ----------
-const bossSize = s => Math.round(24*Math.pow(s,1.45));
+const bossSize = s => Math.round(32*Math.pow(s,1.45));
 const fodderCap = () => Math.min(3, 1 + Math.floor(G.stage/3));
 // enemy fighters and bombers alive at once
-const craftCap = () => Math.min(5, 2 + Math.floor(G.stage/3));
-const shipSize = (s, col) => Math.round((10 + 6*Math.pow(s,1.3))*(1 + .06*col)*rand(.85,1.12));
+const craftCap = () => Math.min(6, 3 + Math.floor(G.stage/3));
+const shipSize = (s, col) => Math.round((20 + 11*Math.pow(s,1.3))*(1 + .07*col)*rand(.9,1.15));
 // every enemy shot hits a little harder each sector, so fewer guns still keep up
-const eDmg = () => 1 + .12*(G.stage-1);
+const eDmg = () => 1.25 + .3*(G.stage-1);
 // Waves for one fight: few ships, but big and tough ones. Gun caps keep it readable: a few heavy guns per ship instead of a wall of small ones.
 function planFight(kind, s, col){
-  const waves = [], g = 2 + Math.floor(s/2), ship = (m=1, x={}) => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
+  const waves = [], g = 3 + Math.floor(s/2), ship = (m=1, x={}) => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
   if (kind==='fight'){
     // a random encounter: a patrol, a lone cruiser, a carrier, or a pack of light raiders
     const r = Math.random();
     if (r < .3){ waves.name = 'Cruiser'; waves.push([ship(2, {guns:g+2})]); }
     else if (r < .5 && s >= 2){ waves.name = 'Carrier'; waves.push([ship(1.7, {guns:Math.max(1, g-1), bays:1 + (s >= 5 ? 1 : 0)})]); }
-    else if (r < .7){ waves.name = 'Raiders'; waves.push(Array.from({length:2 + (Math.random() < s/10 ? 1 : 0)}, () => ship(.6, {guns:2}))); }
-    else { waves.name = 'Patrol'; waves.push([ship(1.3), ...(s >= 4 && Math.random() < .4 ? [ship()] : [])]); }
+    else if (r < .7){ waves.name = 'Raiders'; waves.push(Array.from({length:2 + (s >= 3 ? 1 : 0) + (Math.random() < s/10 ? 1 : 0)}, () => ship(.6, {guns:2}))); }
+    else { waves.name = 'Patrol'; waves.push([ship(1.3), ...(s >= 2 && Math.random() < .6 ? [ship(.8)] : [])]); }
     if (col >= 4 && Math.random() < .35) waves.push([ship(1.2)]);
   } else if (kind==='ambush') waves.push([ship(1.3), ...(s >= 5 ? [ship(.8)] : [])]);
-  else if (kind==='elite') waves.push([{n:Math.round(bossSize(s)*.6), elite:true, guns:g+3, bays:s >= 4 ? 1 : 0}]);
+  else if (kind==='elite') waves.push([{n:Math.round(bossSize(s)*.5), elite:true, guns:g+2, bays:s >= 4 ? 1 : 0}]);
   else if (kind==='gate'){
     waves.push([ship(1.3), ...(s >= 4 ? [ship()] : [])]);
-    waves.push([{n:Math.round(bossSize(s)*1.1), boss:true, guns:5 + Math.floor(s/2), bays:s >= 3 ? 1 : 0}]);
-  } else if (kind==='boss') waves.push([{n:Math.min(1100, Math.round(bossSize(s)*2)), boss:true, flag:true, guns:6 + Math.floor(s/2), bays:2 + Math.floor(s/3)}]);
-  else if (kind==='station') waves.push([{n:Math.min(1400, Math.round(bossSize(s)*2.6)), boss:true, flag:true, station:true, guns:s >= 6 ? 16 : 12, bays:4}]);
+    waves.push([{n:Math.round(bossSize(s)*1.1), boss:true, guns:4 + Math.floor(s/3), bays:s >= 3 ? 1 : 0}]);
+  } else if (kind==='boss') waves.push([{n:Math.min(1300, Math.round(bossSize(s)*1.3)), boss:true, flag:true, guns:4 + Math.floor(s/3), bays:1 + Math.floor(s/3)}]);
+  else if (kind==='station') waves.push([{n:Math.min(1300, Math.round(bossSize(s)*1.8)), boss:true, flag:true, station:true, guns:s >= 6 ? 12 : 8, bays:4}]);
   return waves;
 }
 // Carrier bays go on the rim, in mirrored pairs.
@@ -849,21 +860,24 @@ function spawnPos(){
   return {x:G.AW/2, y:G.AH*.1};
 }
 function spawnWave(list){
-  const hpMul = 1 + .22*(G.stage-1), tier = tierOf(G.stage);
+  const hpMul = 1.15 + .22*(G.stage-1), tier = tierOf(G.stage);
   let boss = null;
   for (const spec of list){
     const d = spec.station ? genStation(spec.n, tier, spec.guns, spec.bays) : genDesign(spec.n, spec.boss || spec.elite, tier, spec.guns), pos = spawnPos();
     if (spec.bays && !spec.station) addBays(d, spec.bays);
-    const e = makeShip(d,'e',pos.x,pos.y,hpMul*(spec.elite ? 1.3 : 1));
+    // a starbase has so many blocks that each one is lighter
+    const e = makeShip(d,'e',pos.x,pos.y,hpMul*(spec.elite ? 1.3 : spec.station ? .5 : 1));
     e.boss = !!spec.boss; e.elite = !!spec.elite; e.flag = !!spec.flag; e.station = !!spec.station; e.n0 = d.size; e.phaseN = 1;
     if (e.boss) boss = e;
     e.sc = G.SC; e.ft = 3; e.phase = rand(0,TAU); e.spin = Math.random()<.5 ? 1 : -1;
     e.orb = rand(0,TAU); e.orbSpd = rand(.12,.35)*(Math.random()<.5 ? 1 : -1);
     // railgun ships hang back
     e.pref = (spec.boss ? 360 : e.guns.some(g => g.t==='rail') ? rand(420,520) : rand(220,380))*G.SC + e.r;
-    e.vmax = 150/Math.sqrt(1 + d.size/30); e.turn = 1.6/Math.sqrt(1 + d.size/20);
+    // close in until the shortest-ranged gun can reach
+    if (e.guns.length) e.pref = Math.min(e.pref, Math.min(...e.guns.map(g => EW[g.t].range))*.75*G.SC + e.r*.5);
+    e.vmax = 200/Math.sqrt(1 + d.size/30); e.turn = 1.6/Math.sqrt(1 + d.size/20);
     // salvage grows with the square root of size, so big late-game hulls don't flood the run with credits
-    e.value = Math.round((4 + Math.sqrt(d.size)*2.2)*(spec.flag ? 5 : spec.boss ? 3 : spec.elite ? 2 : 1));
+    e.value = inc((4 + Math.sqrt(d.size)*2.2)*(spec.flag ? 5 : spec.boss ? 3 : spec.elite ? 2 : 1));
     e.a = Math.atan2(G.player.x-e.x, -(G.player.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
     if (e.station){
       // the starbase holds still above the player (startFight made the arena tall enough)
@@ -895,7 +909,7 @@ function makeFighter(x, y, tier){
     e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);
     e.pref = p.r + rand(140,260)*tS + e.r;
     e.vmax = 190/Math.sqrt(1 + d.size/30); e.turn = 2.4;
-    e.value = Math.round(1 + Math.sqrt(d.size));
+    e.value = inc(2 + Math.sqrt(d.size));
     e.a = Math.atan2(p.x-e.x, -(p.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
     G.ships.push(e);
   }
@@ -932,7 +946,7 @@ function keepDamage(){ for (const k of G.lost) if (G.design.has(k)) G.broken.add
 function fightWon(){
   const kind = G.fight, dmg = [...G.lost].filter(k => G.design.has(k)).length, cap = kind==='boss' || kind==='station';
   G.mode = 'clear'; sfx('clear'); keepDamage();
-  const bonus = Math.round({fight:14, ambush:12, elite:28, gate:40, boss:100, station:110}[kind] + {fight:6, ambush:5, elite:10, gate:14, boss:34, station:38}[kind]*G.stage) + (G.bounty || 0);
+  const bonus = inc({fight:10, ambush:8, elite:20, gate:30, boss:75, station:80}[kind] + {fight:4, ambush:3, elite:7, gate:10, boss:25, station:28}[kind]*G.stage) + (G.bounty || 0);
   G.credits += bonus; G.bounty = 0;
   const nb = {fight:Math.random() < .6 ? 1 : 0, ambush:1, elite:2, gate:2, boss:3, station:4}[kind];
   if (kind==='elite') G.stats.elites++;
@@ -1002,7 +1016,7 @@ function genMap(s){
     for (const b of B) if (!A.some(a => a.links.includes(b.id))) near(A, b.y)[0].links.push(b.id);
   }
   // the first jump is always a fight, elites only show up past the middle, and the column before the gate always offers a shop or repair dock
-  const odds = [['fight',40],['event',22],['shop',12],['salvage',10],['elite',10],['repair',6]];
+  const odds = [['fight',42],['event',20],['shop',12],['salvage',9],['elite',13],['repair',4]];
   const pick = c => {
     const pool = odds.filter(([t]) => !(t==='elite' && c < 3));
     let r = Math.random()*pool.reduce((a,[,w]) => a+w, 0);
@@ -1101,6 +1115,8 @@ function chooseLoot(n, boost, title, intro, done){
 }
 const lootText = got => (got = got.filter(Boolean)).length ? ` Found: <b class="gold">${got.map(t => T[t].name).join(', ')}</b>.` : '';
 const chance = p => Math.random() < p;
+// credit income: every source pays half of what it used to
+const inc = v => Math.round(v*.5);
 const cargoTypes = () => Object.keys(G.inv).filter(t => G.inv[t] > 0);
 function damageRandom(n){
   const ks = [...G.design.keys()].filter(k => k!==CORE && !G.broken.has(k));
@@ -1127,14 +1143,14 @@ function repair(mul=1){
 function salvage(n){
   n.used = true;
   if (chance(.3)){ showOverlay('Wreckage', 'The wreck is bait. Hostiles are closing in.', [['Fight', () => startFight('ambush')]]); return; }
-  const cr = Math.round(rand(15,30) + 6*G.stage), head = `You strip the wreck for <b class="gold">${cr}</b> credits.`;
+  const cr = inc(rand(15,30) + 6*G.stage), head = `You strip the wreck for <b class="gold">${cr}</b> credits.`;
   G.credits += cr; save();
   chooseLoot(chance(.35) ? 2 : 1, 1, 'Wreckage', head, got => { save(); showOverlay('Wreckage', head + lootText(got), [['Star map', toMap]]); });
 }
 function repairDock(n){
   n.used = true;
   const c = G.broken.size; G.broken.clear(); sfx('upgrade');
-  if (!c) G.credits += 20;
+  if (!c) G.credits += 10;
   save();
   showOverlay('Repair dock', c ? `The crew fixes <b>${c}</b> damaged block${c>1?'s':''}, free of charge.` : 'Nothing to fix. The crew pays you <b class="gold">20</b> credits for your spare plating.', [['Star map', toMap]]);
 }
@@ -1147,24 +1163,24 @@ const EVENTS = [
     ['Leave it', () => 'You let it drift.']]},
   {title:'Minefield', text:'Old mines litter the jump lane.', choices:[
     ['Thread through slowly', () => chance(.5) ? `A mine clips the hull. <b>${damageRandom(1)}</b> block damaged.` : 'You slip through untouched.'],
-    ['Blast a path', () => { const cr = Math.round(15 + 5*G.stage); G.credits += cr; return `The chain of blasts rattles the ship: <b>${damageRandom(3)}</b> blocks damaged, but the casings sell for <b class="gold">+${cr}</b> credits.`; }]]},
+    ['Blast a path', () => { const cr = inc(15 + 5*G.stage); G.credits += cr; return `The chain of blasts rattles the ship: <b>${damageRandom(3)}</b> blocks damaged, but the casings sell for <b class="gold">+${cr}</b> credits.`; }]]},
   {title:'Bounty hunter', text:'A hunter offers a cut of a bounty if you help bring down a warship.', choices:[
-    ['Join the hunt', () => { G.bounty = Math.round(50 + 15*G.stage); return {fight:'elite', text:`The target turns on you. <b class="gold">${G.bounty}</b> credits if it goes down.`}; }],
+    ['Join the hunt', () => { G.bounty = inc(50 + 15*G.stage); return {fight:'elite', text:`The target turns on you. <b class="gold">${G.bounty}</b> credits if it goes down.`}; }],
     ['Decline', () => 'The hunter flies off alone.']]},
   {title:'Derelict starbase', text:'A dead station hangs in the dark, its docks still open.', choices:[
     ['Board it', () => chance(.6) ? 'Its stores are intact.' + lootText([giveLoot(1.8), giveLoot(1)]) : {fight:'ambush', text:'It was not empty. Its last defenders open fire.'}],
-    ['Strip the hull', () => { const cr = Math.round(20 + 6*G.stage); G.credits += cr; return `<b class="gold">+${cr}</b> credits of scrap.`; }]]},
+    ['Strip the hull', () => { const cr = inc(20 + 6*G.stage); G.credits += cr; return `<b class="gold">+${cr}</b> credits of scrap.`; }]]},
   {title:'Derelict freighter', text:'A freighter drifts dark, cargo bay open.', choices:[
     ['Board it', () => {
       if (chance(.4)) return `Booby-trapped. <b>${damageRandom(3)}</b> blocks damaged.`;
-      const cr = Math.round(10 + 5*G.stage); G.credits += cr;
+      const cr = inc(10 + 5*G.stage); G.credits += cr;
       return `The hold is full: <b class="gold">+${cr}</b> credits.` + lootText([giveLoot(1.3)]);
     }],
     ['Leave it', () => 'You leave it to drift.']]},
   {title:'Distress call', text:'A damaged transport begs for help.', choices:[
     ['Answer', () => {
       if (chance(.5)) return {fight:'ambush', text:'It was a trap. Pirates drop their disguise.'};
-      const cr = Math.round(20 + 6*G.stage); G.credits += cr;
+      const cr = inc(20 + 6*G.stage); G.credits += cr;
       return `The crew pays you <b class="gold">${cr}</b> credits and hands over a spare.` + lootText([giveLoot(1)]);
     }],
     ['Ignore it', () => 'You fly on.']]},
@@ -1177,7 +1193,7 @@ const EVENTS = [
     ['Move on', () => 'You decline.']]},
   {title:'Asteroid field', text:'Rich ore, and a lot of loose rock.', choices:[
     ['Mine it', () => {
-      const cr = Math.round(25 + 8*G.stage); G.credits += cr;
+      const cr = inc(25 + 8*G.stage); G.credits += cr;
       const d = chance(.5) ? damageRandom(2) : 0;
       return `<b class="gold">+${cr}</b> credits of ore.` + (d ? ` Rocks damage <b>${d}</b> blocks.` : '');
     }],
@@ -1199,7 +1215,7 @@ const EVENTS = [
     ['Give 30 cr', () => { G.credits -= 30; G.stats.bonus = (G.stats.bonus||0) + 3; return 'They thank you. Word of it spreads: <b class="gold">+3 data</b> at the end of the run.'; }, () => G.credits >= 30],
     ['Move on', () => 'You fly on.']]},
   {title:'Scrap cloud', text:'Wreckage from an old battle.', choices:[
-    ['Collect', () => { const cr = Math.round(rand(15,30) + 4*G.stage); G.credits += cr; return `<b class="gold">+${cr}</b> credits of scrap.`; }]]},
+    ['Collect', () => { const cr = inc(rand(15,30) + 4*G.stage); G.credits += cr; return `<b class="gold">+${cr}</b> credits of scrap.`; }]]},
   {title:'Smuggler', text:'A smuggler wants parts, and pays well.', choices:[
     ['Sell a cargo block at full price', () => {
       const ks = cargoTypes(), t = ks[(Math.random()*ks.length)|0], cr = T[t].cost; takeCargo(t); G.credits += cr;
@@ -1335,17 +1351,30 @@ function update(dt){
   // desktop fires on click or Space; auto-aim, touch and mouse-less play fire on their own
   const fire = G.aimAuto || G.fireHeld || keys.Space || !G.mouse.has;
   // per weapon type: may it fire now, and where does it aim
-  const may = t => fire || autoOf(t), aimX = t => autoOf(t) ? px : ax, aimY = t => autoOf(t) ? py : ay;
+  const isAuto = b => !!G.auto[grpOf(K(b.i,b.j), b.t)-1];
+  const may = b => fire || isAuto(b), aimX = b => isAuto(b) ? px : ax, aimY = b => isAuto(b) ? py : ay;
 
   const spend = c => { if (p.en < c) return false; p.en -= c; return true; };
   if (p.alive){
     p.en = Math.min(p.enMax, p.en + p.enRegen*dt);
     const ph = p.ph;
     for (const e of ph.engines) e.c.firing = false;
-    // movement: top speed depends on how much engine thrust points the way you want to go
-    let mx = 0, my = 0;
-    if (keys.KeyA || keys.ArrowLeft) mx--; if (keys.KeyD || keys.ArrowRight) mx++;
-    if (keys.KeyW || keys.ArrowUp) my--; if (keys.KeyS || keys.ArrowDown) my++;
+    // movement: top speed depends on how much engine thrust points the way you want to go.
+    // Mouse and keyboard fly the ship: W/S thrust along the nose, A/D turn; holding Shift the nose follows the mouse and A/D strafe.
+    // Touch (and mouse-less play) moves in screen directions with the nose on the aim point.
+    let mx = 0, my = 0, turnIn = 0;
+    const kb = G.mouse.has && !G.joy, shift = keys.ShiftLeft || keys.ShiftRight;
+    if (kb){
+      let f = 0, s = 0;
+      if (keys.KeyW || keys.ArrowUp) f++; if (keys.KeyS || keys.ArrowDown) f--;
+      if (keys.KeyA || keys.ArrowLeft){ if (shift) s--; else turnIn--; }
+      if (keys.KeyD || keys.ArrowRight){ if (shift) s++; else turnIn++; }
+      // the nose points along (sin a, -cos a); starboard is (cos a, sin a)
+      mx = f*p.sn + s*p.c; my = -f*p.c + s*p.sn;
+    } else {
+      if (keys.KeyA || keys.ArrowLeft) mx--; if (keys.KeyD || keys.ArrowRight) mx++;
+      if (keys.KeyW || keys.ArrowUp) my--; if (keys.KeyS || keys.ArrowDown) my++;
+    }
     // touch: virtual joystick around where the thumb landed, analog up to JOY_R canvas pixels
     let analog = 1;
     if (!mx && !my && G.joy){
@@ -1354,7 +1383,7 @@ function update(dt){
     }
     const ml = Math.hypot(mx,my), ux = ml ? mx/ml : 0, uy = ml ? my/ml : 0;
     const lx = ux*p.c + uy*p.sn, ly = -ux*p.sn + uy*p.c;
-    const spd = ml ? dirSpeed(ph,lx,ly)*SC*analog*((keys.ShiftLeft || keys.ShiftRight) ? .45 : 1) : 0;
+    const spd = ml ? dirSpeed(ph,lx,ly)*SC*analog : 0;
     p.vx += (ux*spd - p.vx)*Math.min(1,dt*(ml ? 5 : 3));
     p.vy += (uy*spd - p.vy)*Math.min(1,dt*(ml ? 5 : 3));
     p.x += p.vx*dt; p.y += p.vy*dt;
@@ -1366,14 +1395,14 @@ function update(dt){
       if ((e.tx*lx + e.ty*ly)/T.engine.thrust > .3){ e.c.firing = true; drift += e.tau; }
     }
     p.a += drift/ph.inertia*dt;
-    // nose swings toward the aim point; engines whose push helps the turn act as jets
-    const want = Math.atan2(ax-p.x, -(ay-p.y)), da = angDiff(want,p.a), cw = da > 0;
+    // nose swings toward the aim point (or turns on A/D); engines whose push helps the turn act as jets
+    const aimTurn = !kb || shift, want = Math.atan2(ax-p.x, -(ay-p.y)), da = aimTurn ? angDiff(want,p.a) : turnIn, cw = da > 0;
     const rate = turnOf(ph.torque + (cw ? ph.jetCW : ph.jetCCW), ph.inertia, ph.mass);
     // angular momentum: heavy hulls take time to start and stop a turn
-    const wWant = clamp(da*4, -rate, rate), acc = rate*2.5;
+    const wWant = aimTurn ? clamp(da*4, -rate, rate) : turnIn*rate, acc = rate*2.5;
     p.w = (p.w||0) + clamp(wWant - (p.w||0), -acc*dt, acc*dt);
     p.a += p.w*dt;
-    if (Math.abs(da) > .06) for (const e of ph.engines) if (e.active && (cw ? e.tau > 0 : e.tau < 0)) e.c.firing = true;
+    if (aimTurn ? Math.abs(da) > .06 : turnIn) for (const e of ph.engines) if (e.active && (cw ? e.tau > 0 : e.tau < 0)) e.c.firing = true;
     p.c = Math.cos(p.a); p.sn = Math.sin(p.a);
 
     // shields recharge after a quiet spell
@@ -1381,7 +1410,7 @@ function update(dt){
       const B = s.bub;
       if (B.down > 0) B.down -= dt;
       else if (G.time - B.last > T.shield.sh.delay && B.hp < B.max){
-        const amt = Math.min(B.max - B.hp, T.shield.sh.regen*LV('shield')*dt, p.en/T.shield.sh.en);
+        const amt = Math.min(B.max - B.hp, T.shield.sh.regen*dt, p.en/T.shield.sh.en);
         B.hp += amt; p.en -= amt*T.shield.sh.en;
       }
     }
@@ -1389,27 +1418,53 @@ function update(dt){
 
   if (p.alive && enemies.length){
     const near = (x,y) => { let tg = null, td = 1e18; for (const e of enemies){ const d = (e.x-x)**2 + (e.y-y)**2; if (d < td){ td = d; tg = e; } } return tg; };
-    const tgtM = near(ax,ay), tgtA = near(px,py);
+    const tgtM = near(ax,ay);
+    // Auto weapons pick their own target: the nearest hostile inside their reach and arc, led on its motion.
+    // Slow guns leave fighters alone while anything bigger is in reach.
+    const pick = (wx, wy, face, arc, reach, spd, fast) => {
+      let best = null, bd = 1e18;
+      for (const e of enemies){
+        if (!e.alive) continue;
+        const d = Math.hypot(e.x-wx, e.y-wy) - e.r; if (d > reach) continue;
+        if (arc < Math.PI && Math.abs(angDiff(Math.atan2(e.y-wy, e.x-wx), face)) > arc + .25) continue;
+        const score = d + (e.craft && !fast ? 600 : 0); if (score < bd){ bd = score; best = e; }
+      }
+      if (!best) return null;
+      const t = spd ? Math.hypot(best.x-wx, best.y-wy)/spd*rand(.7,1) : 0;
+      return [best, best.x + best.vx*t, best.y + best.vy*t];
+    };
     // turrets: inside their arc and with a clear line out of the hull
     for (const g of p.guns){
-      if (!may(g.t)) continue;
+      if (!may(g)) continue;
       if (g.cd > 0){ g.cd -= dt; if (g.cd > 0) continue; }
-      const gun = T[g.t].gun, [wx,wy] = wpos(p,g), ang = Math.atan2(aimY(g.t)-wy, aimX(g.t)-wx);
+      const gun = T[g.t].gun, [wx,wy] = wpos(p,g);
+      let tg = tgtM, tx = aimX(g), ty = aimY(g);
+      if (isAuto(g)){
+        const P = pick(wx, wy, p.a + FA[g.o], gun.arc, (gun.range || 1e4)*SC, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak');
+        if (!P){ g.cd = .15; continue; }
+        [tg, tx, ty] = P;
+      }
+      const ang = Math.atan2(ty-wy, tx-wx);
+      // out of range: hold fire rather than waste the shot
+      if (gun.range && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > gun.range*SC)){ g.cd = .1; continue; }
       if (Math.abs(angDiff(ang, p.a + FA[g.o])) > gun.arc) continue;
       if (!gun.homing && !gun.lob && !laneClear(p,g,ang)) continue;
       if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
       const n = gun.pellets || 1;
-      for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*gun.fan : 0) + (Math.random()-.5)*2*gun.spread, gun, autoOf(g.t) ? tgtA : tgtM, LV(g.t));
+      for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*gun.fan : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t));
       sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
       if (gun.fx==='oval') boomAt(wx + Math.cos(ang)*6, wy + Math.sin(ang)*6, 5*SC, .07);
     }
     // railguns: fire when the aim point sits on their line
     for (const h of p.rails){
-      if (!may('rail')) break;
+      if (!may(h)) continue;
       if (h.cd > 0){ h.cd -= dt; if (h.cd > 0) continue; }
       if (!h.lane) continue;
-      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], off = angDiff(Math.atan2(aimY('rail')-wy, aimX('rail')-wx), face);
+      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, T.rail.rail.range*SC, 0, true) : null;
+      if (isAuto(h) && !P) continue;
+      const tg = P ? P[0] : tgtM, off = angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), face);
+      if (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > T.rail.rail.range*SC) continue;
       if (Math.abs(off) > SWING + .02) continue;
       if (!spend(T.rail.rail.en)) continue;
       h.cd = T.rail.rail.cd; fireRail(p, wx, wy, face + clamp(off, -SWING, SWING)); sfx('rail');
@@ -1417,9 +1472,11 @@ function update(dt){
   }
   // lasers: continuous beam on whatever is first along their line within range
   if (p.alive) for (const h of p.lasers){
-    h.beam = null; if (!h.lane || !enemies.length || !may('laser')) continue;
+    h.beam = null; if (!h.lane || !enemies.length || !may(h)) continue;
     const L = T.laser.laser, [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
-    const face = base + clamp(angDiff(Math.atan2(aimY('laser')-wy, aimX('laser')-wx), base), -SWING, SWING), dx = Math.cos(face), dy = Math.sin(face);
+    const P = isAuto(h) ? pick(wx, wy, base, SWING, L.range*SC, 0, true) : null;
+    if (isAuto(h) && !P) continue;
+    const face = base + clamp(angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), base), -SWING, SWING), dx = Math.cos(face), dy = Math.sin(face);
     const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
     if (hit && spend(L.en*dt)){
@@ -1430,8 +1487,8 @@ function update(dt){
     }
   }
   // tesla coils: lightning to the nearest enemy block in reach, then on to blocks close by; an enemy missile if no hull is in reach
-  if (p.alive && may('tesla')) for (const c of p.teslas){
-    if ((c.cd -= dt) > 0) continue;
+  if (p.alive) for (const c of p.teslas){
+    if (!may(c) || (c.cd -= dt) > 0) continue;
     const Z = T.tesla.tesla, [wx,wy] = wpos(p,c), R = Z.range*SC;
     let hit = null, hd = R*R;
     for (const e of enemies){
@@ -1464,7 +1521,7 @@ function update(dt){
     d.cd -= dt; if (d.cd > 0) continue;
     const [wx,wy] = wpos(p,d), R = T.pd.pd.range*Math.sqrt(G.S);
     let best = null, bd = R*R;
-    for (const b of G.eb){ if (b.dead) continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < bd){ bd = q; best = b; } }
+    for (const b of G.eb){ if (b.dead || !PD_KINDS.has(b.kind)) continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < bd){ bd = q; best = b; } }
     if (best && spend(T.pd.pd.en)){ sfx('pd'); best.dead = true; d.cd = T.pd.pd.cd/LV('pd'); G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09}); }
     else d.cd = .05;
   }
@@ -1551,7 +1608,7 @@ function update(dt){
         const burst = b.kind==='flak' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse : b.r);
         if (k >= 0 && burst){ flakBurst(b); break; }
         if (k >= 0){
-          damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); if (b.homing) missileBlast(b,e,k);
+          b.dmg *= fallOff(b); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); if (b.homing) missileBlast(b,e,k);
           if (b.kind==='torp'){ missileBlast(b,e,k); impact(b,e,k); }
           if (b.ion){ e.jam = G.time + (e.boss ? .4 : 1.5); sparks(b.x, b.y, 0, 6, 120*SC, ['#5fe0ff','#ffffff']); } G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }
@@ -1584,7 +1641,7 @@ function update(dt){
         if (shieldBlock(p,b)){ b.dead = true; break; }
         const k = hitShip(p,b.x,b.y,b.r);
         if (k >= 0){
-          damage(p,k,b.dmg); sfx('hit'); b.dead = true; G.fx.push({k:'spk', x:b.x, y:b.y, vx:0, vy:0, life:.2, max:.2, col:BCOL[b.kind]});
+          b.dmg *= fallOff(b); damage(p,k,b.dmg); sfx('hit'); b.dead = true; G.fx.push({k:'spk', x:b.x, y:b.y, vx:0, vy:0, life:.2, max:.2, col:BCOL[b.kind]});
           if (b.kind==='snipe') boomAt(b.x,b.y,8*SC,.2);
           if (b.kind==='eoval'){ if (p.alive) for (const d of NB) if (p.blocks.has(k+d)) damage(p, k+d, b.dmg*.4); boomAt(b.x,b.y,9*SC,.2); }
           if (b.kind==='emiss'){ blastShip(p, b.x, b.y, 1.6*BS, b.dmg*.6); boomAt(b.x,b.y,16*SC,.35); sfx('boom', .6); }
@@ -1638,7 +1695,7 @@ function launchECraft(e, b){
   const kind = G.stage >= 4 && Math.random() < .35 ? 'bbay' : 'fbay', C = CRAFT[kind], [wx,wy] = wpos(e,b);
   const A = makeShip(new Map(C.design.map(([i,j,t]) => [K(i,j),t])), 'e', wx, wy, C.hp*(1 + .15*(G.stage-1)));
   A.craft = true; A.fodder = true; A.kind = kind; A.sc = G.SC; A.cd = 1.5; A.pick = 0; A.orb = rand(0,TAU);
-  A.value = kind==='bbay' ? 4 : 2; A.a = e.a; A.c = Math.cos(A.a); A.sn = Math.sin(A.a);
+  A.value = kind==='bbay' ? 2 : 1; A.a = e.a; A.c = Math.cos(A.a); A.sn = Math.sin(A.a);
   const ang = Math.atan2(wy-e.y, wx-e.x), v = C.spd*G.SC*.5; A.vx = e.vx + Math.cos(ang)*v; A.vy = e.vy + Math.sin(ang)*v;
   for (const x of A.blocks.values()) if (x.t==='engine') x.firing = true;
   G.ships.push(A); sfx('launch'); return A;
@@ -1706,7 +1763,7 @@ function updateCraft(A, dt, enemies){
   if (A.vx*A.vx + A.vy*A.vy > 4) A.a += clamp(angDiff(Math.atan2(A.vx,-A.vy), A.a), -C.turn*dt, C.turn*dt);
 }
 function fireRail(p, wx, wy, face){
-  const SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = 3000*G.S;
+  const SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = T.rail.rail.range*SC;
   let pool = T.rail.rail.pool*LV('rail'), end = len;
   for (const h of rayHits(ox, oy, dx, dy, len, false)){
     if (!h.e.alive) continue;
@@ -1735,15 +1792,15 @@ function enemyFire(e,dt){
       }
       if (ph >= 3 && (e.rbT = (e.rbT ?? 1.5) - dt) <= 0){
         e.rbT = 4.5;
-        for (let q=0; q<12; q++) eBullet(e.x, e.y, e.phase + q*TAU/12, .55, 'ring', 11*eDmg());
+        for (let q=0; q<12; q++) eBullet(e.x, e.y, e.phase + q*TAU/12, .55, 'ring', 8*eDmg());
       }
     }
     // capital ships also sweep a slow spiral of rings
     e.ft -= dt;
     if (e.ft <= 0){
-      e.ft = e.flag ? .7 : .9;
-      const arms = e.flag ? Math.min(3, 1 + e.phaseN) : Math.min(2, 1 + Math.floor(G.stage/4));
-      for (let q=0; q<arms; q++) eBullet(e.x, e.y, e.phase + q*TAU/arms, .7, 'ring', 11*eDmg());
+      e.ft = e.flag ? 1 : 1.1;
+      const arms = e.flag ? Math.min(2, e.phaseN) : 1 + (G.stage >= 6 ? 1 : 0);
+      for (let q=0; q<arms; q++) eBullet(e.x, e.y, e.phase + q*TAU/arms, .7, 'ring', 8*eDmg());
       e.phase += .3*e.spin;
     }
   }
@@ -1756,11 +1813,13 @@ function enemyFire(e,dt){
     g.cd -= dt;
     if (w.aim && g.cd < w.aim) (e.sights ||= []).push([wx, wy, leadAngle(wx,wy,sp,.6,tgt)]);
     if (g.cd > 0) continue;
+    if (w.range && Math.hypot(tgt.x-wx, tgt.y-wy) - tgt.r > w.range*e.sc){ g.cd = .3; g.shots = 0; continue; }
     if (w.burst && ++g.shots < w.burst) g.cd = w.gap;
     else { g.shots = 0; g.cd = w.cd*rand(.85,1.15); }
-    const ang = leadAngle(wx,wy,sp,.8,tgt) + (Math.random()-.5)*2*(w.spread || 0);
+    const ang = leadAngle(wx,wy,sp,.95,tgt) + (Math.random()-.5)*2*(w.spread || 0);
     const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC, w.kind, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.r*e.sc/G.SC);
     if (!b) continue;
+    if (w.range && !w.fuse && w.kind!=='emiss'){ b.life = b.life0 = w.range/(w.spd*EB_SPD); b.fall = true; }
     if (w.kind==='emiss'){ b.tgt = tgt; b.tr = []; b.life = 8; }
     if (w.fuse){ b.fuse = w.fuse*e.sc; b.blast = w.blast*e.sc; b.life = w.life; }
   }
@@ -1815,7 +1874,8 @@ function drawBlock(X,t,o,team,x,y,aim,hit,ratio,detail,firing){
     X.fillStyle = '#ff3d2a'; X.save(); X.translate(x,y); X.rotate(Math.PI/4); X.fillRect(-5,-1.2,10,2.4); X.fillRect(-1.2,-5,2.4,10); X.restore(); return;
   }
   if (!detail){
-    X.fillStyle = hit ? '#ffffff' : t==='core' ? (team==='p' ? '#7fe0ff' : '#ff8a5a') : t==='armor' ? M.armor[1] : M.hull[1];
+    // far out every block keeps its own colour, so weapons and systems still read
+    X.fillStyle = hit ? '#ffffff' : t==='core' ? (team==='p' ? '#7fe0ff' : '#ff8a5a') : t==='armor' ? M.armor[1] : t==='hull' ? M.hull[1] : (COL[team] || COL.p)[t] || M.hull[1];
     X.fillRect(x-5,y-5,10,10); return;
   }
   const base = t==='armor' ? M.armor : t==='hull' ? M.hull : M.dark;
@@ -1983,7 +2043,8 @@ function drawSpace(cx, cy, z){
 function niceStep(z){ let sp = 10; if (!(z > 0)) return sp; while (sp*z < 12) sp *= 10; return sp; }
 function renderCombat(){
   const S = G.S, p = G.player;
-  G.zoom = Math.min(W,H)/((G.fit || G.span || spanFor(p.r, S))*G.camMul);
+  // never so far out that a block shrinks under two pixels; off-screen hostiles get edge arrows
+  G.zoom = Math.max(.2, Math.min(W,H)/((G.fit || G.span || spanFor(p.r, S))*G.camMul));
   const z = G.zoom, hw = W/2/z, hh = H/2/z;
   let cx = G.camX, cy = G.camY;
   cx = G.AW < 2*hw ? G.AW/2 : clamp(cx, hw, G.AW-hw);
@@ -2289,9 +2350,21 @@ function renderBuild(){
     if (!bad && fc < .4 && fc > 0){ ctx.fillStyle = '#ffc46b'; ctx.fillRect(i*BS+1.5, j*BS-4.5, 3, 3); }
     if (bad || fc === 0){ ctx.strokeStyle = '#ff7a66'; ctx.beginPath(); ctx.moveTo(i*BS-4,j*BS-4); ctx.lineTo(i*BS+4,j*BS+4); ctx.moveTo(i*BS+4,j*BS-4); ctx.lineTo(i*BS-4,j*BS+4); ctx.stroke(); }
   }
+  // group badges while assigning: the group number in its colour on every weapon
+  if (G.grpBrush){
+    ctx.font = FONT(4.2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const [k,t] of G.design){
+      if (!isWeapon(t)) continue;
+      const n = grpOf(k,t), x = KI(k)*BS, y = KJ(k)*BS;
+      ctx.fillStyle = '#05060c'; ctx.fillRect(x-3.4, y-3.4, 6.8, 6.8);
+      ctx.fillStyle = GCOL[n-1]; ctx.fillRect(x-2.8, y-2.8, 5.6, 5.6);
+      ctx.fillStyle = '#05060c'; ctx.fillText(String(n), x, y+.4);
+    }
+    ctx.textBaseline = 'alphabetic';
+  }
   // ghost
   const h = G.hover;
-  if (h && Math.max(Math.abs(h.i),Math.abs(h.j)) <= R){
+  if (h && !G.grpBrush && Math.max(Math.abs(h.i),Math.abs(h.j)) <= R){
     const spots = placeSpots(h.i,h.j,G.rot,G.sel);
     for (const [i,j,o] of spots){
       if (G.sel==='sell'){ ctx.globalAlpha = .9; drawBlock(ctx,'sell',0,'p',i*BS,j*BS,0,false,1,true,false); continue; }
@@ -2443,7 +2516,7 @@ function headOf(i,j){
 // A removed block goes back to cargo (plating is refunded); a damaged one is scrapped.
 // A damaged block goes back to cargo still damaged (damaged plating refunds its value less the repair).
 function removeCell(k){
-  const t = G.design.get(k), was = G.broken.delete(k); G.design.delete(k); G.dirs.delete(k);
+  const t = G.design.get(k), was = G.broken.delete(k); G.design.delete(k); G.dirs.delete(k); delete G.grp[k];
   if (HEAD_OF[t]) return;
   if (PLATE(t)) G.credits += was ? Math.max(0, T[t].cost - repCost(t)) : T[t].cost;
   else { G.inv[t] = (G.inv[t]||0) + 1; if (was) G.dmg[t] = dmgOf(t) + 1; }
@@ -2472,6 +2545,7 @@ function spinAt(i,j){
   return true;
 }
 function buildAction(i,j,mode,tap){
+  if (G.grpBrush){ assignAt(i,j); syncUI(); return; }
   sfx('place');
   if (mode!=='sell' && tap && spinAt(i,j)){ G.drag = null; syncUI(); return; }
   if (mode==='sell'){ for (const [a,b] of mirrorSpots(i,j,0)) sellAt(a,b); }
@@ -2659,7 +2733,10 @@ addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement && e.code==='Space') return;
   keys[e.code] = true;
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-  if (G.mode==='build'){
+  if (G.mode==='build' && G.grpBrush){
+    const gd = /^Digit([1-5])$/.exec(e.code); if (gd) setBrush(+gd[1]);
+    if (e.code==='Escape' || e.code==='Enter') setBrush(0);
+  } else if (G.mode==='build'){
     const key = e.key.toLowerCase(), t = PAL.find(t => T[t].key === key); if (t) select(t);
     if (e.code==='KeyR') rotate();
     if (e.code==='Equal' || e.code==='NumpadAdd') zoomBtn(1.25);
@@ -2704,7 +2781,7 @@ function drawIcons(){
 }
 function select(t){
   if (!owned(t)) return; // blocks you have never found stay secret
-  G.sel = t; if (PARTS[t]) G.rot &= ~1; syncUI();
+  G.sel = t; G.grpBrush = 0; if (PARTS[t]) G.rot &= ~1; syncUI();
 }
 function designStats(){
   const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), o:G.dirs.get(k)||0}));
@@ -2745,7 +2822,8 @@ function syncUI(){
   $('undo').disabled = !undoStack.length; renderBps(); renderGroups();
   $('rotArrow').textContent = ARROW[G.rot]; $('rotName').textContent = FACING[G.rot];
   $('rot').title = rotOk ? 'Facing for the next block. Tip: tap a placed block of this type to turn it.' : 'This block has no facing';
-  $('selDesc').textContent = T[G.sel].desc + (rotOk && !PARTS[G.sel] ? ' Tap a placed one to turn it 45°.' : '');
+  const rg = rangeOf(G.sel);
+  $('selDesc').textContent = T[G.sel].desc + (rg ? ` Range ${Math.round(rg*Math.pow(S,.8)/BS)} m.` : '') + (rotOk && !PARTS[G.sel] ? ' Tap a placed one to turn it 45°.' : '');
   const rb = $('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
   rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;
@@ -2944,19 +3022,29 @@ $('zoomIn').addEventListener('click', () => camZoom(.8));
 $('zoomOut').addEventListener('click', () => camZoom(1.25));
 // weapon groups: the drydock assigns types to groups, and combat toggles each group's auto fire (keys 1-5)
 function toggleGroup(n){ G.auto[n-1] = !G.auto[n-1]; toast(`Group ${n}: ${G.auto[n-1] ? 'auto fire' : 'fires with you'}`); renderGroups(); save(); }
-const shipWeapons = () => PAL.filter(t => isWeapon(t) && onShip(t));
+const shipWeapons = () => [...G.design].filter(([k,t]) => isWeapon(t));
+// the group brush: pick a group in the panel, then click or drag over weapons on the ship
+function setBrush(n){ G.grpBrush = n; syncUI(); }
+function assignAt(i,j){
+  const [hi,hj] = headOf(i,j), k = K(hi,hj), t = G.design.get(k);
+  if (!isWeapon(t) || grpOf(k,t)===G.grpBrush) return;
+  G.grp[k] = G.grpBrush; sfx('place'); save();
+}
 function renderGroups(){
   const ws = shipWeapons(), on = n => G.auto[n-1], N = [1,2,3,4,5];
-  // one row per weapon type with a dot under its group, and a bottom row that sets how each group fires
+  // what each group holds, e.g. "2× Cannon, Missile"
+  const inG = n => { const c = {}; for (const [k,t] of ws) if (grpOf(k,t)===n) c[t] = (c[t]||0) + 1; return Object.entries(c).map(([t,m]) => (m > 1 ? m+'× ' : '') + T[t].name); };
+  const B = G.grpBrush;
   $('grps').innerHTML = ws.length ?
-    '<p class="sub">Click a column to move a weapon type into that group. The bottom row sets how each group fires: <b>Auto</b> shoots by itself at the nearest hostile, <b>Man</b> only when you fire. In a fight, keys <b>1-5</b> switch a group.</p>' +
-    `<div class="gtab"><span class="gh">Group</span>${N.map(n => `<span class="gh gn">${n}</span>`).join('')}` +
-    ws.map(t => `<span>${T[t].name}</span>` + N.map(n => `<button type="button" class="gb" data-g="${t}:${n}" aria-pressed="${grpOf(t)===n}" title="Put ${T[t].name.toLowerCase()} in group ${n}">${grpOf(t)===n ? '●' : ''}</button>`).join('')).join('') +
-    `<span class="gh">Fires</span>` + N.map(n => `<button type="button" class="gb ga" data-a="${n}" aria-pressed="${on(n)}" title="Group ${n} fires ${on(n) ? 'by itself' : 'with you'}">${on(n) ? 'Auto' : 'Man'}</button>`).join('') + '</div>'
+    `<p class="sub">${B ? `Click or drag over weapons on the ship to put them in <b>group ${B}</b>. The number on each weapon is its group.` : 'Pick a group number, then click weapons on the ship to put them in that group. Each weapon has its own group, so two cannons can be in different ones.'}</p>` +
+    `<div class="gtab"><span class="gh">Assign</span>${N.map(n => `<button type="button" class="gb gk" data-b="${n}" aria-pressed="${B===n}" style="--gc:${GCOL[n-1]}" title="Put weapons in group ${n}">${n}</button>`).join('')}` +
+    `<span class="gh">Fires</span>` + N.map(n => `<button type="button" class="gb ga" data-a="${n}" aria-pressed="${on(n)}" title="Group ${n} fires ${on(n) ? 'by itself' : 'with you'}">${on(n) ? 'Auto' : 'Man'}</button>`).join('') + '</div>' +
+    N.map(n => { const l = inG(n); return l.length ? `<p class="gl"><b style="color:${GCOL[n-1]}">${n}</b> ${l.join(', ')}${on(n) ? ' · auto' : ''}</p>` : ''; }).join('') +
+    (B ? '<button type="button" class="rot wide-btn" data-b="0">Done assigning</button>' : '')
     : '<p class="sub">Put a weapon on the ship to set up groups.</p>';
   const gs = N.map(n => {
-    const names = ws.filter(t => grpOf(t)===n).map(t => T[t].name); if (!names.length) return '';
-    return `<button type="button" class="gb grpc" data-a="${n}" aria-pressed="${on(n)}"><kbd>${n}</kbd> ${names.join(', ')} · ${on(n) ? 'AUTO' : 'manual'}</button>`;
+    const l = inG(n); if (!l.length) return '';
+    return `<button type="button" class="gb grpc" data-a="${n}" aria-pressed="${on(n)}"><kbd>${n}</kbd> ${l.join(', ')} · ${on(n) ? 'AUTO' : 'manual'}</button>`;
   }).join('');
   $('groups').innerHTML = gs ? '<span class="ghd">Weapon groups · keys 1-5 or click</span>' + gs : '';
 }
@@ -2965,10 +3053,10 @@ function renderGroups(){
 const TUT = {
   title:['Welcome', 'Fly a tiny ship through nine sectors and build it up as you go. Start a <b>New run</b>. Data from finished runs buys permanent hangar upgrades here.'],
   map:['Star map', 'Click a beacon linked to yours to jump there: <b>!</b> fight, <b>$</b> shop, <b>?</b> signal, <b>*</b> wreckage, <b>+</b> repair dock. Reach the gate on the far right to leave the sector. <b>Open drydock</b> (or <b>D</b>) to rebuild between jumps.'],
-  combat:['Fighting', 'Move with <b>WASD</b> or the arrows (drag on touch). Aim with the mouse and click or hold <b>Space</b> to fire; <b>T</b> turns on auto-aim. The mouse wheel or <b>+ / −</b> zooms. Destroy every hostile to win. Lose the core and the run is over.'],
+  combat:['Fighting', '<b>W/S</b> thrust, <b>A/D</b> turn the ship. Hold <b>Shift</b> and the ship turns toward the mouse while <b>A/D</b> slide sideways. Aim with the mouse and click or hold <b>Space</b> to fire; <b>T</b> turns on auto-aim. On touch, drag to move. The mouse wheel or <b>+ / −</b> zooms. Destroy every hostile to win. Lose the core and the run is over.'],
   loot:['Loot', 'Choose one of the offered blocks, or skip. It goes into cargo, ready to fit in the drydock.'],
   dock:['Drydock', 'Pick a block in the list (the number is how many you have in cargo), then click a cell touching your ship to place it. <b>R</b> turns turrets and engines, <b>M</b> sets mirroring, right-click puts a block back in cargo. Hull and armor cost credits.'],
-  groups:['Weapon groups', 'Under the tools, <b>Weapon groups</b> puts each weapon type in group 1-5. Set a group to <b>Auto</b> and it fires by itself at the nearest hostile; <b>Man</b> groups fire when you do. Keys <b>1-5</b> switch groups during a fight.'],
+  groups:['Weapon groups', 'Under the tools, <b>Weapon groups</b>: pick a group number, then click weapons on the ship to put them in it. Set a group to <b>Auto</b> and it fires by itself at the nearest hostile; <b>Man</b> groups fire when you do. Keys <b>1-5</b> switch groups during a fight.'],
   shop:['Shop', 'Buy blocks, upgrade a block type (+35% per level, up to Lv5), repair damaged blocks at half price, or sell spare cargo.'],
   signal:['Signals', 'Signals are random events. A choice can pay off in credits and blocks, or go badly.'],
   damage:['Damage', 'Blocks destroyed in a fight stay damaged: dark, cracked, and left behind until repaired. Repair them in the drydock, at a shop for half price, or for free at a repair dock.'],
@@ -2993,7 +3081,7 @@ $('tutSkip').addEventListener('click', () => { tutOff = true; tutQ = []; tutSave
 $('tutReset').addEventListener('click', () => { tutSeen = {}; tutOff = false; tutSave(); toast('Tutorial tips will show again'); tut('dock'); if (shipWeapons().length) tut('groups'); });
 for (const id of ['grps','groups']) $(id).addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.g){ const [t,n] = b.dataset.g.split(':'); G.grp[t] = +n; renderGroups(); save(); }
+  if (b.dataset.b) setBrush(+b.dataset.b===G.grpBrush ? 0 : +b.dataset.b);
   else if (b.dataset.a) toggleGroup(+b.dataset.a);
 });
 try { setAuto(localStorage.getItem('oom-auto') === '1', false); } catch { setAuto(false, false); }
