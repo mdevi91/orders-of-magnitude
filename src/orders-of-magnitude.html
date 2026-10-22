@@ -755,7 +755,7 @@ function startStage(){
   // every stage opens on last stage's view and slowly pulls back to a wider one, even if the hull didn't grow
   // a retry of the same stage replays the same zoom instead of widening again
   if (G.spanStage !== G.stage){ G.span0 = G.spanT ? G.spanT : spanFor(G.player.r, G.S)*.6; G.spanStage = G.stage; }
-  G.spanT = Math.max(spanFor(G.player.r, G.S), G.span0*1.15); G.span = G.span0; G.spanAt = 0; G.swarmT = 4;
+  G.spanT = Math.max(spanFor(G.player.r, G.S), G.span0*1.15); G.span = G.span0; G.fit = 0; G.spanAt = 0; G.swarmT = 4;
   G.AW = Math.max(1300*G.S, G.spanT*3); G.AH = Math.max(900*G.S, G.spanT*2.2);
   G.player.x = G.AW/2; G.player.y = G.AH*.72;
   G.ships = [G.player]; G.pb = []; G.eb = []; G.fx = []; G.beams = [];
@@ -1048,11 +1048,17 @@ function update(dt){
 
   updateFx(dt);
 
-  // camera
-  G.camX += (p.x - G.camX)*Math.min(1,dt*4); G.camY += (p.y - G.camY)*Math.min(1,dt*4);
-
   // zoom-out animation: ease in and out over 4 s
   if (G.spanAt < 1){ G.spanAt = Math.min(1, G.spanAt + dt/4); const k = G.spanAt*G.spanAt*(3 - 2*G.spanAt); G.span = G.span0 + (G.spanT - G.span0)*k; }
+
+  // camera: frame the player and every live enemy, never tighter than the stage's base view
+  let x0 = p.x - p.r, x1 = p.x + p.r, y0 = p.y - p.r, y1 = p.y + p.r;
+  for (const e of enemies) if (e.alive){ x0 = Math.min(x0, e.x - e.r); x1 = Math.max(x1, e.x + e.r); y0 = Math.min(y0, e.y - e.r); y1 = Math.max(y1, e.y + e.r); }
+  const m = Math.min(W,H), need = Math.max(G.span, 1.25*Math.max((x1-x0)*m/W, (y1-y0)*m/H));
+  G.fit = G.fit || G.span;
+  G.fit += (need - G.fit)*Math.min(1, dt*(need > G.fit ? 3 : 1));
+  const tx = (x0+x1)/2, ty = (y0+y1)/2;
+  G.camX += (tx - G.camX)*Math.min(1,dt*4); G.camY += (ty - G.camY)*Math.min(1,dt*4);
 
   // swarm keeps coming between and during waves; it never holds up a stage clear
   if (p.alive && G.stage > 1 && G.waveIdx > 0){
@@ -1353,7 +1359,7 @@ function drawSpace(cx, cy, z){
 function niceStep(z){ let sp = 10; if (!(z > 0)) return sp; while (sp*z < 12) sp *= 10; return sp; }
 function renderCombat(){
   const S = G.S, p = G.player;
-  G.zoom = Math.min(W,H)/(G.span || spanFor(p.r, S));
+  G.zoom = Math.min(W,H)/(G.fit || G.span || spanFor(p.r, S));
   const z = G.zoom, hw = W/2/z, hh = H/2/z;
   let cx = G.camX, cy = G.camY;
   cx = G.AW < 2*hw ? G.AW/2 : clamp(cx, hw, G.AW-hw);
