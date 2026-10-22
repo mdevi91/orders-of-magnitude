@@ -1257,7 +1257,7 @@ const META = [
   {id:'proto', name:'Prototype access', desc:'Loot and shops reach one tier further.', max:2, cost:8},
 ];
 function metaLv(id){ return G.meta.lv[id] || 0; }
-const metaCost = m => m.cost*(metaLv(m.id) + 1);
+const metaCost = m => 2*m.cost*(metaLv(m.id) + 1);
 function showTitle(){
   G.mode = 'title'; G.ships = []; G.pb = []; G.eb = []; G.fx = []; syncUI();
   const h = 'Cross nine sectors. Pick your route on each star map, salvage blocks, trade at shops and rebuild between jumps. A flagship guards every third sector. Lose the core and the run is over.' +
