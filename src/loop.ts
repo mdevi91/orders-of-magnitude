@@ -1,5 +1,5 @@
 import { updateFx } from './craft';
-import { renderBuildOverlay, renderCombatOverlay } from './draw';
+import { renderBuildOverlay, renderCombatOverlay, syncTip } from './draw';
 import { renderMap } from './mapdraw';
 import { render3d } from './render3d';
 import { G } from './state';
@@ -24,6 +24,6 @@ export function frame(now: number){
     if (G.mode==='build') renderBuildOverlay();
     else if (G.mode==='map') renderMap();
     else if (G.mode!=='title' && G.player) renderCombatOverlay();
-    syncHud();
+    syncHud(); syncTip();
   } catch (err) { console.error(err); }
 }

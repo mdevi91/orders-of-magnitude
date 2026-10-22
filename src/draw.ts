@@ -1,13 +1,14 @@
 import { Vector3 } from 'three';
-import { BEAM, COL, MAXLV, def, grpOf, isWeapon, lvOf } from './catalog';
-import { FACE, K, KI, KJ, KL, TAU, angDiff, clamp, rand } from './grid';
+import { BEAM, COL, MAXLV, T, def, grpOf, isWeapon, lvOf } from './catalog';
+import { placeCheck, placeSpots } from './editor';
+import { FACE, FACING, K, KI, KJ, KL, TAU, angDiff, clamp, rand } from './grid';
 import { aimsOut, arcClear, designR, designType } from './inspect';
 import { laneFwd } from './physics';
 import { camera, project, projectCell } from './render3d';
 import { G } from './state';
 import type { Cell, Facing, Stick, Team } from './types';
 import { JOY_R } from './update';
-import { FONT, H, PX, W, ctx } from './view';
+import { $, FONT, H, PX, W, ctx } from './view';
 
 // ---------- drawing ----------
 // VGA-style metal sprites: each block is a bevelled plate (light top-left, shadow bottom-right) with its part drawn on top.
@@ -253,10 +254,35 @@ export function renderCombatOverlay(){
     ctx.fillText(b.sub.toUpperCase(), Math.round(W/2), y + big + 6); ctx.globalAlpha = 1;
   }
 }
+// The drydock tooltip beside the cursor: the block under it, then what a click does (or why it can't).
+let tipHtml = '';
+export function syncTip(){
+  const el = $('tip'), h = G.mode==='build' && G.mouse.has ? G.hover : null;
+  if (!h){ if (!el.hidden) el.hidden = true; return; }
+  const k = K(h.i,h.j,h.l), t = G.design.get(k), lines: string[] = [];
+  if (t){
+    const d = T[t], o = G.dirs.get(k) || 0;
+    lines.push(`<b>${d.name}</b>${d.rot ? ` · faces ${FACING[o]}` : ''}${lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : ''}${G.broken.has(k) ? ' · <span class="warn">damaged</span>' : ''}`);
+  }
+  if (G.grpBrush) lines.push(t && isWeapon(t) ? `Click: put it in group ${G.grpBrush}` : '<span class="dim">Not a weapon</span>');
+  else if (G.sel==='sell' || G.drag==='sell') lines.push(t==='core' ? '<span class="warn">The core stays</span>' : '<span class="warn">Click: remove to cargo</span>');
+  else {
+    const [i,j,l,o] = placeSpots(h.ni, h.nj, h.nl, G.rot, G.sel)[0], r = placeCheck(i,j,l,G.sel,o);
+    lines.push(r === true ? `<span class="ok">Click: add ${T[G.sel].name}${T[G.sel].rot ? ` facing ${FACING[G.rot]}` : ''}</span>` : `<span class="warn">${r}</span>`);
+    lines.push('<span class="dim">R turns · right-click removes</span>');
+  }
+  const html = lines.join('<br>');
+  if (html !== tipHtml){ tipHtml = html; el.innerHTML = html; }
+  el.hidden = false;
+  // beside the cursor, flipped to the other side near the right and bottom edges
+  const x = G.mouse.x*PX, y = G.mouse.y*PX, w = el.offsetWidth, hh = el.offsetHeight;
+  el.style.left = Math.round(x + 18 + w > innerWidth - 8 ? x - 12 - w : x + 18) + 'px';
+  el.style.top = Math.round(y + 18 + hh > innerHeight - 8 ? y - 12 - hh : y + 18) + 'px';
+}
 // Drydock markers: ✕ on blocks that can't fire or thrust, a gold dot on boxed-in turrets, group numbers while assigning.
 export function renderBuildOverlay(){
   ctx.font = FONT(8); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const fore = projectCell(0, -designR() - 3, 0);
+  const fore = projectCell(0, -17, 0);
   if (fore){ ctx.fillStyle = '#8497c4'; ctx.fillText('FORE', Math.round(fore.x), Math.round(fore.y)); }
   for (const [k,t] of G.design){
     const i = KI(k), j = KJ(k), l = KL(k), o = G.dirs.get(k) || 0, at = projectCell(i, j, l);

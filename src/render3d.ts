@@ -1,16 +1,17 @@
 // The 3D view: one WebGL scene for fights, the title and the star map backdrop, and one for the drydock.
 // It renders at the game's low pixel resolution and CSS scales it up, so the voxels keep a pixel-art edge.
 import {
-  AdditiveBlending, AmbientLight, BoxGeometry, BufferAttribute, BufferGeometry, CanvasTexture, Color, DirectionalLight, DynamicDrawUsage,
-  EdgesGeometry, Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, LineBasicMaterial, LineSegments, Matrix4, MeshBasicMaterial,
-  MeshLambertMaterial, Object3D, PerspectiveCamera, Points, PointsMaterial, Quaternion, Ray, Raycaster, Scene, Sprite, SpriteMaterial,
+  AdditiveBlending, AmbientLight, BoxGeometry, BufferAttribute, BufferGeometry, CanvasTexture, Color, ConeGeometry, DirectionalLight, DynamicDrawUsage,
+  EdgesGeometry, Group, HemisphereLight, IcosahedronGeometry, InstancedMesh, LineBasicMaterial, LineSegments, MeshBasicMaterial,
+  MeshLambertMaterial, NearestFilter, Object3D, PerspectiveCamera, Points, PointsMaterial, Quaternion, Ray, Raycaster, SRGBColorSpace, Scene, Sprite, SpriteMaterial,
   Vector2, Vector3, WebGLRenderer,
 } from 'three';
-import { BCOL, COL, ESH, PARTS, T, def, grpOf, isWeapon, shRad } from './catalog';
+import { BCOL, COL, ESH, HEAD_OF, PARTS, T, def, grpOf, isWeapon, shRad } from './catalog';
+import { drawBlock } from './draw';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { BS, DIRV, FACE, KI, KJ, KL, OPP, clamp, rand } from './grid';
 import { G } from './state';
-import type { Block, BuildHover, Cell, Facing, Key, Ship, Team } from './types';
+import type { Block, BlockType, BuildHover, Cell, Facing, Key, Ship, Team } from './types';
 import { $, H, W } from './view';
 
 // ---------- renderer and scenes ----------
@@ -18,20 +19,13 @@ export let renderer: WebGLRenderer | null = null;
 export const camera = new PerspectiveCamera(60, 16/9, 2, 60000);
 const scene = new Scene(), buildScene = new Scene();
 const UP = new Vector3(0,1,0);
-const m4 = new Matrix4(), tq = new Quaternion(), tv = new Vector3(), tv2 = new Vector3(), tcol = new Color(), one = new Vector3(1,1,1);
+const tq = new Quaternion(), tv = new Vector3(), tv2 = new Vector3(), tcol = new Color(), one = new Vector3(1,1,1);
 
-/** Block colours: plating in steel for the player and rust for enemies; systems in their own colours. */
-const PLATING: Record<Team, {hull: string; armor: string}> = {p:{hull:'#8f9aac', armor:'#5f6a7c'}, e:{hull:'#9a4630', armor:'#6a3024'}, a:{hull:'#8f9aac', armor:'#5f6a7c'}};
-export function blockColor(t: Cell, team: Team, out = tcol){
-  if (t==='hull' || t==='armor') return out.set(PLATING[team][t]);
-  if (t==='core') return out.set(team==='e' ? '#ff6a3a' : '#5fd8ff');
-  return out.set(COL[team][t] || COL.p[t] || '#b0b8c8');
-}
 /** Turrets and fixed weapons get a barrel; engines get a nozzle. */
 const BARREL: Partial<Record<Cell, number>> = {cannon:.9, gatling:1, scatter:.7, flak:.8, ion:.9, torpedo:1.1, rail:1.4, laser:1.1, core:.6};
 
 function lights(s: Scene){
-  s.add(new AmbientLight(0x404a60, 1.4));
+  s.add(new AmbientLight(0x505a70, 1.8));
   s.add(new HemisphereLight(0x9ab8ff, 0x302018, .8));
   const sun = new DirectionalLight(0xfff2dd, 2.2); sun.position.set(1, 2, 1.4); s.add(sun);
 }
@@ -58,39 +52,64 @@ function makeSky(){
   }
 }
 
-// ---------- ships ----------
+/// ---------- ships ----------
+// Every block type wears its pixel-art icon (the palette's sprite) on all six faces, so a cannon reads as a cannon from any side.
 const BOX = new BoxGeometry(BS*.94, BS*.94, BS*.94);
 const BARREL_GEO = new BoxGeometry(BS*.24, BS*.24, BS).translate(0, 0, -BS*.5);
 const FLAME_GEO = new BoxGeometry(BS*.5, BS*.5, BS*.9).translate(0, 0, BS*.45);
-const hullMat = new MeshLambertMaterial({flatShading:true});
 const barrelMat = new MeshLambertMaterial({color:0xc8d0dc});
 const flameMat = new MeshBasicMaterial({color:0xffa040, blending:AdditiveBlending, transparent:true, depthWrite:false});
-interface ShipMesh { g: Group; boxes: InstancedMesh; barrels: InstancedMesh; flames: InstancedMesh; ver: number; blocks: Block[]; guns: Block[]; engines: Block[]; flash: Set<Block> }
+const texCache = new Map<string, CanvasTexture>(), matCache = new Map<string, MeshLambertMaterial>();
+function iconTex(t: Cell, team: Team){
+  const key = team + t; let tx = texCache.get(key); if (tx) return tx;
+  const c = document.createElement('canvas'); c.width = c.height = 20;
+  const x = c.getContext('2d')!; x.setTransform(2,0,0,2,10,10); x.lineWidth = .5;
+  drawBlock(x, t, 0, team==='e' ? 'e' : 'p', 0, 0, -Math.PI/2, false, 1, true, t==='engine');
+  tx = new CanvasTexture(c); tx.magFilter = tx.minFilter = NearestFilter; tx.generateMipmaps = false; tx.colorSpace = SRGBColorSpace;
+  texCache.set(key, tx); return tx;
+}
+/** The textured material for a block type, shared by every ship of that side; instance colours tint it. */
+export function blockMat(t: Cell, team: Team){
+  const key = team + t; let m = matCache.get(key);
+  if (!m){ m = new MeshLambertMaterial({map:iconTex(t, team)}); matCache.set(key, m); }
+  return m;
+}
+interface ShipMesh { g: Group; parts: Map<InstancedMesh, Block[]>; at: Map<Block, [InstancedMesh, number]>; barrels: InstancedMesh; flames: InstancedMesh; ver: number; guns: Block[]; engines: Block[]; flash: Set<Block> }
 const meshes = new Map<Ship, ShipMesh>();
 const dummy = new Object3D();
 /** The rotation that points local -z along a direction. */
 const aimQ = (dir: Vector3, out = tq) => out.setFromUnitVectors(tv2.set(0,0,-1), dir);
+/** Each type's own colour washed over its icon, so blocks tell apart at a glance; plating stays bare steel (or rust). */
+export function typeTint(t: Cell, team: Team, out = tcol){
+  out.setRGB(1,1,1);
+  if (t==='hull' || t==='armor') return team==='e' ? out.set('#e0907a') : out;
+  const c = COL[team][t] || COL.p[t];
+  return c ? out.lerp(new Color(c), .55) : out;
+}
+/** Instance tint for a block: its type colour, darkened by battle damage. */
+function shade(b: Block, team: Team){ const k = b.hp/b.max; return typeTint(b.t, team).multiplyScalar(k < .7 ? .45 + .55*k/.7 : 1); }
 
 function buildShipMesh(s: Ship): ShipMesh {
   const blocks = [...s.blocks.values()], guns = blocks.filter(b => BARREL[b.t]), engines = blocks.filter(b => b.t==='engine');
-  const boxes = new InstancedMesh(BOX, hullMat, Math.max(1, blocks.length));
+  const g = new Group(), parts = new Map<InstancedMesh, Block[]>(), at = new Map<Block, [InstancedMesh, number]>();
+  const byType = new Map<Cell, Block[]>();
+  for (const b of blocks) (byType.get(b.t) || byType.set(b.t, []).get(b.t)!).push(b);
+  for (const [t, list] of byType){
+    const mesh = new InstancedMesh(BOX, blockMat(t, s.team), list.length);
+    list.forEach((b, n) => {
+      dummy.position.set(b.i*BS, b.l*BS, b.j*BS); dummy.quaternion.identity(); dummy.scale.copy(one); dummy.updateMatrix();
+      mesh.setMatrixAt(n, dummy.matrix); mesh.setColorAt(n, shade(b, s.team)); at.set(b, [mesh, n]);
+    });
+    parts.set(mesh, list); g.add(mesh);
+  }
   const barrels = new InstancedMesh(BARREL_GEO, barrelMat, Math.max(1, guns.length));
   const flames = new InstancedMesh(FLAME_GEO, flameMat, Math.max(1, engines.length));
-  blocks.forEach((b, n) => {
-    dummy.position.set(b.i*BS, b.l*BS, b.j*BS); dummy.quaternion.identity(); dummy.scale.copy(one); dummy.updateMatrix();
-    boxes.setMatrixAt(n, dummy.matrix); boxes.setColorAt(n, shade(b, s.team));
-  });
-  boxes.count = blocks.length; barrels.count = guns.length; flames.count = engines.length;
+  barrels.count = guns.length; flames.count = engines.length;
   barrels.instanceMatrix.setUsage(DynamicDrawUsage); flames.instanceMatrix.setUsage(DynamicDrawUsage);
-  const g = new Group(); g.add(boxes, barrels, flames); scene.add(g);
-  return {g, boxes, barrels, flames, ver:s.ver, blocks, guns, engines, flash:new Set()};
+  g.add(barrels, flames); scene.add(g);
+  return {g, parts, at, barrels, flames, ver:s.ver, guns, engines, flash:new Set()};
 }
-/** A block's colour with battle damage darkening it. */
-function shade(b: Block, team: Team){
-  blockColor(b.t, team); const k = b.hp/b.max;
-  return k < .7 ? tcol.multiplyScalar(.45 + .55*k/.7) : tcol;
-}
-function disposeMesh(m: ShipMesh){ scene.remove(m.g); m.boxes.dispose(); m.barrels.dispose(); m.flames.dispose(); }
+function disposeMesh(m: ShipMesh){ scene.remove(m.g); for (const mesh of m.parts.keys()) mesh.dispose(); m.barrels.dispose(); m.flames.dispose(); }
 function syncShips(){
   const live = new Set(G.ships.filter(s => s.alive));
   for (const [s,m] of meshes) if (!live.has(s)){ disposeMesh(m); meshes.delete(s); }
@@ -99,13 +118,16 @@ function syncShips(){
     let m = meshes.get(s);
     if (!m || m.ver !== s.ver){ if (m) disposeMesh(m); m = buildShipMesh(s); meshes.set(s, m); }
     m.g.position.copy(s.p); m.g.quaternion.copy(s.q);
-    // white flash on hit, then back to the damaged colour
-    m.blocks.forEach((b, n) => {
-      const hot = G.time - b.hit < .06;
-      if (hot){ m!.boxes.setColorAt(n, tcol.set('#ffffff')); m!.flash.add(b); }
-      else if (m!.flash.has(b)){ m!.boxes.setColorAt(n, shade(b, s.team)); m!.flash.delete(b); }
-    });
-    if (m.boxes.instanceColor) m.boxes.instanceColor.needsUpdate = true;
+    // white flash on hit, then back to the damaged tint
+    for (const [mesh, list] of m.parts){
+      let dirty = false;
+      list.forEach((b, n) => {
+        const hot = G.time - b.hit < .06;
+        if (hot){ mesh.setColorAt(n, tcol.setRGB(3,3,3)); m!.flash.add(b); dirty = true; }
+        else if (m!.flash.has(b)){ mesh.setColorAt(n, shade(b, s.team)); m!.flash.delete(b); dirty = true; }
+      });
+      if (dirty && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
     // barrels: the player's turrets follow their aim, enemy guns track the player, fixed weapons point along their facing
     const inv = tq.copy(s.q).invert().clone();
     m.guns.forEach((b, n) => {
@@ -246,13 +268,31 @@ export function project(p: Vector3){
   return {x:(v.x+1)/2*W, y:(1-v.y)/2*H};
 }
 
-// ---------- drydock ----------
-const bBoxes = new InstancedMesh(BOX, hullMat, 4096), bBarrels = new InstancedMesh(BARREL_GEO, barrelMat, 1024);
-const ghostMat = new MeshBasicMaterial({color:0x7fe07a, transparent:true, opacity:.45, depthWrite:false});
-const ghost = new InstancedMesh(new BoxGeometry(BS*.98, BS*.98, BS*.98), ghostMat, 64);
-const cursorBox = new LineSegments(new EdgesGeometry(new BoxGeometry(BS*1.04, BS*1.04, BS*1.04)), new LineBasicMaterial({color:0xffc46b}));
-const floor = new Group(), RUST = new Color(.25,.08,0);
-let bKeys: Key[] = [];
+/// ---------- drydock ----------
+// One instanced mesh per block type, reused frame to frame; picking maps each instance back to its cell.
+const dockMeshes = new Map<BlockType, InstancedMesh>(), dockKeys = new Map<InstancedMesh, Key[]>();
+function dockMesh(t: BlockType){
+  let m = dockMeshes.get(t);
+  if (!m){ m = new InstancedMesh(BOX, blockMat(t, 'p'), 1024); m.frustumCulled = false; dockMeshes.set(t, m); dockKeys.set(m, []); buildScene.add(m); }
+  return m;
+}
+const bBarrels = new InstancedMesh(BARREL_GEO, barrelMat, 1024);
+// The placement preview: the block itself, see-through and pulsing (red where it can't go), with an arrow for its facing.
+const ghostMeshes = new Map<BlockType, InstancedMesh>();
+function ghostMesh(t: BlockType){
+  let m = ghostMeshes.get(t);
+  if (!m){
+    m = new InstancedMesh(new BoxGeometry(BS*.99, BS*.99, BS*.99), new MeshLambertMaterial({map:iconTex(t, 'p'), transparent:true, opacity:.7, depthWrite:false, emissive:0x404020}), 64);
+    m.frustumCulled = false; ghostMeshes.set(t, m); buildScene.add(m);
+  }
+  return m;
+}
+const arrows = new InstancedMesh(new ConeGeometry(BS*.32, BS*.9, 8).rotateX(-Math.PI/2), new MeshBasicMaterial({color:0xffe08a}), 8);
+// where the new block goes (gold box) and what it attaches to (white box); in remove mode a red box on the block
+const cursorBox = new LineSegments(new EdgesGeometry(new BoxGeometry(BS*1.06, BS*1.06, BS*1.06)), new LineBasicMaterial({color:0xffc46b}));
+const attachBox = new LineSegments(new EdgesGeometry(new BoxGeometry(BS*1.02, BS*1.02, BS*1.02)), new LineBasicMaterial({color:0xffffff, transparent:true, opacity:.6}));
+const floor = new Group();
+const GROUP_COL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
 function makeFloor(){
   // a deck grid under the core's layer, with the fore direction marked
   const n = 24, pts: number[] = [];
@@ -266,55 +306,74 @@ function makeFloor(){
 /** The drydock camera orbits the core; G.bDist zooms. */
 function orbit(){
   let R = 0; for (const k of G.design.keys()) R = Math.max(R, Math.hypot(KI(k), KJ(k), KL(k)));
-  const d = (R*BS + 40)*2.6*(G.bDist || 1);
+  const d = (R*BS + 22)*2.2*(G.bDist || 1);
   camera.position.set(Math.sin(G.bYaw)*Math.cos(G.bPitch), Math.sin(G.bPitch), Math.cos(G.bYaw)*Math.cos(G.bPitch)).multiplyScalar(d);
   camera.up.copy(UP); camera.lookAt(0,0,0);
 }
 function syncDesign(){
-  bKeys = [...G.design.keys()];
+  for (const [m, keys] of dockKeys){ m.count = 0; keys.length = 0; }
+  // blocks of the selected type pulse brighter, so you can see where they all are
+  const pulse = 1.15 + .3*Math.sin(G.time*5);
   let nb = 0;
-  bKeys.forEach((k, n) => {
-    const t = G.design.get(k)!, i = KI(k), j = KJ(k), l = KL(k), o = G.dirs.get(k) || 0;
+  for (const [k,t] of G.design){
+    const i = KI(k), j = KJ(k), l = KL(k), o = G.dirs.get(k) || 0, m = dockMesh(t), n = m.count++;
+    dockKeys.get(m)!.push(k);
     dummy.position.set(i*BS, l*BS, j*BS); dummy.quaternion.identity(); dummy.scale.copy(one); dummy.updateMatrix();
-    bBoxes.setMatrixAt(n, dummy.matrix);
-    // damaged blocks show dark and rusty until repaired
-    blockColor(t, 'p'); if (G.broken.has(k)) tcol.multiplyScalar(.35).add(RUST);
-    if (G.grpBrush && isWeapon(t)) tcol.set(['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'][grpOf(k,t)-1]);
-    bBoxes.setColorAt(n, tcol);
+    m.setMatrixAt(n, dummy.matrix);
+    // damaged blocks show dark and rusty until repaired; while assigning groups, weapons wear their group's colour
+    if (G.broken.has(k)) tcol.setRGB(.5,.3,.25);
+    else if (G.grpBrush) tcol.set(isWeapon(t) ? GROUP_COL[grpOf(k,t)-1] : '#555a66');
+    else typeTint(t, 'p').multiplyScalar(t===G.sel || HEAD_OF[t]===G.sel ? pulse : 1);
+    m.setColorAt(n, tcol);
     if (BARREL[t] || t==='engine'){
       dummy.quaternion.copy(aimQ(t==='engine' ? DIRV[OPP[o]] : DIRV[o])); dummy.scale.set(1,1,t==='engine' ? .7 : BARREL[t] || 1); dummy.updateMatrix();
       if (nb < 1024) bBarrels.setMatrixAt(nb++, dummy.matrix);
     }
-  });
-  bBoxes.count = bKeys.length; bBarrels.count = nb;
-  bBoxes.instanceMatrix.needsUpdate = true; if (bBoxes.instanceColor) bBoxes.instanceColor.needsUpdate = true; bBarrels.instanceMatrix.needsUpdate = true;
-  // the placement ghost: every cell the next block (and its mirror twins) would fill
-  const h = G.hover; let ng = 0;
-  cursorBox.visible = !!h;
+  }
+  for (const m of dockMeshes.values()){ m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+  bBarrels.count = nb; bBarrels.instanceMatrix.needsUpdate = true;
+  // the preview
+  for (const m of ghostMeshes.values()) m.count = 0;
+  let na = 0;
+  const h = G.hover, sell = G.drag==='sell' || G.sel==='sell';
+  cursorBox.visible = attachBox.visible = !!h;
   if (h){
-    const sell = G.drag==='sell' || G.sel==='sell';
-    cursorBox.position.set(h.i*BS, h.l*BS, h.j*BS);
-    (cursorBox.material as LineBasicMaterial).color.set(sell ? '#ff5a3a' : G.grpBrush ? '#ffffff' : '#ffc46b');
-    if (!sell && !G.grpBrush){
-      for (const [i,j,l,o] of placeSpots(h.ni, h.nj, h.nl, G.rot, G.sel)){
-        const ok = placeCheck(i,j,l,G.sel,o) === true;
-        for (const [a,b,c] of cellsFor(i,j,l,G.sel,T[G.sel].rot ? o : 0)){
-          if (ng >= 64) break;
+    if (sell || G.grpBrush){
+      cursorBox.position.set(h.i*BS, h.l*BS, h.j*BS); attachBox.visible = false;
+      (cursorBox.material as LineBasicMaterial).color.set(sell ? '#ff5a3a' : '#ffffff');
+    } else {
+      cursorBox.position.set(h.ni*BS, h.nl*BS, h.nj*BS); attachBox.position.set(h.i*BS, h.l*BS, h.j*BS);
+      const spots = placeSpots(h.ni, h.nj, h.nl, G.rot, G.sel), ok0 = placeCheck(spots[0][0], spots[0][1], spots[0][2], G.sel, spots[0][3]) === true;
+      (cursorBox.material as LineBasicMaterial).color.set(ok0 ? '#ffc46b' : '#ff5a3a');
+      const glow = .55 + .25*Math.sin(G.time*8);
+      for (const [i,j,l,o] of spots){
+        const ok = placeCheck(i,j,l,G.sel,o) === true, oo = T[G.sel].rot ? o : 0;
+        for (const [a,b,c,ct] of cellsFor(i,j,l,G.sel,oo)){
+          const m = ghostMesh(ct as BlockType); if (m.count >= 64) continue;
           dummy.position.set(a*BS, c*BS, b*BS); dummy.quaternion.identity(); dummy.scale.copy(one); dummy.updateMatrix();
-          ghost.setMatrixAt(ng, dummy.matrix); ghost.setColorAt(ng, tcol.set(ok ? '#7fe07a' : '#ff5a3a')); ng++;
+          m.setMatrixAt(m.count, dummy.matrix); m.setColorAt(m.count, ok ? tcol.setRGB(1.2,1.2,1.2) : tcol.setRGB(1.4,.25,.2)); m.count++;
+          (m.material as MeshLambertMaterial).opacity = glow;
+        }
+        if (T[G.sel].rot && na < 8){
+          // an arrow out of the facing side of the new block
+          dummy.position.set(i*BS, l*BS, j*BS).addScaledVector(DIRV[oo], BS*.95); aimQ(DIRV[oo], dummy.quaternion); dummy.scale.copy(one); dummy.updateMatrix();
+          arrows.setMatrixAt(na++, dummy.matrix);
         }
       }
     }
   }
-  ghost.count = ng; ghost.instanceMatrix.needsUpdate = true; if (ghost.instanceColor) ghost.instanceColor.needsUpdate = true;
+  for (const m of ghostMeshes.values()){ m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+  arrows.count = na; arrows.instanceMatrix.needsUpdate = true;
 }
 /** The block under the cursor in the drydock and the empty cell beside the face it was hit on. */
 export function buildPick(x: number, y: number): BuildHover | null {
-  orbit(); camera.updateMatrixWorld(); bBoxes.updateMatrixWorld();
+  orbit(); camera.updateMatrixWorld();
   const r = new Raycaster(); r.setFromCamera(new Vector2(x/W*2 - 1, -(y/H*2 - 1)), camera);
-  const hit = r.intersectObject(bBoxes, false).find(h => h.instanceId !== undefined && h.instanceId < bKeys.length);
+  const live = [...dockMeshes.values()].filter(m => m.count > 0);
+  for (const m of live) m.updateMatrixWorld();
+  const hit = r.intersectObjects(live, false).find(h => h.instanceId !== undefined && h.instanceId < (h.object as InstancedMesh).count);
   if (!hit || !hit.face) return null;
-  const k = bKeys[hit.instanceId!], i = KI(k), j = KJ(k), l = KL(k), nrm = hit.face.normal;
+  const k = dockKeys.get(hit.object as InstancedMesh)![hit.instanceId!], i = KI(k), j = KJ(k), l = KL(k), nrm = hit.face.normal;
   return {i, j, l, ni:i + Math.round(nrm.x), nj:j + Math.round(nrm.z), nl:l + Math.round(nrm.y)};
 }
 
@@ -358,5 +417,5 @@ export function init(){
   } catch { renderer = null; }
   makeSky(); makeFloor();
   lights(scene); scene.add(sky, bolts, booms, smokes, debs, bubbles, sparkPts, lines, arena);
-  lights(buildScene); buildScene.add(bBoxes, bBarrels, ghost, cursorBox, floor);
+  lights(buildScene); buildScene.add(bBarrels, arrows, cursorBox, attachBox, floor);
 }
