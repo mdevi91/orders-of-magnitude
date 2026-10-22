@@ -801,7 +801,12 @@ function update(dt){
   else {
     let best = null, bd = 1e18;
     for (const e of enemies){ const d = (e.x-p.x)**2 + (e.y-p.y)**2; if (d < bd){ bd = d; best = e; } }
-    if (best){ ax = best.x; ay = best.y; } else { ax = p.x; ay = p.y - 100; }
+    // small lead on the target's movement plus a slow wobble, so auto fire is good but not perfect
+    if (best){
+      const d = Math.sqrt(bd), t = d/(550*SC)*.5, w = best.wob ??= Math.random()*99, amp = best.r*.5 + d*.03;
+      ax = best.x + best.vx*t + Math.sin(G.time*1.7 + w)*amp;
+      ay = best.y + best.vy*t + Math.sin(G.time*2.3 + w*1.3)*amp;
+    } else { ax = p.x; ay = p.y - 100; }
   }
   G.aim = {x:ax, y:ay};
   // desktop fires on click or Space; auto-aim, touch and mouse-less play fire on their own
