@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orders of Magnitude</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+</head>
+<body>
+
+<canvas id="c" aria-label="Game field"></canvas>
+<canvas id="hi"></canvas>
+<div id="crt"></div>
+
+<header id="hud">
+  <div class="hud-l">
+    <span class="brand">Orders of Magnitude</span>
+    <span id="hudStage" class="tag">Sector 1</span>
+    <span id="hudScale" class="tag">Scale ×1.00</span>
+    <span id="hudWave" class="tag" hidden>Wave 1/2</span>
+  </div>
+  <div class="hud-r">
+    <div id="coreWrap" hidden><span class="lbl">Core</span><div class="bar"><i id="coreBar"></i></div><span class="lbl">Energy</span><div class="bar"><i id="enBar"></i></div></div>
+    <span class="lbl">Credits</span><b id="hudCredits">0</b>
+    <button id="muteBtn" class="tag hudbtn" type="button" aria-label="Sound">♪ on</button>
+    <button id="aimBtn" class="tag hudbtn" type="button" aria-label="Auto-aim" aria-pressed="false" hidden>Auto off</button>
+    <button id="zoomOut" class="tag hudbtn" type="button" aria-label="Zoom out" hidden>−</button>
+    <button id="zoomIn" class="tag hudbtn" type="button" aria-label="Zoom in" hidden>+</button>
+    <button id="pauseBtn" class="tag hudbtn" type="button" aria-label="Pause" hidden>II</button>
+  </div>
+</header>
+
+<aside id="panel" aria-label="Drydock">
+  <h2>Drydock</h2>
+  <p class="sub" id="gridInfo"></p>
+  <div id="palette"></div>
+  <p id="selDesc"></p>
+  <button id="repair" class="rot upg" type="button"></button>
+  <div class="tools">
+    <button id="rot" class="rot" type="button">⟳ Rotate <span id="rotArrow">↑</span> <span id="rotName">fore</span> <kbd>R</kbd></button>
+    <button id="mirror" class="rot" type="button">Mirror <span id="mirName">⇆ L/R</span> <kbd>M</kbd></button>
+  </div>
+  <div class="tools">
+    <span class="zoom"><button id="zOut" class="rot" type="button" aria-label="Zoom out">−</button><button id="zIn" class="rot" type="button" aria-label="Zoom in">+</button><button id="zFit" class="rot" type="button">Fit</button></span>
+    <span class="zoom"><button id="undo" class="rot" type="button">↶ Undo</button></span>
+  </div>
+  <details id="grpBox" open><summary>Weapon groups</summary><div id="grps"></div></details>
+  <details id="statsBox" open><summary>Ship stats</summary><dl id="stats"></dl></details>
+  <details id="saveBox"><summary>Save game</summary>
+    <p>Progress saves on its own whenever you are in drydock. Export a save file to keep a copy or move it to another browser.</p>
+    <div class="bp"><button id="saveNow" class="rot" type="button">Save now</button><button id="saveExp" class="rot" type="button">Export</button><button id="saveImp" class="rot" type="button">Import</button></div>
+    <input id="saveFile" type="file" accept=".json,application/json" hidden>
+  </details>
+  <details id="bpBox"><summary>Blueprints</summary><div id="bps"></div></details>
+  <button id="launch" type="button">Star map</button>
+  <details id="help" open>
+    <summary>Controls</summary>
+    <ul>
+      <li><b>Run:</b> jump across each sector's star map to the gate. Fights, wrecks and signals give credits and blocks; shops buy, sell, upgrade and repair. Raiders and signals can also turn up mid-jump. Every third sector ends in a flagship or starbase. Lose the core and the run is over.</li>
+      <li><b>Build:</b> click or drag to place blocks from your cargo. Right-click or the Remove tool puts a block back in cargo. Hull and armor plating can be bought here at any time. Blocks must touch your ship.</li>
+      <li><b>Damage:</b> blocks destroyed in a fight stay damaged (dark, cracked) and don't fly until repaired. Removing a damaged block scraps it.</li>
+      <li><b>Facing:</b> <kbd>R</kbd> or the Rotate button turns the next turret or engine in 45° steps, and lasers, railguns and hangar bays in 90° steps. Tap a placed block of the selected type to turn it in place. Turrets cover an arc around their facing. Lasers and railguns fire along it and can swing up to 5° either side to aim.</li>
+      <li><b>Engines</b> push away from their exhaust, which must be open. Most of your speed comes from the direction your engines face. Off-centre engines also help the ship turn.</li>
+      <li><b>Line of fire:</b> guns can't shoot through your own hull, so put them where they can see out. A red ✕ marks a block that can't fire or thrust; a gold mark means a turret is mostly boxed in.</li>
+      <li><b>Fly:</b> W/S thrust along the nose, A/D turn the ship. Hold Shift and the ship turns toward the mouse while A/D slide sideways. On touch, drag to move.</li>
+      <li><b>Aim:</b> your ship turns its nose toward the cursor. Big ships turn slowly; gyros help. Hold the mouse button or <kbd>Space</kbd> to fire. <kbd>T</kbd> or the Auto button switches to auto-aim: the ship targets the nearest enemy and fires on its own. Point defense always fires on its own.</li>
+      <li><b>Energy:</b> weapons use energy to fire and shields use it to recharge. The core makes a little; Generators add more and Batteries store it. Both are safe deep inside the hull. When energy runs out, weapons wait. The gold Energy stat means full fire uses more than you make.</li>
+      <li><b>Shields</b> each project a bubble that stops enemy shots from every side, protecting blocks up to 2 cells away (3 at Lv2, 4 at Lv3). Overlap them to cover a big hull. If it pops it is down for 5 s, and it recharges after 2.5 s without hits. Enemies carry the same weapons you unlock. A red dashed line means an enemy railgun is about to fire.</li>
+      <li><b>Touch:</b> left half of the screen is a move stick, right half aims. Without the aim stick the ship aims at the nearest enemy.</li>
+      <li><b>Drydock view:</b> mouse wheel, pinch, or the − + buttons zoom; middle-drag or two fingers pan; Fit resets. <kbd>Ctrl</kbd>+<kbd>Z</kbd> or Undo takes back a change. Blueprints keep up to three designs.</li>
+      <li><b>Hangar bays</b> launch a fighter (1×4 bay) or bomber (2×6 bay) out of their front end. The craft fights on its own, flies home every 30 s to rearm and repair, then launches again. If it is shot down the bay builds a new one, which takes longer.</li>
+      <li><b>Missiles</b> blow up in a wide blast. <b>MIRVs</b> (2×2 launchers) split into three homing warheads near their target.</li>
+      <li><b>Flak</b> shells burst near enemy ships: area damage, and the blast clears enemy bullets.</li>
+      <li><b>Enemies</b> grow point defense that shoots down missiles, shields (orange bubbles; railguns and lasers go straight through), generators that explode when hit and make them fire faster, and carrier bays that launch fighters and bombers. Some sectors end in a starbase instead of a flagship.</li>
+      <li><b>Damage</b> knocks blocks off. Anything cut off from the core drifts away for the rest of the fight but comes back afterwards.</li>
+      <li><b>Weapon groups:</b> every weapon sits in one of five groups: under Weapon groups, pick a number and click weapons on the ship. In a fight, <kbd>1</kbd>-<kbd>5</kbd> or the buttons bottom left put a group on auto: it fires on its own at the nearest hostile while the rest fire with you.</li>
+      <li><b>Camera:</b> mouse wheel, <kbd>+</kbd>/<kbd>−</kbd> or the HUD buttons zoom the fight view in and out.</li>
+      <li><kbd>P</kbd> pauses.</li>
+      <li><button id="tutReset" class="rot" type="button">Replay the tutorial tips</button></li>
+    </ul>
+  </details>
+  <button id="reset" type="button">Abandon run</button>
+</aside>
+
+<aside id="mapPanel" aria-label="Star map" hidden>
+  <h2 id="mapTitle">Sector 1</h2>
+  <p class="sub" id="mapInfo"></p>
+  <button id="mapGo" class="rot wide-btn" type="button" hidden></button>
+  <button id="toDock" class="rot wide-btn" type="button">Open drydock <kbd>D</kbd></button>
+  <ul id="legend"></ul>
+  <button id="mapAbandon" type="button" style="background:none;border:0;padding:0;color:var(--muted);font:inherit;font-size:16px;text-decoration:underline;cursor:pointer;align-self:flex-start">Abandon run</button>
+</aside>
+<div id="bossWrap" hidden><span id="bossName">Flagship</span><div class="bar"><i id="bossBar"></i></div></div>
+
+<div id="splash" role="img" aria-label="Devigili Studios">
+  <div class="logo">
+    <svg class="mark" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
+      <rect x="1" y="1" width="14" height="14" fill="#7a2a20"/><rect x="0" y="0" width="14" height="14" fill="#ffc46b"/>
+      <rect x="1" y="1" width="12" height="12" fill="#05060c"/>
+      <path d="M3 3h5v1h1v1h1v4h-1v1h-1v1H3zM5 5v4h2V5z" fill="#ffc46b"/>
+      <rect x="10" y="10" width="2" height="2" fill="#5fd8ff"/>
+    </svg>
+    <p class="name">DEVIGILI</p>
+    <div class="rule"></div>
+    <p class="studio">STUDIOS</p>
+    <p class="pres">presents</p>
+  </div>
+</div>
+<div id="overlay" hidden><div class="card" role="dialog" aria-live="polite"><h1 id="ovTitle"></h1><div id="ovText" class="ovt"></div><div class="ov-actions" id="ovActions"></div></div></div>
+<div id="toast" hidden></div>
+<div id="groups" hidden></div>
+<div id="tut" hidden role="note"><b id="tutTitle"></b><p id="tutText"></p><div class="ov-actions"><button id="tutOk" type="button">Got it</button><button id="tutSkip" type="button" class="ghost">Skip tutorial</button></div></div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

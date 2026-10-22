@@ -1,0 +1,166 @@
+// @ts-nocheck
+import { renderBps } from './blueprints';
+import { rangeOf } from './bullets';
+import { BEAM, CRAFT, LV, PAL, PARTS, PLATE, T, lvOf, owned } from './catalog';
+import { aimsOut, arcClear, designType, drawBlock } from './draw';
+import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
+import { renderGroups } from './groups';
+import { undoStack } from './input';
+import { dmgOf, repTotal } from './loot';
+import { dirSpeed, laneFwd, physics } from './physics';
+import { save } from './save';
+import { ACT, canRepair, openShop } from './shop';
+import { NODE, canJump, curNode, exitNode } from './starmap';
+import { G, blockCount, blockLimit, buildR, scaleOf, turnOf } from './state';
+import { $ } from './view';
+
+// ---------- UI ----------
+export function buildPalette(){
+  const el = $('palette');
+  for (const t of PAL){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'pal'; b.id = 'pal-'+t; b.title = T[t].desc;
+    const ic = document.createElement('canvas'); ic.width = ic.height = 14; ic.id = 'ic-'+t;
+    const sp = document.createElement('span');
+    sp.innerHTML = `<span class="nm">${T[t].name}</span><span class="ct" id="ct-${t}"></span>`;
+    const kb = document.createElement('kbd'); kb.textContent = T[t].key.toUpperCase();
+    b.append(ic, sp, kb);
+    b.addEventListener('click', () => select(t));
+    el.append(b);
+  }
+}
+export function drawIcons(){
+  for (const t of PAL){
+    const ic = $('ic-'+t), g = ic.getContext('2d'), o = T[t].rot ? G.rot : 0;
+    g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,14,14);
+    g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
+    drawBlock(g, t, o, 'p', 0, 0, FA[o], false, 1, true, t==='engine');
+  }
+}
+export function select(t){
+  if (!owned(t)) return; // blocks you have never found stay secret
+  G.sel = t; G.grpBrush = 0; if (PARTS[t]) G.rot &= ~1; syncUI();
+}
+export function designStats(){
+  const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), o:G.dirs.get(k)||0}));
+  const ph = physics(cells, designType);
+  let dps = 0, hp = 0, pd = 0, sh = 0, fb = 0, bb = 0, badW = 0, badT = 0, weakT = 0, eGen = 6, eCap = 40, eUse = 0;
+  for (const c of cells){
+    const d = T[c.t], m = LV(c.t); hp += d.hp*m;
+    if (aimsOut(c.t)){ const fc = arcClear(c.i, c.j, c.o, c.t); if (fc === 0) badT++; else if (fc < .4) weakT++; }
+    if (d.gun) dps += d.gun.dmg*(d.gun.mirv || 1)*(d.gun.pellets || 1)*m/d.gun.cd;
+    if (d.tesla){ dps += d.tesla.dmg*d.tesla.jumps*m/d.tesla.cd; eUse += d.tesla.en/d.tesla.cd; }
+    if (d.gun && d.gun.en) eUse += d.gun.en/d.gun.cd;
+    if (c.t==='laser') eUse += d.laser.en; if (c.t==='rail') eUse += d.rail.en/d.rail.cd; if (c.t==='pd') eUse += d.pd.en/d.pd.cd*m;
+    if (c.t==='gen') eGen += d.en.regen*m; if (c.t==='battery') eCap += d.en.cap*m;
+    if (d.pd) pd++;
+    if (c.t==='shield') sh++;
+    if (CRAFT[c.t]){ dps += CRAFT[c.t].gun.dmg/CRAFT[c.t].gun.cd*m; if (c.t==='fbay') fb++; else bb++; }
+    if (BEAM(c.t)){
+      if (!laneFwd(designType, c.i, c.j, c.o)) badW++;
+      else dps += (c.t==='rail' ? d.rail.pool/d.rail.cd : d.laser.dps*.6)*m;
+    }
+  }
+  return {n:cells.length, hp, dps, pd, sh, fb, bb, badW, badT, weakT, eGen, eCap, eUse, badE:ph.engines.filter(e => !e.active).length,
+    fore:dirSpeed(ph,0,-1), side:Math.max(dirSpeed(ph,1,0), dirSpeed(ph,-1,0)), aft:dirSpeed(ph,0,1),
+    turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia, ph.mass)};
+}
+export function syncUI(){
+  const s = G.stage, R = buildR(), S = scaleOf(s);
+  for (const t of PAL){
+    const btn = $('pal-'+t), ct = $('ct-'+t), have = G.inv[t] || 0;
+    btn.setAttribute('aria-pressed', String(G.sel===t)); btn.hidden = !owned(t);
+    ct.textContent = t==='sell' ? 'to cargo' : PLATE(t) ? T[t].cost+' cr' + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '') : `×${have}` + (dmgOf(t) ? ` (${dmgOf(t)} dmg)` : '') + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '');
+    ct.classList.toggle('no', t!=='sell' && (PLATE(t) ? T[t].cost > G.credits : !have));
+  }
+  if (!owned(G.sel)) G.sel = 'hull';
+  const rotOk = !!T[G.sel].rot;
+  $('rot').disabled = !rotOk; drawIcons();
+  $('mirName').textContent = MIRROR[G.mir];
+  $('undo').disabled = !undoStack.length; renderBps(); renderGroups();
+  $('rotArrow').textContent = ARROW[G.rot]; $('rotName').textContent = FACING[G.rot];
+  $('rot').title = rotOk ? 'Facing for the next block. Tip: tap a placed block of this type to turn it.' : 'This block has no facing';
+  const rg = rangeOf(G.sel);
+  $('selDesc').textContent = T[G.sel].desc + (rg ? ` Range ${Math.round(rg*Math.pow(S,.8)/BS)} m.` : '') + (rotOk && !PARTS[G.sel] ? ' Tap a placed one to turn it 45°.' : '');
+  const rb = $('repair');
+  rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
+  rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;
+  $('gridInfo').innerHTML = `Sector <b>${s}</b> at scale <b>×${S.toFixed(2)}</b>. Blocks <b>${blockCount()} / ${blockLimit()}</b>, more each sector. Plating costs credits; every other block comes from cargo. Upgrades are sold at shops.`;
+  const st = designStats(), ms = v => (v/BS).toFixed(1);
+  const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
+  $('stats').innerHTML =
+    `<dt>Blocks</dt><dd>${blockCount()} / ${blockLimit()}</dd><dt>Structure</dt><dd>${st.hp} hp</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
+    `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Speed side / aft</dt><dd>${ms(st.side)} / ${ms(st.aft)}</dd>` +
+    `<dt>Energy</dt><dd class="${st.eUse > st.eGen ? 'gold' : ''}">+${Math.round(st.eGen)}/s · uses ${Math.round(st.eUse)}/s · ${Math.round(st.eCap)}</dd>` +
+    `<dt>Turn rate</dt><dd>${Math.round(st.turn*180/Math.PI)}°/s</dd><dt>Shields / PD</dt><dd>${st.sh} / ${st.pd}</dd>` +
+    (st.fb || st.bb ? `<dt>Fighters / bombers</dt><dd>${st.fb} / ${st.bb}</dd>` : '') +
+    (G.broken.size ? `<dt class="warn">Damaged</dt><dd class="warn">${G.broken.size} block${G.broken.size>1?'s':''}</dd>` : '') +
+    (warn ? `<dt class="warn">Blocked</dt><dd class="warn">${warn}</dd>` : '') +
+    (st.weakT ? `<dt class="gold">Boxed in</dt><dd class="gold">${st.weakT} turret${st.weakT>1?'s':''}</dd>` : '');
+  $('launch').textContent = 'Star map';
+  const m = G.mode, fight = m==='combat' || ((m==='clear' || m==='dead') && G.player);
+  $('panel').hidden = m!=='build'; $('mapPanel').hidden = m!=='map';
+  $('hudWave').hidden = !fight; $('coreWrap').hidden = !fight; $('pauseBtn').hidden = !fight; $('aimBtn').hidden = !fight; $('zoomIn').hidden = $('zoomOut').hidden = !fight; $('groups').hidden = !fight;
+  $('hudScale').hidden = m==='title';
+  if (m==='map') syncMapPanel();
+  hudCache = {};
+  if (m==='build' || m==='map') save();
+}
+export function syncMapPanel(){
+  if (!G.map) return;
+  const cur = curNode(), h = G.mapHover, nb = G.broken.size, cargo = Object.values(G.inv).reduce((a,b) => a + b, 0);
+  $('mapTitle').textContent = `Sector ${G.stage}`;
+  const lead = h ? `<b>${NODE[h.type].name}.</b> ${NODE[h.type].desc}${canJump(h) ? ' Click to jump.' : ''}`
+    : exitNode(cur) ? (G.map.done ? 'The gate is open.' : `The ${NODE[cur.type].name.toLowerCase()} blocks the way out.`)
+    : `Pick a lit beacon to jump to. ${G.stage%3===0 ? 'A flagship guards this sector.' : `Flagship in sector ${Math.ceil(G.stage/3)*3}.`}`;
+  $('mapInfo').innerHTML = lead + `<br>Cargo <b>${cargo}</b> block${cargo===1 ? '' : 's'}` + (nb ? `, <b style="color:var(--foe)">${nb} damaged</b>` : '') + '.';
+  let lbl = '';
+  if (exitNode(cur)) lbl = G.map.done ? `Jump to sector ${G.stage+1}` : `Engage ${NODE[cur.type].name.toLowerCase()}`;
+  else if (cur.type==='shop') lbl = 'Open shop';
+  else if (cur.type==='event' && !cur.used) lbl = 'Answer the signal';
+  $('mapGo').hidden = !lbl; $('mapGo').textContent = lbl;
+}
+export let hudCache = {};
+export function setTxt(id, v){ if (hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
+export function syncHud(){
+  const S = G.mode==='combat' ? G.S : scaleOf(G.stage);
+  setTxt('hudStage', `Sector ${G.stage}`);
+  setTxt('hudScale', `Scale ×${S.toFixed(2)}`);
+  setTxt('hudCredits', String(Math.round(G.credits)));
+  const B = G.mode==='combat' && G.boss && G.boss.alive ? G.boss : null;
+  if (hudCache.boss !== !!B){ hudCache.boss = !!B; $('bossWrap').hidden = !B; }
+  if (B){
+    setTxt('bossName', B.flag ? `${B.station ? 'Starbase' : 'Flagship'} · phase ${B.phaseN}` : 'Capital ship');
+    const bw = (100*B.blocks.size/B.n0).toFixed(0)+'%';
+    if (hudCache.bw !== bw){ hudCache.bw = bw; $('bossBar').style.width = bw; }
+  }
+  if (G.mode!=='build' && G.mode!=='map' && G.mode!=='title' && G.player){
+    const alive = G.ships.filter(s => s.alive && s.team==='e' && !s.fodder).length;
+    setTxt('hudWave', `${NODE[G.fight].name} · wave ${G.waveIdx}/${G.waves.length} · ${alive} hostile${alive===1 ? '' : 's'}`);
+    const core = G.player.blocks.get(CORE), pct = core ? Math.max(0, core.hp/core.max) : 0;
+    const w = (pct*100).toFixed(0)+'%';
+    const ew = (Math.max(0, G.player.en/G.player.enMax)*100).toFixed(0)+'%';
+    if (hudCache.en !== ew){ hudCache.en = ew; $('enBar').style.width = ew; }
+    if (hudCache.core !== w){ hudCache.core = w; const bar = $('coreBar'); bar.style.width = w; bar.style.background = pct < .35 ? 'var(--foe)' : ''; }
+  }
+}
+export function showOverlay(title, html, actions, wide=false){
+  $('ovTitle').textContent = title; $('ovText').innerHTML = html;
+  $('ovTitle').closest('.card').classList.toggle('wide', wide);
+  const a = $('ovActions'); a.innerHTML = '';
+  for (const [label, fn, cls] of actions){ const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', fn); a.append(b); }
+  $('overlay').hidden = false; a.firstChild?.focus();
+}
+export function hideOverlay(){ $('overlay').hidden = true; }
+export let toastTimer = 0;
+export function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1600); }
+
+// wiring that runs once at start-up
+export function init(){
+  // shop and hangar buttons inside the overlay text
+  $('ovText').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]'); if (!b || b.disabled) return;
+    const [k, v] = b.dataset.act.split(':');
+    if (ACT[k](v)) return;
+    save(); openShop(G.shopNode);
+  });
+}

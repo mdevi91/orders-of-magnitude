@@ -1,4 +1,5 @@
-// Injected into the game's scope ahead of each test. Tests call these helpers and the game's own functions directly.
+// Runs ahead of each test inside `with (OOM)`: every module export is in scope, so tests call the game's functions directly.
+// Module bindings can't be reassigned from here; change game state through G or the game's own functions.
 const __checks = [], __logs = [];
 const ok = (name, pass, msg='') => { __checks.push({name, pass:!!pass, msg:String(msg)}); };
 const __fail = (name, msg) => ok(name, false, msg);
@@ -7,7 +8,7 @@ const __finish = () => console.log('TESTRESULT ' + JSON.stringify({checks:__chec
 // a clean run: no saves, no hangar upgrades, no tutorial tips
 function fresh(stage=1){
   try { localStorage.clear(); } catch {}
-  tutOff = true; tutQ = []; $('tut').hidden = true;
+  $('tutSkip').click(); // no tutorial tips
   G.meta = {data:0, lv:{}}; newRun();
   if (stage > 1){ G.stage = stage; G.map = genMap(stage); G.node = G.map.nodes[1]; }
 }

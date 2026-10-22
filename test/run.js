@@ -1,10 +1,17 @@
 #!/usr/bin/env node
-// Test runner: builds the game, injects each test/*.test.js into the game's own scope, runs it in headless Chrome
-// and reports the checks it made. Usage: node test/run.js [name ...]   (CHROME=/path/to/chrome to pick a browser)
-const fs = require('fs'), path = require('path'), os = require('os'), { spawnSync } = require('child_process');
+// Test runner: builds the game in test mode (which exposes every module as window.OOM), serves it locally,
+// and runs each test/*.test.js in headless Chrome inside `with (OOM)`, so tests call the game's functions directly.
+// Usage: node test/run.js [name ...]   (CHROME=/path/to/chrome to pick a browser)
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import http from 'node:http';
+import { spawn, spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
-const root = path.join(__dirname, '..');
-const build = spawnSync('bash', ['build.sh', 'src/orders-of-magnitude.html'], { cwd: root, encoding: 'utf8' });
+const here = path.dirname(fileURLToPath(import.meta.url)), root = path.join(here, '..');
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'oom-test-')), dist = path.join(tmp, 'dist');
+const build = spawnSync('npx', ['vite', 'build', '--mode', 'test', '--outDir', dist, '--emptyOutDir', '--logLevel', 'error'], { cwd: root, encoding: 'utf8', shell: true });
 if (build.status !== 0){ console.error(build.stdout + build.stderr); process.exit(1); }
 
 const chrome = [process.env.CHROME,
@@ -13,35 +20,61 @@ const chrome = [process.env.CHROME,
 ].find(p => p && fs.existsSync(p));
 if (!chrome){ console.error('No Chrome found: set CHROME=/path/to/chrome'); process.exit(1); }
 
-const page = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
-const hook = 'requestAnimationFrame(frame);\n})();';
-if (!page.includes(hook)){ console.error('Injection point not found in public/index.html'); process.exit(1); }
-const prelude = fs.readFileSync(path.join(__dirname, 'prelude.js'), 'utf8');
-
+const page = fs.readFileSync(path.join(dist, 'index.html'), 'utf8');
+const prelude = fs.readFileSync(path.join(here, 'prelude.js'), 'utf8');
 const want = process.argv.slice(2);
-const files = fs.readdirSync(__dirname).filter(f => f.endsWith('.test.js') && (!want.length || want.some(w => f.startsWith(w))));
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'oom-test-'));
+const files = fs.readdirSync(here).filter(f => f.endsWith('.test.js') && (!want.length || want.some(w => f.startsWith(w))));
+for (const f of files){
+  const code = fs.readFileSync(path.join(here, f), 'utf8');
+  // a classic script: waits for the game module, then runs prelude + test with every module export in scope
+  const run = `<script>
+function __run(){ with (OOM) {
+${prelude}
+try {
+${code}
+} catch (e) { __fail('uncaught', e.stack); }
+__finish();
+} }
+const __wait = setInterval(() => { if (window.OOM){ clearInterval(__wait); setTimeout(__run, 0); } }, 10);
+</script>`;
+  fs.writeFileSync(path.join(dist, f.replace('.js', '.html')), page.replace('</body>', run + '\n</body>'));
+}
+
+const types = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css' };
+const server = http.createServer((req, res) => {
+  const p = path.join(dist, decodeURIComponent(req.url.split('?')[0]));
+  if (!p.startsWith(dist) || !fs.existsSync(p) || fs.statSync(p).isDirectory()){ res.writeHead(404); res.end(); return; }
+  res.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(res);
+});
+await new Promise(r => server.listen(0, '127.0.0.1', r));
+const port = server.address().port;
+
+const runChrome = (url, profile) => new Promise(resolve => {
+  const c = spawn(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', `--user-data-dir=${profile}`,
+    '--enable-logging=stderr', '--v=0', '--virtual-time-budget=600000', '--dump-dom', url]);
+  let err = ''; c.stderr.on('data', d => err += d); c.stdout.on('data', () => {});
+  const kill = setTimeout(() => c.kill(), 600000);
+  c.on('close', () => { clearTimeout(kill); resolve(err); });
+});
+
 let failed = 0;
 for (const f of files){
-  const code = fs.readFileSync(path.join(__dirname, f), 'utf8');
-  const html = page.replace(hook, `requestAnimationFrame(frame);\n${prelude}\nsetTimeout(() => { try {\n${code}\n} catch (e) { __fail('uncaught', e.stack); } __finish(); }, 0);\n})();`);
-  const file = path.join(tmp, f.replace('.js', '.html'));
-  fs.writeFileSync(file, html);
-  const t0 = Date.now();
-  const r = spawnSync(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', `--user-data-dir=${path.join(tmp, 'profile-' + f)}`,
-    '--enable-logging=stderr', '--v=0', '--virtual-time-budget=600000', '--dump-dom', 'file:///' + file.replace(/\\/g, '/')],
-    { encoding: 'utf8', timeout: 600000, maxBuffer: 1 << 26 });
-  const line = (r.stderr || '').split('\n').find(l => l.includes('TESTRESULT '));
-  const name = f.replace('.test.js', '');
-  if (!line){ failed++; console.log(`✗ ${name}: no result (timed out or crashed)`); continue; }
-  const json = line.slice(line.indexOf('TESTRESULT ') + 11).trim().replace(/", source: .*$/, '');
-  const res = JSON.parse(json);
+  const name = f.replace('.test.js', ''), t0 = Date.now();
+  const err = await runChrome(`http://127.0.0.1:${port}/${f.replace('.js', '.html')}`, path.join(tmp, 'profile-' + name));
+  const line = err.split('\n').find(l => l.includes('TESTRESULT '));
+  if (!line){
+    failed++; console.log(`✗ ${name}: no result (timed out or crashed)`);
+    for (const l of err.split('\n').filter(l => l.includes('CONSOLE')).slice(0, 5)) console.log('    ' + l.slice(0, 300));
+    continue;
+  }
+  const res = JSON.parse(line.slice(line.indexOf('TESTRESULT ') + 11).trim().replace(/", source: .*$/, ''));
   const bad = res.checks.filter(c => !c.pass);
   failed += bad.length;
   console.log(`${bad.length ? '✗' : '✓'} ${name}: ${res.checks.length - bad.length}/${res.checks.length} checks, ${((Date.now()-t0)/1000).toFixed(1)} s`);
   for (const l of res.logs) console.log('    ' + l);
   for (const c of bad) console.log(`    FAIL ${c.name}${c.msg ? ': ' + c.msg : ''}`);
 }
+server.close();
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(failed ? `\n${failed} failing check(s)` : '\nAll tests passed');
 process.exit(failed ? 1 : 0);

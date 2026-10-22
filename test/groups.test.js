@@ -8,13 +8,14 @@ startFight('fight'); G.waves = []; G.ships = [G.player];
 G.player.guns = G.player.guns.filter(g => g.t!=='core');
 dummy(200);
 G.mouse.has = true; G.fireHeld = false; G.aimAuto = false; for (const k in keys) keys[k] = false;
-const shots = []; const real = pBullet; pBullet = (x, ...a) => { shots.push(x < G.player.x ? 'left' : 'right'); return real(x, ...a); };
-sim(4);
+// note which side each new shot leaves from
+const shots = [], seen = new Set();
+const watch = () => { for (const b of G.pb) if (!seen.has(b)){ seen.add(b); shots.push(b.x < G.player.x ? 'left' : 'right'); } };
+sim(4, () => false, watch);
 ok('auto group fires on its own', shots.includes('right'), shots.length + ' shots');
 ok('manual group waits for the player', !shots.includes('left'));
-shots.length = 0; G.fireHeld = true; sim(3);
+shots.length = 0; G.fireHeld = true; sim(3, () => false, watch);
 ok('manual group fires with the player', shots.includes('left'));
-pBullet = real;
 // removing a weapon forgets its group
 G.mode = 'build'; sellAt(-1,-1);
 ok('removed weapon drops its group', !(K(-1,-1) in G.grp));

@@ -1,0 +1,217 @@
+// @ts-nocheck
+import { sfx } from './audio';
+import { EW, pickWeapon, tierOf } from './catalog';
+import { CORE, K, KI, KJ, NB, TAU, clamp, rand } from './grid';
+import { undoStack } from './input';
+import { chooseLoot, inc, lootText } from './loot';
+import { runOver } from './runs';
+import { save } from './save';
+import { genDesign, makeShip } from './ships';
+import { NODE, goOn, nextSector, toMap } from './starmap';
+import { G, scaleOf, spanFor } from './state';
+import { tut } from './tutorial';
+import { designStats, hideOverlay, showOverlay, syncUI, toast } from './ui';
+import { keys } from './update';
+import { H, W } from './view';
+
+// ---------- fights ----------
+export const bossSize = s => Math.round(32*Math.pow(s,1.45));
+export const fodderCap = () => Math.min(3, 1 + Math.floor(G.stage/3));
+// enemy fighters and bombers alive at once
+export const craftCap = () => Math.min(6, 3 + Math.floor(G.stage/3));
+export const shipSize = (s, col) => Math.round((20 + 11*Math.pow(s,1.3))*(1 + .07*col)*rand(.9,1.15));
+// every enemy shot hits a little harder each sector, so fewer guns still keep up
+export const eDmg = () => 1.25 + .3*(G.stage-1);
+// Waves for one fight: few ships, but big and tough ones. Gun caps keep it readable: a few heavy guns per ship instead of a wall of small ones.
+export function planFight(kind, s, col){
+  const waves = [], g = 3 + Math.floor(s/2), ship = (m=1, x={}) => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
+  if (kind==='fight'){
+    // a random encounter: a patrol, a lone cruiser, a carrier, or a pack of light raiders
+    const r = Math.random();
+    if (r < .3){ waves.name = 'Cruiser'; waves.push([ship(2, {guns:g+2})]); }
+    else if (r < .5 && s >= 2){ waves.name = 'Carrier'; waves.push([ship(1.7, {guns:Math.max(1, g-1), bays:1 + (s >= 5 ? 1 : 0)})]); }
+    else if (r < .7){ waves.name = 'Raiders'; waves.push(Array.from({length:2 + (s >= 3 ? 1 : 0) + (Math.random() < s/10 ? 1 : 0)}, () => ship(.6, {guns:2}))); }
+    else { waves.name = 'Patrol'; waves.push([ship(1.3), ...(s >= 2 && Math.random() < .6 ? [ship(.8)] : [])]); }
+    if (col >= 4 && Math.random() < .35) waves.push([ship(1.2)]);
+  } else if (kind==='ambush') waves.push([ship(1.3), ...(s >= 5 ? [ship(.8)] : [])]);
+  else if (kind==='elite') waves.push([{n:Math.round(bossSize(s)*.5), elite:true, guns:g+2, bays:s >= 4 ? 1 : 0}]);
+  else if (kind==='gate'){
+    waves.push([ship(1.3), ...(s >= 4 ? [ship()] : [])]);
+    waves.push([{n:Math.round(bossSize(s)*1.1), boss:true, guns:4 + Math.floor(s/3), bays:s >= 3 ? 1 : 0}]);
+  } else if (kind==='boss') waves.push([{n:Math.min(1300, Math.round(bossSize(s)*1.3)), boss:true, flag:true, guns:4 + Math.floor(s/3), bays:1 + Math.floor(s/3)}]);
+  else if (kind==='station') waves.push([{n:Math.min(1300, Math.round(bossSize(s)*1.8)), boss:true, flag:true, station:true, guns:s >= 6 ? 12 : 8, bays:4}]);
+  return waves;
+}
+// Carrier bays go on the rim, in mirrored pairs.
+export function addBays(d, n){
+  const nbs = k => NB.filter(o => d.has(k+o)).length;
+  for (let c=0; c<n; c++){
+    const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && nbs(k) <= 2);
+    if (!pool.length) return;
+    const k = pool[(Math.random()*pool.length)|0], mk = K(-KI(k), KJ(k));
+    d.set(k,'bay'); if (d.get(mk)==='hull' || d.get(mk)==='armor') d.set(mk,'bay');
+  }
+}
+// Starbase: a hub, four spokes and a ring, grown with fourfold symmetry. Guns, shields and bays sit on the rim, generators deep inside.
+export function genStation(n, stage, guns, bays){
+  const d = new Map([[CORE,'core']]), keys = [CORE];
+  const put = (i,j,t) => { for (const [a,b] of [[i,j],[-j,i],[-i,-j],[j,-i]]){ const k = K(a,b); if (!d.has(k)){ d.set(k,t); keys.push(k); } } };
+  const R = Math.max(5, Math.round(Math.sqrt(n)*.42));
+  for (let i=-1; i<=1; i++) for (let j=-1; j<=1; j++) if (i || j) put(i,j,'armor');
+  for (let r=2; r<=R; r++){ put(0,-r,'armor'); put(1,-r,'hull'); }
+  for (let q=0; q<R*2; q++){ const a = q/(R*8)*TAU; for (const w of [0,1]) put(Math.round(Math.cos(a)*(R-w)), Math.round(Math.sin(a)*(R-w)), w ? 'hull' : 'armor'); }
+  let tries = 0;
+  while (d.size < n && tries++ < n*20){
+    const base = keys[(Math.random()*keys.length)|0], nk = base + NB[(Math.random()*4)|0];
+    if (d.has(nk) || Math.max(Math.abs(KI(nk)), Math.abs(KJ(nk))) > R + 6) continue;
+    put(KI(nk), KJ(nk), Math.random() < .35 ? 'armor' : 'hull');
+  }
+  const nbs = k => NB.filter(o => d.has(k+o)).length;
+  const conv = (t, count, inner) => {
+    for (let c=0; c<count; c++){
+      const pool = [...d.keys()].filter(k => (d.get(k)==='hull' || d.get(k)==='armor') && (inner ? nbs(k)===4 : nbs(k) <= 2));
+      if (!pool.length) return;
+      const k = pool[(Math.random()*pool.length)|0], i = KI(k), j = KJ(k);
+      for (const [a,b] of [[i,j],[-j,i],[-i,-j],[j,-i]]){ const kk = K(a,b); if (d.get(kk)==='hull' || d.get(kk)==='armor') d.set(kk, typeof t==='function' ? t() : t); }
+    }
+  };
+  conv(() => pickWeapon(stage), Math.ceil(guns/4), false);
+  conv('bay', Math.ceil(bays/4), false);
+  if (stage >= 3) conv('shield', 1 + Math.floor(d.size/400), false);
+  if (stage >= 4) conv('gen', 1 + Math.floor(d.size/500), true);
+  if (stage >= 5) conv('pd', 1 + Math.floor(d.size/350), false);
+  return d;
+}
+export function spawnPos(){
+  const p = G.player, m = .08;
+  for (let t=0; t<30; t++){
+    const side = (Math.random()*3)|0;
+    const x = side===0 ? rand(m,1-m)*G.AW : side===1 ? m*G.AW : (1-m)*G.AW;
+    const y = side===0 ? m*G.AH : rand(m,.6)*G.AH;
+    if (Math.hypot(x-p.x, y-p.y) > .4*Math.min(G.AW,G.AH)) return {x,y};
+  }
+  return {x:G.AW/2, y:G.AH*.1};
+}
+export function spawnWave(list){
+  const hpMul = 1.15 + .22*(G.stage-1), tier = tierOf(G.stage);
+  let boss = null;
+  for (const spec of list){
+    const d = spec.station ? genStation(spec.n, tier, spec.guns, spec.bays) : genDesign(spec.n, spec.boss || spec.elite, tier, spec.guns), pos = spawnPos();
+    if (spec.bays && !spec.station) addBays(d, spec.bays);
+    // a starbase has so many blocks that each one is lighter
+    const e = makeShip(d,'e',pos.x,pos.y,hpMul*(spec.elite ? 1.3 : spec.station ? .5 : 1));
+    e.boss = !!spec.boss; e.elite = !!spec.elite; e.flag = !!spec.flag; e.station = !!spec.station; e.n0 = d.size; e.phaseN = 1;
+    if (e.boss) boss = e;
+    e.sc = G.SC; e.ft = 3; e.phase = rand(0,TAU); e.spin = Math.random()<.5 ? 1 : -1;
+    e.orb = rand(0,TAU); e.orbSpd = rand(.12,.35)*(Math.random()<.5 ? 1 : -1);
+    // railgun ships hang back
+    e.pref = (spec.boss ? 360 : e.guns.some(g => g.t==='rail') ? rand(420,520) : rand(220,380))*G.SC + e.r;
+    // close in until the shortest-ranged gun can reach
+    if (e.guns.length) e.pref = Math.min(e.pref, Math.min(...e.guns.map(g => EW[g.t].range))*.75*G.SC + e.r*.5);
+    e.vmax = 200/Math.sqrt(1 + d.size/30); e.turn = 1.6/Math.sqrt(1 + d.size/20);
+    // salvage grows with the square root of size, so big late-game hulls don't flood the run with credits
+    e.value = inc((4 + Math.sqrt(d.size)*2.2)*(spec.flag ? 5 : spec.boss ? 3 : spec.elite ? 2 : 1));
+    e.a = Math.atan2(G.player.x-e.x, -(G.player.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
+    if (e.station){
+      // the starbase holds still above the player (startFight made the arena tall enough)
+      const p = G.player, gap = e.r + p.r + 320*G.SC;
+      G.AW = Math.max(G.AW, e.r*2 + 600*G.SC); G.AH = Math.max(G.AH, e.r*2 + 600*G.SC);
+      e.x = clamp(p.x, e.r + 40, G.AW - e.r - 40); e.y = Math.max(e.r + 40, p.y - gap); e.vmax = 0; e.a = 0; e.c = 1; e.sn = 0;
+    }
+    G.ships.push(e);
+  }
+  if (boss) G.boss = boss;
+  G.banner = {text: G.waves.length > 1 ? `Wave ${G.waveIdx}/${G.waves.length}` : G.waves.name || NODE[G.fight].name,
+    sub: boss ? (boss.station ? 'Enemy starbase' : boss.flag ? 'Enemy flagship' : 'Capital ship inbound') : `${list.length} hostile${list.length>1 ? 's' : ''}`, red:!!boss, t:2.4};
+}
+// Swarm: flights of ships sized like earlier sectors arrive during gate and flagship fights, so a grown hull towers over them.
+export function spawnSwarm(){
+  const p = G.player, s = G.stage;
+  const tier = 1 + Math.floor(Math.random()**2 * (s-1)), tS = Math.pow(scaleOf(tier),.8);
+  const ang = rand(0,TAU), dist = .5*Math.hypot(W,H)/G.zoom + 40;
+  const cx = clamp(p.x + Math.cos(ang)*dist, 0, G.AW), cy = clamp(p.y + Math.sin(ang)*dist, 0, G.AH);
+  const flight = 1;
+  for (let q=0; q<flight; q++) makeFighter(cx + rand(-40,40)*tS, cy + rand(-40,40)*tS, tier);
+}
+export function makeFighter(x, y, tier){
+  const p = G.player, tS = Math.pow(scaleOf(tier),.8);
+  {
+    const d = genDesign(Math.round((7 + 3.2*Math.pow(tier,1.3))*rand(.85,1.1)), false, tierOf(tier), 2);
+    const e = makeShip(d,'e', clamp(x, 0, G.AW), clamp(y, 0, G.AH), 1);
+    e.fodder = true; e.sc = tS;
+    e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);
+    e.pref = p.r + rand(140,260)*tS + e.r;
+    e.vmax = 190/Math.sqrt(1 + d.size/30); e.turn = 2.4;
+    e.value = inc(2 + Math.sqrt(d.size));
+    e.a = Math.atan2(p.x-e.x, -(p.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
+    G.ships.push(e);
+  }
+}
+// The ship that flies: the design without its damaged blocks, and without anything they cut off from the core.
+export function flyDesign(){
+  const d = new Map([...G.design].filter(([k]) => !G.broken.has(k)));
+  const seen = new Set([CORE]), q = [CORE];
+  while (q.length){ const c = q.pop(); for (const nb of NB){ const m = c+nb; if (d.has(m) && !seen.has(m)){ seen.add(m); q.push(m); } } }
+  for (const k of [...d.keys()]) if (!seen.has(k)) d.delete(k);
+  return d;
+}
+export function startFight(kind){
+  undoStack.length = 0; G.fight = kind; G.lost = new Set(); G.boss = null;
+  G.S = scaleOf(G.stage); G.SC = Math.pow(G.S,.8);
+  G.player = makeShip(flyDesign(),'p',0,0,1,G.dirs);
+  // every sector opens on last sector's view and slowly pulls back to a wider one, even if the hull didn't grow
+  if (G.spanStage !== G.stage){ G.span0 = G.spanT ? G.spanT : spanFor(G.player.r, G.S)*.6; G.spanStage = G.stage; }
+  G.spanT = Math.max(spanFor(G.player.r, G.S), G.span0*1.15); G.span = G.span0; G.fit = 0; G.spanAt = 0; G.swarmT = 4;
+  G.AW = Math.max(1300*G.S, G.spanT*3); G.AH = Math.max(900*G.S, G.spanT*2.2);
+  // a starbase needs room above the player
+  if (kind==='station'){ G.AW *= 1.4; G.AH *= 2; }
+  G.player.x = G.AW/2; G.player.y = G.AH*(kind==='station' ? .85 : .72);
+  G.ships = [G.player]; G.pb = []; G.eb = []; G.fx = []; G.beams = [];
+  G.waves = planFight(kind, G.stage, G.node ? G.node.col : 1); G.waveIdx = 0; G.waveGap = 2.5;
+  G.camX = G.player.x; G.camY = G.player.y; G.joy = null; G.aimJoy = null; G.deadT = 0; G.earned = 0; G.paused = false;
+  G.banner = {text:G.waves.name || NODE[kind].name, sub:`Sector ${G.stage}`, t:2};
+  G.mode = 'combat'; hideOverlay(); syncUI(); tut('combat');
+  const st = designStats(), n = st.badT + st.badW + st.badE;
+  if (n) toast(`${n} block${n>1?'s':''} can't fire or thrust: marked ✕ in drydock`);
+}
+// Blocks destroyed in a fight stay damaged until repaired.
+export function keepDamage(){ for (const k of G.lost) if (G.design.has(k)) G.broken.add(k); G.lost = new Set(); if (G.broken.size) tut('damage'); }
+export function fightWon(){
+  const kind = G.fight, dmg = [...G.lost].filter(k => G.design.has(k)).length, cap = kind==='boss' || kind==='station';
+  G.mode = 'clear'; sfx('clear'); keepDamage();
+  const bonus = inc({fight:10, ambush:8, elite:20, gate:30, boss:75, station:80}[kind] + {fight:4, ambush:3, elite:7, gate:10, boss:25, station:28}[kind]*G.stage) + (G.bounty || 0);
+  G.credits += bonus; G.bounty = 0;
+  const nb = {fight:Math.random() < .6 ? 1 : 0, ambush:1, elite:2, gate:2, boss:3, station:4}[kind];
+  if (kind==='elite') G.stats.elites++;
+  if (cap) G.stats.flags++;
+  // the gate opens before the loot pick, so a reload mid-pick doesn't close it again
+  if (kind==='gate' || cap){ G.map.done = true; G.stats.sectors++; }
+  const head = `Salvage <b class="gold">+${G.earned}</b>, bounty <b class="gold">+${bonus}</b>.`;
+  save();
+  if (nb) chooseLoot(nb, kind==='elite' || cap ? 1.6 : 1, 'Victory', head, got => fightResult(kind, cap, head + lootText(got), dmg));
+  else fightResult(kind, cap, head, dmg);
+}
+export function fightResult(kind, cap, text, dmg){
+  text += dmg ? ` <b>${dmg}</b> block${dmg>1?'s':''} damaged: repair in drydock or at a shop.` : '';
+  if (kind==='gate' || cap){
+    if (cap && G.stage >= 9 && !G.stats.won){
+      G.stats.won = true; save();
+      showOverlay('Victory', text + ` The third ${kind==='station' ? 'starbase' : 'flagship'} is down: the run is won. Keep going for more data, or end the run here.`,
+        [['Keep going', nextSector], ['End run', () => runOver('won'), 'ghost']]);
+      return;
+    }
+    const nx = G.stage + 1;
+    showOverlay(kind==='station' ? 'Starbase destroyed' : kind==='boss' ? 'Flagship destroyed' : `Sector ${G.stage} cleared`, text + ` The gate is open. Sector ${nx} is next${nx%3===0 ? ', and a flagship or starbase guards it' : ''}.`,
+      [[`Jump to sector ${nx}`, nextSector], ['Star map', toMap, 'ghost']]);
+  } else showOverlay('Victory', text, [[G.pendingNode ? 'Continue' : 'Star map', goOn]]);
+  save();
+}
+export function playerDied(){ G.mode = 'dead'; runOver('dead'); }
+export function flee(){ keepDamage(); G.pendingNode = null; G.bounty = 0; toast('You jumped away'); toMap(); }
+export function togglePause(){
+  if (G.mode!=='combat') return;
+  G.paused = !G.paused;
+  if (G.paused) showOverlay('Paused', `${NODE[G.fight].name}, wave ${G.waveIdx} of ${G.waves.length}. Fleeing keeps the damage you took and gives no reward.`,
+    [['Resume', togglePause], ['Flee', flee, 'ghost']]);
+  else hideOverlay();
+}
