@@ -184,6 +184,7 @@ details li b{color:var(--paper);font-weight:400}
     <div id="coreWrap" hidden><span class="lbl">Core</span><div class="bar"><i id="coreBar"></i></div><span class="lbl">Energy</span><div class="bar"><i id="enBar"></i></div></div>
     <span class="lbl">Credits</span><b id="hudCredits">0</b>
     <button id="muteBtn" class="tag hudbtn" type="button" aria-label="Sound">♪ on</button>
+    <button id="aimBtn" class="tag hudbtn" type="button" aria-label="Auto-aim" aria-pressed="false" hidden>Auto off</button>
     <button id="pauseBtn" class="tag hudbtn" type="button" aria-label="Pause" hidden>II</button>
   </div>
 </header>
@@ -213,7 +214,7 @@ details li b{color:var(--paper);font-weight:400}
       <li><b>Engines</b> push away from their exhaust, which must be open. Most of your speed comes from the direction your engines face. Off-centre engines also help the ship turn.</li>
       <li><b>Line of fire:</b> guns can't shoot through your own hull, so put them where they can see out. A red ✕ marks a block that can't fire or thrust; a gold mark means a turret is mostly boxed in.</li>
       <li><b>Fly:</b> WASD or arrows. Hold Shift to slow down.</li>
-      <li><b>Aim:</b> your ship turns its nose toward the cursor. Big ships turn slowly; gyros help. Guns fire on their own. <kbd>T</kbd> switches to auto-aim at the nearest ship.</li>
+      <li><b>Aim:</b> your ship turns its nose toward the cursor. Big ships turn slowly; gyros help. Hold the mouse button or <kbd>Space</kbd> to fire. <kbd>T</kbd> or the Auto button switches to auto-aim: the ship targets the nearest enemy and fires on its own. Point defense always fires on its own.</li>
       <li><b>Energy:</b> weapons use energy to fire and shields use it to recharge. The core makes a little; Generators add more and Batteries store it. Both are safe deep inside the hull. When energy runs out, weapons wait. The gold Energy stat means full fire uses more than you make.</li>
       <li><b>Shields</b> each project a bubble that stops enemy shots from every side, protecting blocks up to 2 cells away (3 at Lv2, 4 at Lv3). Overlap them to cover a big hull. If it pops it is down for 5 s, and it recharges after 2.5 s without hits. A red dashed line means a sniper is about to fire.</li>
       <li><b>Touch:</b> left half of the screen is a move stick, right half aims. Without the aim stick the ship aims at the nearest enemy.</li>
@@ -319,7 +320,7 @@ const G = {
   mode:'build', bz:1, bpx:0, bpy:0, mir:1, stage:1, credits:140, design:new Map(), dirs:new Map(), lv:{}, sel:'hull', rot:0, mirror:true,
   ships:[], player:null, pb:[], eb:[], fx:[], beams:[],
   waves:[], waveIdx:0, waveGap:0, time:0, S:1, SC:1, AW:0, AH:0, camX:0, camY:0, zoom:1, span:0, spanT:0, span0:0, spanAt:0, swarmT:0,
-  paused:false, aimAuto:false, mouse:{x:0,y:0,has:false}, tdx:0, tdy:0, touchId:null,
+  paused:false, aimAuto:false, fireHeld:false, mouse:{x:0,y:0,has:false}, tdx:0, tdy:0, touchId:null,
   banner:null, deadT:0, earned:0, shake:0, hover:null, drag:null, lastCell:null, aim:{x:0,y:0},
 };
 [[0,0,'core'],[0,-1,'cannon'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']].forEach(([i,j,t]) => G.design.set(K(i,j),t));
@@ -725,6 +726,8 @@ function update(dt){
     if (best){ ax = best.x; ay = best.y; } else { ax = p.x; ay = p.y - 100; }
   }
   G.aim = {x:ax, y:ay};
+  // desktop fires on click or Space; auto-aim, touch and mouse-less play fire on their own
+  const fire = G.aimAuto || G.fireHeld || keys.Space || !G.mouse.has;
 
   const spend = c => { if (p.en < c) return false; p.en -= c; return true; };
   if (p.alive){
@@ -776,7 +779,7 @@ function update(dt){
     }
   }
 
-  if (p.alive && enemies.length){
+  if (p.alive && enemies.length && fire){
     let tgt = null, td = 1e18;
     for (const e of enemies){ const d = (e.x-ax)**2 + (e.y-ay)**2; if (d < td){ td = d; tgt = e; } }
     // turrets: inside their arc and with a clear line out of the hull
@@ -803,7 +806,7 @@ function update(dt){
   }
   // lasers: continuous beam on whatever is first along their line within range
   if (p.alive) for (const h of p.lasers){
-    h.beam = null; if (!h.lane || !enemies.length) continue;
+    h.beam = null; if (!h.lane || !enemies.length || !fire) continue;
     const L = T.laser.laser, [wx,wy] = wpos(p,h), face = p.a + FA[h.o], dx = Math.cos(face), dy = Math.sin(face);
     const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
@@ -1619,11 +1622,12 @@ cv.addEventListener('pointerdown', e => {
   const x = e.clientX/PX, y = e.clientY/PX, touch = e.pointerType==='touch';
   ptrs.set(e.pointerId, {x, y}); audio();
   if (!touch) G.mouse = {x, y, has:true};
+  if (G.mode==='combat' && !touch && e.button===0) G.fireHeld = true;
   if (G.mode==='combat' && touch){
     // twin-stick: left half moves, right half aims; with no aim stick the ship auto-aims
     if (x < W/2 && !G.joy) G.joy = {id:e.pointerId, x0:x, y0:y, x, y};
     else if (!G.aimJoy) G.aimJoy = {id:e.pointerId, x0:x, y0:y, x, y};
-    G.aimAuto = true;
+    setAuto(true, false);
   }
   if (G.mode==='build'){
     if (e.button===1){ panning = {x, y, bpx:G.bpx, bpy:G.bpy}; e.preventDefault(); return; }
@@ -1667,6 +1671,7 @@ cv.addEventListener('pointermove', e => {
 });
 const endPtr = e => {
   ptrs.delete(e.pointerId);
+  if (e.pointerType!=='touch') G.fireHeld = false;
   if (G.joy && G.joy.id===e.pointerId) G.joy = null;
   if (G.aimJoy && G.aimJoy.id===e.pointerId) G.aimJoy = null;
   if (G.mode==='build'){
@@ -1701,11 +1706,11 @@ addEventListener('keydown', e => {
     if (e.code==='Enter' && !(e.target instanceof HTMLButtonElement)) startStage();
   } else if (G.mode==='combat'){
     if (e.code==='KeyP' || e.code==='Escape') togglePause();
-    if (e.code==='KeyT') G.aimAuto = !G.aimAuto;
+    if (e.code==='KeyT') setAuto(!G.aimAuto);
   }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
-addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (G.mode==='combat' && !G.paused) togglePause(); });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; G.fireHeld = false; if (G.mode==='combat' && !G.paused) togglePause(); });
 
 // ---------- UI ----------
 function buildPalette(){
@@ -1791,7 +1796,7 @@ function syncUI(){
   $('launch').textContent = `Launch stage ${s}`;
   const inBuild = G.mode==='build';
   $('panel').hidden = !inBuild;
-  $('hudWave').hidden = inBuild; $('coreWrap').hidden = inBuild; $('pauseBtn').hidden = inBuild;
+  $('hudWave').hidden = inBuild; $('coreWrap').hidden = inBuild; $('pauseBtn').hidden = inBuild; $('aimBtn').hidden = inBuild;
   hudCache = {};
   if (inBuild) save();
 }
@@ -1889,6 +1894,13 @@ $('zFit').addEventListener('click', () => { G.bz = 1; G.bpx = G.bpy = 0; });
 $('pauseBtn').addEventListener('click', togglePause);
 $('muteBtn').addEventListener('click', () => { audio(); setMute(!muted); });
 setMute(muted);
+// auto-aim: the keyboard/button choice is remembered; touch turns it on without saving
+function setAuto(v, save=true){
+  G.aimAuto = v; if (save) try { localStorage.setItem('oom-auto', v ? '1' : '0'); } catch {}
+  const b = $('aimBtn'); b.textContent = v ? 'Auto on' : 'Auto off'; b.setAttribute('aria-pressed', v);
+}
+$('aimBtn').addEventListener('click', () => setAuto(!G.aimAuto));
+try { setAuto(localStorage.getItem('oom-auto') === '1', false); } catch { setAuto(false, false); }
 function cycleMirror(){ G.mir = (G.mir + 1) % 4; syncUI(); }
 $('mirror').addEventListener('click', cycleMirror);
 $('rot').addEventListener('click', rotate);
