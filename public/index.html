@@ -117,9 +117,11 @@ kbd{font-family:var(--mono);font-size:16px;border:var(--px) solid #34477e;paddin
 #stats dt{color:var(--muted);font-size:17px;text-transform:uppercase;letter-spacing:.06em}
 #stats dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
 #launch{
-  font-family:var(--display);font-size:12px;letter-spacing:.06em;text-transform:uppercase;line-height:1.4;
-  background:var(--gold);color:var(--ink);border:0;padding:12px;cursor:pointer;box-shadow:4px 4px 0 #7a2a20;
+  font-family:var(--display);font-size:15px;letter-spacing:.06em;text-transform:uppercase;line-height:1.4;
+  background:var(--gold);color:var(--ink);border:0;padding:16px 12px;cursor:pointer;box-shadow:4px 4px 0 #7a2a20;
+  position:sticky;bottom:0;z-index:1;text-shadow:1px 1px 0 #fff0c0;
 }
+#launch::before{content:'▶ '}
 #launch:hover{background:#ffd88f}
 #launch:active{transform:translate(4px,4px);box-shadow:none}
 details summary{cursor:pointer;color:var(--line);font-size:17px;letter-spacing:.08em;text-transform:uppercase}
@@ -148,6 +150,10 @@ details li b{color:var(--paper);font-weight:400}
 #hud{background:linear-gradient(to bottom,rgba(46,51,61,.96),rgba(30,34,41,.9));border-bottom:var(--px) solid var(--lo);box-shadow:inset 0 -1px 0 #4a505c;padding-bottom:8px}
 #launch,.ov-actions button:not(.ghost){background:linear-gradient(to bottom,#ffd88f,#e0a040);border:var(--px) solid;border-color:#fff0c0 #7a4a10 #7a4a10 #fff0c0;box-shadow:3px 3px 0 #000}
 #launch:hover{background:linear-gradient(to bottom,#ffe8b0,#f0b050)}
+#launch{animation:launchPulse 1.6s ease-in-out infinite}
+#launch:hover,#launch:focus-visible{animation:none}
+@keyframes launchPulse{0%,100%{box-shadow:3px 3px 0 #000,0 0 0 0 rgba(255,200,90,0)}50%{box-shadow:3px 3px 0 #000,0 0 14px 4px rgba(255,200,90,.65)}}
+@media (prefers-reduced-motion:reduce){#launch{animation:none}}
 .bar i{background:linear-gradient(to bottom,#9fffa0,#2ac83a)}
 #enBar{background:linear-gradient(to bottom,#fff0a0,#e0a020)}
 #crt{background:repeating-linear-gradient(to bottom,rgba(0,0,0,.18) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 65%,rgba(0,0,0,.5) 100%)}
@@ -176,7 +182,7 @@ details li b{color:var(--paper);font-weight:400}
   .bar{width:70px}
   #selDesc{min-height:0;font-size:16px}
   .upg,.rot{min-height:36px}
-  #launch{padding:10px}
+  #launch{padding:12px 10px;font-size:13px}
   #hudScale{display:none}
 }
 </style>
