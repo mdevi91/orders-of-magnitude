@@ -47,7 +47,7 @@ export interface EnemyGunDef {
   unlock: number; w: number; range: number; cd: number; spd: number; dmg: number; r: number; kind: BulletKind; spread?: number;
   burst?: number; gap?: number; fuse?: number; blast?: number; life?: number; aim?: number;
 }
-export interface PartDef { len: number; w?: number; body: BlockType }
+export interface PartDef { len: number; w?: number; cells?: [number, number][]; body: BlockType }
 export interface CraftDef {
   design: [number, number, Cell][]; hp: number; spd: number; agi: number; turn: number; orbit: number; over: number; orbSpd: number;
   range: number; sortie: number; rearm: number; rebuild: number; sfx: string; gun: GunDef;

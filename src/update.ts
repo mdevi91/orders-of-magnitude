@@ -361,14 +361,9 @@ export function update(dt: number){
   // zoom-out animation: ease in and out over 4 s
   if (G.spanAt < 1){ G.spanAt = Math.min(1, G.spanAt + dt/4); const k = G.spanAt*G.spanAt*(3 - 2*G.spanAt); G.span = G.span0 + (G.spanT - G.span0)*k; }
 
-  // camera: frame the player and every live enemy, never tighter than the stage's base view
-  let x0 = p.x - p.r, x1 = p.x + p.r, y0 = p.y - p.r, y1 = p.y + p.r;
-  for (const e of enemies) if (e.alive){ x0 = Math.min(x0, e.x - e.r); x1 = Math.max(x1, e.x + e.r); y0 = Math.min(y0, e.y - e.r); y1 = Math.max(y1, e.y + e.r); }
-  const m = Math.min(W,H), need = Math.max(G.span, 1.6*Math.max((x1-x0)*m/W, (y1-y0)*m/H));
-  G.fit = G.fit || G.span;
-  G.fit += (need - G.fit)*Math.min(1, dt*(need > G.fit ? 3 : 1));
-  const tx = (x0+x1)/2, ty = (y0+y1)/2;
-  G.camX += (tx - G.camX)*Math.min(1,dt*4); G.camY += (ty - G.camY)*Math.min(1,dt*4);
+  // camera: follows the player at the stage's base view; off-screen hostiles get edge arrows
+  G.fit = G.span;
+  G.camX = p.x; G.camY = p.y;
 
   // at gates and flagships a swarm keeps coming between and during waves; it never holds up a win
   if (p.alive && (G.fight==='gate' || G.fight==='boss' || G.fight==='station') && G.waveIdx > 0){

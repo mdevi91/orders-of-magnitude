@@ -9,8 +9,10 @@ export const BLOCKS = {
   core:   {name:'Core', cost:0, hp:80, mass:3, thrust:4, torque:12, gun:{range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI}, desc:'Your heart. Lose it and the stage is lost. Gives a little thrust in every direction.'},
   hull:   {name:'Hull', key:'1', unlock:1, cost:4, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
   armor:  {name:'Armor', key:'2', unlock:1, cost:10, hp:70, mass:3, desc:'Three times the toughness of hull. Heavy.'},
-  cannon: {name:'Cannon', key:'3', unlock:1, cost:33, hp:20, mass:1.5, rot:true, gun:{range:360, cd:.5, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 18 damage per second. Covers 50° either side of its facing.'},
-  gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{range:220, cd:.15, en:1, spd:760, dmg:3.6, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
+  cannon: {name:'Cannon', key:'3', unlock:1, cost:33, hp:20, mass:1.5, rot:true, gun:{range:324, cd:.435, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 21 damage per second. Covers 50° either side of its facing.'},
+  bigcannon:{name:'Big cannon', key:'k', unlock:5, cost:120, hp:30, mass:3, rot:true, gun:{range:480, cd:1.3, en:9, spd:400, dmg:32, spread:.015, r:4.2, arc:.7, fx:'oval'}, desc:'Inverted T: a 3-wide base with a 2-cell nose ahead of it. Turret firing huge slugs, about 25 damage per second, from the tip of its nose. Covers 40° either side of its facing.'},
+  hgatling:{name:'Heavy gatling', key:'u', unlock:4, cost:95, hp:22, mass:2.5, rot:true, gun:{range:280, cd:.1, en:1.1, spd:700, dmg:3.8, spread:.035, r:2, arc:1.05, fx:'line'}, desc:'2 blocks long. Turret with a hammering tracer stream, 38 damage per second. Covers 60° either side of its facing.'},
+  gatling:{name:'Gatling', key:'4', unlock:2, cost:51, hp:16, mass:1.5, rot:true, gun:{range:253, cd:.15, en:1, spd:760, dmg:3.6, spread:.03, r:1.8, arc:1.25, fx:'line'}, desc:'Turret. Tight tracer stream, 24 damage per second. Covers 70° either side of its facing.'},
   missile:{name:'Missile', key:'5', unlock:3, cost:72, hp:16, mass:2, gun:{range:1100, cd:2.9, en:8, spd:230, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
   mirv:   {name:'MIRV', key:'v', unlock:8, cost:180, hp:18, mass:2.5, gun:{range:1000, cd:7, en:22, spd:190, dmg:7, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:3}, desc:'2×2 launcher. A slow carrier missile that splits into 3 homing warheads near its target, each with its own blast. Enemy point defense can shoot them down.'},
   flak:   {name:'Flak', key:'f', unlock:4, cost:45, hp:18, mass:1.5, rot:true, gun:{range:460, cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', fuse:22, blast:26, nofall:true}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
@@ -34,14 +36,24 @@ export const BLOCKS = {
   laser_b:{name:'Laser', cost:0, hp:24, mass:1.5, rot:true},
   fbay_b: {name:'Fighter bay', cost:0, hp:20, mass:1.5, rot:true},
   bbay_b: {name:'Bomber bay', cost:0, hp:24, mass:2, rot:true},
+  bigcannon_b:{name:'Big cannon', cost:0, hp:30, mass:2.5, rot:true},
+  hgatling_b:{name:'Heavy gatling', cost:0, hp:22, mass:2, rot:true},
   mirv_b: {name:'MIRV', cost:0, hp:18, mass:2.5},
 } satisfies Record<string, BlockDef>;
 export const T: Record<BlockType, BlockDef> = BLOCKS;
 /** The catalogue entry for a cell, if the player can build it (enemy-only cells such as carrier bays have none). */
 export const def = (t: Cell): BlockDef | undefined => T[t as BlockType];
-// multi-cell parts: len cells trailing behind the head along its facing, w columns wide extending to the head's starboard
-export const PARTS: Partial<Record<Cell, PartDef>> = {rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}};
-export const HEAD_OF: Partial<Record<Cell, BlockType>> = {rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv'};
+// multi-cell parts: len cells trailing behind the head along its facing, w columns wide extending to the head's starboard,
+// or an explicit shape: cells as [cells behind the head, cells to its starboard]
+export const PARTS: Partial<Record<Cell, PartDef>> = {bigcannon:{len:3, cells:[[1,0],[2,0],[2,-1],[2,1]], body:'bigcannon_b'}, hgatling:{len:2, body:'hgatling_b'}, rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}};
+export const HEAD_OF: Partial<Record<Cell, BlockType>> = {bigcannon_b:'bigcannon', hgatling_b:'hgatling', rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv'};
+/** Every cell of a part as [behind, starboard] from its head, the head first. */
+export const partOffsets = (P: PartDef): [number, number][] => {
+  if (P.cells) return [[0,0], ...P.cells];
+  const out: [number, number][] = [];
+  for (let m=0; m<(P.w||1); m++) for (let n=0; n<P.len; n++) out.push([n,m]);
+  return out;
+};
 export const isPart = (t: Cell | undefined) => !!(t && (PARTS[t] || HEAD_OF[t]));
 export const BEAM = (t: Cell) => t==='rail' || t==='laser';
 // Hangar craft flown out of the bays. hp scales the craft's blocks; it circles its target at target radius*over + orbit.
@@ -73,9 +85,9 @@ export function pickWeapon(stage: number): EnemyGun {
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL: BlockType[] = ['hull','armor','cannon','gatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','gen','battery','sell'];
+export const PAL: BlockType[] = ['hull','armor','cannon','bigcannon','gatling','hgatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','gen','battery','sell'];
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
-  p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', gatling:'#a8ecff', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
+  p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
      fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', tesla:'#c8b0ff', torpedo:'#ffe08a', mine:'#ffb27a'},
   e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
@@ -92,7 +104,7 @@ export const tierOf = (s: number) => Math.floor(s*1.5 + 1);
 export const MAXLV = 5;
 // Weapon groups, Starsector style: every weapon on the ship (keyed by its head cell) sits in one of five groups, starting in its type's default;
 // a group on auto fires on its own at the nearest hostile.
-export const WGRP: Partial<Record<Cell, number>> = {cannon:1, gatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4};
+export const WGRP: Partial<Record<Cell, number>> = {cannon:1, bigcannon:1, gatling:1, hgatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4};
 export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
 export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t];
 export const grpOf = (k: Key, t: Cell) => G.grp[k] || WGRP[t] || 1;
@@ -102,7 +114,7 @@ export const LV = (t: Cell) => 1 + .35*(lvOf(t)-1);
 export const priceMul = () => (1 + .08*(G.stage-1))*(1 - .08*metaLv('trade'));
 export const upCost = (t: BlockType) => Math.round(Math.max(30, T[t].cost*3)*lvOf(t)*priceMul());
 // fixing one destroyed cell; multi-cell parts spread their price over their cells
-export const repCost = (t: BlockType) => { const h = HEAD_OF[t] || t, P = PARTS[h]; return Math.max(1, Math.ceil(T[h].cost*.3/(P ? P.len*(P.w||1) : 1))); };
+export const repCost = (t: BlockType) => { const h = HEAD_OF[t] || t, P = PARTS[h]; return Math.max(1, Math.ceil(T[h].cost*.3/(P ? partOffsets(P).length : 1))); };
 // shield bubble radius: covers blocks up to 1 + level cells away (2 at Lv1, 4 at Lv3)
 export const shRad = () => (1 + Math.min(4, lvOf('shield')) + .5)*BS;
 

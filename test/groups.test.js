@@ -7,7 +7,7 @@ ok('two cannons, two groups', grpOf(K(-1,-1),'cannon') === 1 && grpOf(K(1,-1),'c
 startFight('fight'); G.waves = []; G.ships = [G.player];
 G.player.guns = G.player.guns.filter(g => g.t!=='core');
 dummy(200);
-G.mouse.has = true; G.fireHeld = false; G.aimAuto = false; for (const k in keys) keys[k] = false;
+G.mouse.has = true; G.mouse.x = W/2; G.mouse.y = 0; G.fireHeld = false; G.aimAuto = false; for (const k in keys) keys[k] = false;
 // note which side each new shot leaves from
 const shots = [], seen = new Set();
 const watch = () => { for (const b of G.pb) if (!seen.has(b)){ seen.add(b); shots.push(b.x < G.player.x ? 'left' : 'right'); } };

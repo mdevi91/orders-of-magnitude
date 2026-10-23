@@ -59,6 +59,18 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill(); X.globalAlpha = 1; break;
     case 'cannon': case 'gun':
       barrel(X,x,y,ca,sa,7,2.4,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
+    case 'bigcannon':
+      barrel(X,x,y,ca,sa,9,3.6,gun); orb(X,x,y,4, [gun[2],gun[1],gun[0]]);
+      X.fillStyle = gun[2]; X.fillRect(x-.8,y-.8,1.6,1.6); break;
+    case 'bigcannon_b':
+      X.fillStyle = '#20242c'; X.fillRect(x-4,y-4,8,8); X.fillStyle = '#5a6270'; X.fillRect(x-4,y-4,8,1.2); X.fillRect(x-4,y+2.8,8,1.2);
+      X.fillStyle = '#a8ecff'; X.fillRect(x-.6,y-2.4,1.2,4.8); break;
+    case 'hgatling':
+      for (const q of [-1.8,-.6,.6,1.8]) barrel(X,x-sa*q,y+ca*q,ca,sa,7.4,1.1,gun);
+      orb(X,x,y,3.2, [gun[2],'#5a6270',gun[1]]); break;
+    case 'hgatling_b':
+      X.fillStyle = '#20242c'; X.fillRect(x-3.6,y-4,7.2,8); X.fillStyle = '#d8b04a'; for (let q=-3; q<4; q+=1.5) X.fillRect(x-2.6,y+q-.4,5.2,.8);
+      break;
     case 'scatter':
       for (const q of [-1,0,1]) barrel(X,x-sa*q*1.6,y+ca*q*1.6,Math.cos(ang+q*.18),Math.sin(ang+q*.18),5.4,1.3,gun);
       orb(X,x,y,2.8, [gun[2],'#6a7280',gun[0]]); break;

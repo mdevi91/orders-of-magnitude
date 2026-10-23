@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { HEAD_OF, PARTS, PLATE, T, def, isPart, repCost } from './catalog';
+import { HEAD_OF, PARTS, PLATE, T, def, isPart, partOffsets, repCost } from './catalog';
 import { layoutBuild } from './draw';
 import { CORE, FACE, K, NB, flipO, mirrorO } from './grid';
 import { assignAt } from './groups';
@@ -20,12 +20,12 @@ export function mirrorSpots(i: number, j: number, o: Facing): Spot[] {
   if (m===3) out.push([-i,-j,flipO(mirrorO(o))]);
   const seen = new Set<string>(); return out.filter(([a,b]) => { const k = a+','+b; if (seen.has(k)) return false; seen.add(k); return true; });
 }
-// Cells a placement covers: the clicked cell plus, for multi-cell parts, body cells trailing behind the facing (and to starboard if wide).
+// Cells a placement covers: the clicked cell plus, for multi-cell parts, body cells trailing behind the facing (and to starboard if wide, or in the part's own shape).
 export function cellsFor<C extends Cell>(i: number, j: number, t: C, o: Facing){
   const out: [number, number, C | BlockType][] = [[i,j,t]], P = PARTS[t];
   if (P){
     const [fx,fy] = FACE[o], [sx,sy] = FACE[(o+2)%8];
-    for (let m=0; m<(P.w||1); m++) for (let n=0; n<P.len; n++) if (n || m) out.push([i-fx*n+sx*m, j-fy*n+sy*m, P.body]);
+    for (const [n,m] of partOffsets(P)) if (n || m) out.push([i-fx*n+sx*m, j-fy*n+sy*m, P.body]);
   }
   return out;
 }
@@ -77,7 +77,7 @@ export function headOf(i: number, j: number): [number, number] {
   const k = K(i,j), t = G.design.get(k), ht = t && HEAD_OF[t];
   if (!ht) return [i,j];
   const o = G.dirs.get(k)||0, [fx,fy] = FACE[o], [sx,sy] = FACE[(o+2)%8], P = PARTS[ht]!;
-  for (let m=0; m<(P.w||1); m++) for (let n=0; n<P.len; n++){
+  for (const [n,m] of partOffsets(P)){
     const a = i+fx*n-sx*m, b = j+fy*n-sy*m, hk = K(a,b);
     if (G.design.get(hk)===ht && (G.dirs.get(hk)||0)===o) return [a,b];
   }

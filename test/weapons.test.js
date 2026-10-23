@@ -1,5 +1,5 @@
 // Every weapon hits a target inside its range and holds fire at one beyond it; shots fade with distance.
-const W = ['cannon','gatling','scatter','flak','ion','missile','mirv','torpedo','mine','laser','rail','tesla'];
+const W = ['cannon','bigcannon','gatling','hgatling','scatter','flak','ion','missile','mirv','torpedo','mine','laser','rail','tesla'];
 function armed(t){
   // the weapon straight ahead of the core (multi-cell parts trail back to it), two generators and a battery for energy
   const len = PARTS[t] ? PARTS[t].len : 1, d = new Map([[CORE,'core'],[K(-1,0),'gen'],[K(1,0),'gen'],[K(0,1),'battery']]);
@@ -34,4 +34,13 @@ for (const t of W){
   const e = dummy(t==='mine' ? 70 : R*.6 + 25);
   sim(8);
   ok(`${t} hits on auto fire`, hpLost(e) > 0, `damage ${Math.round(hpLost(e))}`);
+}
+// the big cannon is an inverted T: nose ahead, a 3-wide base at the back; every body cell finds its head
+fresh();
+{
+  const cells = cellsFor(0,-3,'bigcannon',0).map(([i,j]) => i+','+j).sort().join(' ');
+  ok('big cannon footprint', cells === '-1,-1 0,-1 0,-2 0,-3 1,-1', cells);
+  G.design = new Map([[CORE,'core']]); G.dirs = new Map();
+  for (const [i,j,ct] of cellsFor(0,-3,'bigcannon',0)){ G.design.set(K(i,j), ct); G.dirs.set(K(i,j), 0); }
+  ok('big cannon cells find their head', [[-1,-1],[1,-1],[0,-1],[0,-2]].every(([i,j]) => headOf(i,j).join()==='0,-3'));
 }
