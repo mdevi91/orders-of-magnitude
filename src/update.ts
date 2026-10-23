@@ -14,6 +14,11 @@ import { H, W } from './view';
 /** Keys held down, by KeyboardEvent.code. */
 export const keys: Record<string, boolean> = {};
 export const JOY_R = 26;
+// Auto fire picks a drifting spot somewhere on the target's hull (and a little past its edge further out), not its centre.
+export function wobble(e: Ship, d: number): [number, number] {
+  const w = e.wob ??= Math.random()*99, amp = e.r*1.1 + d*.03;
+  return [Math.sin(G.time*1.7 + w)*Math.cos(G.time*.6 + w*.4)*amp, Math.sin(G.time*2.3 + w*1.3)*Math.cos(G.time*.8 + w*.9)*amp];
+}
 export function update(dt: number){
   G.time += dt;
   const p = G.player!, SC = G.SC;
@@ -30,13 +35,13 @@ export function update(dt: number){
   {
     let best: Ship | null = null, bd = 1e18;
     for (const e of enemies){ const d = (e.x-p.x)**2 + (e.y-p.y)**2; if (d < bd){ bd = d; best = e; } }
-    // small lead on the target's movement plus a slow wobble, so auto fire is good but not perfect
+    // a loose lead on the target's movement plus a wide wobble, so auto fire is rough and misses a lot
     if (best){
-      const w = best.wob ??= Math.random()*99, d = Math.sqrt(bd), amp = best.r*.9 + d*.06;
+      const d = Math.sqrt(bd), [ox,oy] = wobble(best, d);
       // lead drifts between under- and over-leading
-      const t = d/(550*SC)*(.4 + .4*Math.sin(G.time*.9 + w*.7));
-      px = best.x + best.vx*t + Math.sin(G.time*1.7 + w)*amp;
-      py = best.y + best.vy*t + Math.sin(G.time*2.3 + w*1.3)*amp;
+      const t = d/(550*SC)*(.3 + .6*Math.sin(G.time*.9 + best.wob!*.7));
+      px = best.x + best.vx*t + ox;
+      py = best.y + best.vy*t + oy;
     } else { px = p.x; py = p.y - 100; }
   }
   if (ax === undefined){ ax = px; ay = py; }
@@ -124,8 +129,8 @@ export function update(dt: number){
       const score = d + (e.craft && !fast ? 600 : 0); if (score < bd){ bd = score; best = e; }
     }
     if (!best) return null;
-    const b: Ship = best, t = spd ? Math.hypot(b.x-wx, b.y-wy)/spd*rand(.7,1) : 0;
-    return [b, b.x + b.vx*t, b.y + b.vy*t];
+    const b: Ship = best, d = Math.hypot(b.x-wx, b.y-wy), t = spd ? d/spd*rand(.2,1.3) : 0, [ox,oy] = wobble(b, d);
+    return [b, b.x + b.vx*t + ox, b.y + b.vy*t + oy];
   };
   if (p.alive && enemies.length){
     // turrets: inside their arc and with a clear line out of the hull
