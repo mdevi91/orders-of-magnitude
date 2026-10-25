@@ -194,32 +194,55 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     if (L >= MAXLV){ X.globalAlpha = .7; X.fillRect(bx-5,by-5,10,.8); X.globalAlpha = 1; }
   }
 }
-// Hangar craft (fighters and bombers, on either side) are drawn as ship sprites, not block grids; their blocks still
-// take the hits, so they flash when struck and darken as they are worn down. The nose points to local -y.
-const CRAFT_SHAPE: Record<CraftKind, number[]> = {
-  fbay:[0,-13, 3,-4, 13,6, 12,9, 4,6, 3,11, -3,11, -4,6, -12,9, -13,6, -3,-4],
-  bbay:[0,-12, 8,-6, 24,4, 24,8, 12,8, 8,12, -8,12, -12,8, -24,8, -24,4, -8,-6],
+// Hangar craft (fighters and bombers, on either side) are tiny pixel-art sprites, not block grids; their single block still
+// takes the hits, so they flash when struck and darken as they wear. The nose points to local -y; one sprite pixel is one world unit.
+// o outline, h hull, d shade, c cockpit glass, e engine
+const CRAFT_PIX: Record<CraftKind, string[]> = {
+  fbay:[
+    '...o...',
+    '..oho..',
+    '..ocho.',
+    '.ohhho.',
+    'ohdhdho',
+    'od.h.do',
+    'o.e.e.o',
+  ],
+  bbay:[
+    '....ooo....',
+    '...ohcho...',
+    '.oodhhhdoo.',
+    'ohhhhhhhhho',
+    'ohdhhdhhdho',
+    '.o.e...e.o.',
+  ],
 };
+const craftSprites = new Map<string, HTMLCanvasElement>();
+function craftSprite(k: CraftKind, foe: boolean, mode: 'n' | 'hit' | 'dark', flame: number){
+  const key = `${k}${foe}${mode}${flame}`;
+  let c = craftSprites.get(key); if (c) return c;
+  const P = CRAFT_PIX[k], w = P[0].length, h = P.length;
+  c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d')!;
+  const pal: Record<string, string> = foe
+    ? {o:'#5a1008', h:'#ff7a66', d:'#a83a2e', c:'#ffd6cc', e:flame ? '#fff0c0' : '#ffb27a'}
+    : {o:'#0a1830', h:'#bcd0f5', d:'#5a78b8', c:'#7fe8ff', e:flame ? '#fff0c0' : '#ffb27a'};
+  for (let y=0; y<h; y++) for (let x=0; x<w; x++){
+    const ch = P[y][x]; if (ch === '.') continue;
+    g.fillStyle = mode==='hit' && ch !== 'o' ? '#ffffff' : mode==='dark' ? '#000000' : pal[ch];
+    g.fillRect(x, y, 1, 1);
+  }
+  craftSprites.set(key, c); return c;
+}
 function drawCraft(s: Ship){
-  const k = s.kind!, P = CRAFT_SHAPE[k], foe = s.team==='e', z = G.zoom, sc = k==='fbay' ? .42 : .3;
-  ctx.scale(sc, sc); // fighters are about one block across, bombers a little wider
+  const k = s.kind!, foe = s.team==='e';
   let hp = 0, max = 0, hit = false;
   for (const b of s.blocks.values()){ hp += b.hp; max += b.max; if (G.time - b.hit < .06) hit = true; }
-  const path = () => { ctx.beginPath(); ctx.moveTo(P[0], P[1]); for (let i=2; i<P.length; i+=2) ctx.lineTo(P[i], P[i+1]); ctx.closePath(); };
-  const hull = foe ? ['#ff7a66','#a83a2e'] : ['#bcd0f5','#5a78b8'], glass = foe ? '#ffd6cc' : '#7fe8ff', eng = k==='fbay' ? [[0, 11]] : [[-7, 12], [7, 12]];
-  // engine flames, flickering
-  for (const [ex, ey] of eng){ const l = 4 + 3*Math.random(); ctx.fillStyle = '#ffb27a'; ctx.fillRect(ex-1.5, ey, 3, l); ctx.fillStyle = '#fff0c0'; ctx.fillRect(ex-.7, ey, 1.4, l*.6); }
-  // outline for contrast, the hull, a darker underside panel, then the cockpit glass
-  ctx.lineWidth = 2/(z*sc); ctx.strokeStyle = foe ? (s.boss || s.elite ? '#ffd04a' : '#ff5a3a') : '#0a1830'; path(); ctx.stroke();
-  ctx.fillStyle = hit ? '#ffffff' : hull[0]; path(); ctx.fill();
-  if (!hit){
-    ctx.save(); path(); ctx.clip(); ctx.fillStyle = hull[1]; ctx.fillRect(-30, 2, 60, 20);
-    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-.6, -12, 1.2, 22); ctx.restore();
-    ctx.fillStyle = glass; ctx.beginPath(); ctx.ellipse(0, k==='fbay' ? -4 : -5, k==='fbay' ? 1.8 : 3, k==='fbay' ? 3.4 : 2.4, 0, 0, TAU); ctx.fill();
-    if (k==='bbay'){ ctx.fillStyle = '#20242c'; ctx.fillRect(-4, 3, 8, 4); }
-    // wear: darker as the blocks lose hit points
-    const wear = 1 - hp/Math.max(1, max); if (wear > .15){ ctx.globalAlpha = wear*.6; ctx.fillStyle = '#000000'; path(); ctx.fill(); ctx.globalAlpha = 1; }
-  }
+  const spr = craftSprite(k, foe, hit ? 'hit' : 'n', ((G.time*14)|0) & 1), w = spr.width, h = spr.height;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(spr, -w/2, -h/2, w, h);
+  // wear: darker as the block loses hit points
+  const wear = 1 - hp/Math.max(1, max);
+  if (!hit && wear > .15){ ctx.globalAlpha = wear*.55; ctx.drawImage(craftSprite(k, foe, 'dark', 0), -w/2, -h/2, w, h); ctx.globalAlpha = 1; }
 }
 export function drawShip(s: Ship){
   const z = G.zoom, p = G.player!, X0 = (s.x-G.camX)*z + W/2 + (G.camOX||0), Y0 = (s.y-G.camY)*z + H/2 + (G.camOY||0);
