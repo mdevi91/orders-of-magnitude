@@ -120,7 +120,7 @@ export function spawnWave(list: Wave){
       G.AW = Math.max(G.AW, e.r*2 + 600*G.SC); G.AH = Math.max(G.AH, e.r*2 + 600*G.SC);
       e.x = clamp(p.x, e.r + 40, G.AW - e.r - 40); e.y = Math.max(e.r + 40, p.y - gap); e.vmax = 0; e.a = 0; e.c = 1; e.sn = 0;
     }
-    G.ships.push(e);
+    warpIn(e); G.ships.push(e);
   }
   if (boss) G.boss = boss;
   const B = boss as Ship | null;
@@ -147,8 +147,20 @@ export function makeFighter(x: number, y: number, tier: number){
     e.vmax = 190/Math.sqrt(1 + d.size/30); e.turn = 2.4;
     e.value = inc(2 + Math.sqrt(d.size));
     e.a = Math.atan2(p.x-e.x, -(p.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
-    G.ships.push(e);
+    warpIn(e); G.ships.push(e);
   }
+}
+// Enemies arrive out of a space jump: they streak in from far away along the line past the player, stretched and flickering,
+// and drop out with a flash. Until then they can't be hit and don't act.
+export const WARP = .7;
+export function warpIn(e: Ship){
+  const p = G.player!, a = Math.atan2(e.y-p.y, e.x-p.x);
+  // drop out of the jump where the player can see it: on the same bearing, but inside the view
+  if (!e.station){
+    const d = Math.min(Math.hypot(e.x-p.x, e.y-p.y), Math.max(e.r + p.r + 60*G.SC, G.span*G.camMul*.4));
+    e.x = clamp(p.x + Math.cos(a)*d, e.r, G.AW - e.r); e.y = clamp(p.y + Math.sin(a)*d, e.r, G.AH - e.r);
+  }
+  e.warp = WARP + rand(0,.5); e.warpA = a + rand(-.4,.4);
 }
 // The ship that flies: the design without its damaged blocks, and without anything they cut off from the core.
 export function flyDesign(){

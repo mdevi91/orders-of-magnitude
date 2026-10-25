@@ -108,6 +108,8 @@ export interface Ship {
   kind: CraftKind | null; bay: Block | null; sortie: number; aimA: number; cd: number; pick: number;
   /** shared life pool: every block adds to it, damage to any block takes from it, and the ship explodes at 0 */
   life: number; lifeMax: number;
+  /** arriving from a space jump: seconds left in the jump, and the direction it comes in from */
+  warp?: number; warpA?: number;
 }
 
 export interface Bullet {

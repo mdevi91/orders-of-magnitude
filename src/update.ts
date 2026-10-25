@@ -28,7 +28,15 @@ export function update(dt: number){
   G.time += dt;
   const p = G.player!, SC = G.SC;
   for (const s of G.ships){ s.c = Math.cos(s.a); s.sn = Math.sin(s.a); }
-  const enemies = G.ships.filter(s => s.alive && s.team==='e'), allies = G.ships.filter(s => s.alive && s.team==='a');
+  // ships still in their jump in can't be hit and don't act; they drop out with a flash
+  for (const s of G.ships) if (s.warp && s.warp > 0 && (s.warp -= dt) <= 0){
+    s.warp = 0; sfx('launch', .8);
+    G.fx.push({k:'ring', x:s.x, y:s.y, r:s.r*2.2 + 30*SC, life:.5, max:.5, col:'#c8e8ff'});
+    boomAt(s.x, s.y, s.r*.9 + 8*SC, .18);
+    sparks(s.x, s.y, s.warpA! + Math.PI, 14, 420*SC, ['#ffffff','#a8ecff','#c8b0ff']);
+  }
+  const arriving = G.ships.some(s => s.alive && s.team==='e' && !s.fodder && (s.warp || 0) > 0);
+  const enemies = G.ships.filter(s => s.alive && s.team==='e' && !((s.warp || 0) > 0)), allies = G.ships.filter(s => s.alive && s.team==='a');
 
   // aim
   let ax: number | undefined, ay = 0;
@@ -384,7 +392,7 @@ export function update(dt: number){
 
   // waves
   if (!p.alive){ G.deadT -= dt; if (G.deadT <= 0) playerDied(); }
-  else if (!enemies.some(e => e.alive && !e.fodder)){
+  else if (!arriving && !enemies.some(e => e.alive && !e.fodder)){
     G.waveGap -= dt;
     if (G.waveGap <= 0){
       if (G.waveIdx < G.waves.length){ G.waveIdx++; spawnWave(G.waves[G.waveIdx-1]); G.waveGap = 1.6; }

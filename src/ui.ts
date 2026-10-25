@@ -1,6 +1,6 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, CRAFT, HM, LV, PAL, PARTS, PLATE, T, canBuyHere, isCraft, lvOf, outfitPrice, owned } from './catalog';
+import { BEAM, CRAFT, HM, LV, MAXLV, PAL, PARTS, PLATE, RARITY, T, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
 import { aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
@@ -16,10 +16,20 @@ import type { BlockType } from './types';
 import { $ } from './view';
 
 // ---------- UI ----------
+// The parts palette, in groups; a group's heading hides while none of its blocks are available.
+const GROUPS = [['Structure', (t: BlockType) => t==='sell' || PLATE(t)], ['Weapons', (t: BlockType) => isWeapon(t)], ['Hangars', (t: BlockType) => isCraft(t)], ['Systems', () => true]] as const;
+const groupOf = (t: BlockType) => GROUPS.findIndex(([,f]) => f(t));
 export function buildPalette(){
-  const el = $('palette');
+  const root = $('palette');
+  GROUPS.forEach(([name], n) => {
+    const h = document.createElement('h3'); h.className = 'palh'; h.id = 'palh-'+n; h.textContent = name;
+    const g = document.createElement('div'); g.className = 'palg'; g.id = 'palg-'+n;
+    root.append(h, g);
+  });
   for (const t of PAL){
+    const el = $('palg-'+groupOf(t));
     const b = document.createElement('button'); b.type = 'button'; b.className = 'pal'; b.id = 'pal-'+t; b.title = T[t].desc || '';
+    if (t!=='sell' && !PLATE(t)) b.style.setProperty('--rc', RARITY[rarOf(t)].col);
     const ic = document.createElement('canvas'); ic.width = ic.height = 14; ic.id = 'ic-'+t;
     const sp = document.createElement('span');
     sp.innerHTML = `<span class="nm">${T[t].name}</span><span class="ct" id="ct-${t}"></span>`;
@@ -36,6 +46,25 @@ export function drawIcons(){
     g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
     drawBlock(g, t, o, 'p', 0, 0, FA[o], false, 1, t==='engine');
   }
+  const t = G.sel, o = T[t].rot ? G.rot : 0, g = $<HTMLCanvasElement>('selIc').getContext('2d')!;
+  g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,14,14);
+  g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
+  drawBlock(g, t, o, 'p', 0, 0, FA[o], false, 1, t==='engine');
+}
+// The inspector card for the selected part: what it is, what it does, what it costs and where it comes from.
+function syncSelCard(S: number){
+  const t = G.sel, d = T[t], plate = PLATE(t), rg = rangeOf(t), have = G.inv[t] || 0, L = lvOf(t);
+  $('selName').textContent = d.name;
+  $('selName').style.color = t==='sell' || plate ? '' : RARITY[rarOf(t)].col;
+  $('selRar').textContent = t==='sell' ? 'Tool' : plate ? 'Plating' : RARITY[rarOf(t)].name;
+  $('selDesc').textContent = (d.desc || '') + (d.rot && !PARTS[t] ? ' Tap a placed one to turn it 45°.' : '');
+  const row = (k: string, v: string) => `<dt>${k}</dt><dd>${v}</dd>`;
+  $('selStats').innerHTML = t==='sell' ? '' :
+    row('Source', plate ? `${d.cost} cr each` : have ? `${have} in cargo` + (dmgOf(t) ? ` (${dmgOf(t)} damaged)` : '') : canBuyHere(t) ? `${outfitPrice(t)} cr each` : 'none in cargo') +
+    (d.hp ? row('Hit points', String(Math.round(d.hp*LV(t)*HM.hp()))) : '') +
+    (rg ? row('Range', `${Math.round(rg*Math.pow(S,.8)/BS)} m`) : '') +
+    row('Level', `${L} / ${MAXLV}`) +
+    (PARTS[t] ? row('Size', `${partOffsets(PARTS[t]!).length} cells`) : '');
 }
 export function select(t: BlockType){
   if (!owned(t)) return; // blocks you have never found stay secret
@@ -82,8 +111,8 @@ export function syncUI(){
   $<HTMLButtonElement>('undo').disabled = !undoStack.length; renderBps(); renderGroups();
   $('rotArrow').textContent = ARROW[G.rot]; $('rotName').textContent = FACING[G.rot];
   $('rot').title = rotOk ? 'Facing for the next block. Tip: tap a placed block of this type to turn it.' : 'This block has no facing';
-  const rg = rangeOf(G.sel);
-  $('selDesc').textContent = (T[G.sel].desc || '') + (rg ? ` Range ${Math.round(rg*Math.pow(S,.8)/BS)} m.` : '') + (rotOk && !PARTS[G.sel] ? ' Tap a placed one to turn it 45°.' : '');
+  syncSelCard(S);
+  GROUPS.forEach((_, n) => { $('palh-'+n).hidden = !PAL.some(t => groupOf(t)===n && owned(t)); });
   const rb = $<HTMLButtonElement>('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
   rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;
@@ -92,7 +121,7 @@ export function syncUI(){
   const st = designStats(), ms = (v: number) => (v/BS).toFixed(1);
   const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
   $('stats').innerHTML =
-    `<dt>Blocks</dt><dd>${blockCount()}</dd><dt>Structure</dt><dd>${Math.round(st.hp)} hp · life ${Math.round(st.hp*LIFE)}</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
+    `<dt>Blocks</dt><dd>${blockCount()}</dd><dt>Structure</dt><dd>${Math.round(st.hp)} hp</dd><dt>Life</dt><dd>${Math.round(st.hp*LIFE)}</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
     `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Speed side / aft</dt><dd>${ms(st.side)} / ${ms(st.aft)}</dd>` +
     `<dt>Energy</dt><dd class="${st.eUse > st.eGen ? 'gold' : ''}">+${Math.round(st.eGen)}/s · uses ${Math.round(st.eUse)}/s · ${Math.round(st.eCap)}</dd>` +
     `<dt>Turn rate</dt><dd>${Math.round(st.turn*180/Math.PI)}°/s</dd><dt>Shields / PD</dt><dd>${st.sh} / ${st.pd}</dd>` +
@@ -102,7 +131,7 @@ export function syncUI(){
     (st.weakT ? `<dt class="gold">Boxed in</dt><dd class="gold">${st.weakT} turret${st.weakT>1?'s':''}</dd>` : '');
   $('launch').textContent = G.outfit ? 'Start run' : 'Star map';
   const m = G.mode, fight = m==='combat' || ((m==='clear' || m==='dead') && G.player);
-  $('panel').hidden = m!=='build'; $('mapPanel').hidden = m!=='map';
+  $('panel').hidden = $('inspect').hidden = m!=='build'; $('mapPanel').hidden = m!=='map';
   $('hudWave').hidden = !fight; $('coreWrap').hidden = !fight; $('pauseBtn').hidden = !fight; $('aimBtn').hidden = !fight; $('zoomIn').hidden = $('zoomOut').hidden = !fight; $('groups').hidden = !fight;
   if (m==='map') syncMapPanel();
   hudCache = {};
@@ -148,12 +177,14 @@ export function syncHud(){
 /** An overlay button: label, handler, and an optional class ('ghost' for the quiet style). */
 export type OverlayAction = [string, () => void, string?];
 export function showOverlay(title: string, html: string, actions: OverlayAction[], wide=false){
-  $('ovTitle').textContent = title; $('ovText').innerHTML = html;
+  $('ovTitle').textContent = title; $('ovText').innerHTML = html; menuCard(false);
   $('ovTitle').closest('.card')!.classList.toggle('wide', wide);
   const a = $('ovActions'); a.innerHTML = '';
   for (const [label, fn, cls] of actions){ const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', fn); a.append(b); }
   $('overlay').hidden = false; (a.firstChild as HTMLElement | null)?.focus();
 }
+/** The main menu stacks its buttons in a column. */
+export function menuCard(on: boolean){ $('ovTitle').closest('.card')!.classList.toggle('menu', on); }
 export function hideOverlay(){ $('overlay').hidden = true; }
 export let toastTimer = 0;
 export function toast(msg: string){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1600); }

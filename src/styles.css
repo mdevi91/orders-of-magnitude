@@ -30,7 +30,7 @@ body{
 #crt{position:fixed;inset:0;z-index:4;pointer-events:none;
   background:repeating-linear-gradient(to bottom,rgba(0,0,0,.22) 0 1px,transparent 1px 3px),
              radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.45) 100%)}
-button,.pal,#panel,.card,#toast,.tag{border-radius:0}
+button,.pal,#panel,#inspect,.card,#toast,.tag{border-radius:0}
 #hud{
   position:fixed;left:0;right:0;top:0;z-index:5;pointer-events:none;
   padding-top:calc(env(safe-area-inset-top,0px) + 10px);padding-bottom:10px;
@@ -47,17 +47,39 @@ button,.pal,#panel,.card,#toast,.tag{border-radius:0}
 .bar{width:120px;height:10px;background:var(--ink);border:var(--px) solid var(--paper);position:relative}
 .bar i{position:absolute;inset:0 auto 0 0;background:var(--paper);width:100%}
 
-#panel,#mapPanel{
+#panel,#inspect,#mapPanel{
   position:fixed;z-index:6;top:calc(env(safe-area-inset-top,0px) + 56px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);
   right:max(16px,env(safe-area-inset-right,0px));width:292px;overflow-y:auto;
   background:var(--ink-2);border:var(--px) solid var(--line);box-shadow:4px 4px 0 #050a1a;
   padding:14px;display:flex;flex-direction:column;gap:12px;
 }
-#panel > *,#mapPanel > *{flex-shrink:0}
-#panel h2,#mapPanel h2{margin:0;font-family:var(--display);font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);text-shadow:2px 2px 0 #7a2a20}
+#panel > *,#inspect > *,#mapPanel > *{flex-shrink:0}
+/* drydock: parts on the left, the ship on the right, the build grid between */
+#panel{right:auto;left:max(16px,env(safe-area-inset-left,0px));width:264px}
+.toolbar{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.toolbar .rot{padding:3px 6px}
+.toolbar kbd{font-size:13px;padding:0 2px}
+.palh{margin:4px 0 -2px;font:10px/1.4 var(--display);color:var(--line);text-transform:uppercase;letter-spacing:.06em}
+.palh[hidden]{display:none}
+.palg{display:flex;flex-direction:column;gap:3px}
+.palg .pal{padding:3px 6px}
+.palg .pal > span{display:flex;flex:1;align-items:baseline;gap:8px}
+.palg .pal .nm{flex:1}
+.palg .pal .ct{flex:none}
+#palette{display:flex;flex-direction:column;gap:6px}
+.pal{border-left:3px solid var(--rc,#34477e)}
+#selCard{display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--well);border:var(--px) solid;border-color:var(--lo) #4a505c #4a505c var(--lo)}
+.selHead{display:flex;gap:10px;align-items:center}
+#selIc{width:42px;height:42px;image-rendering:pixelated;flex:none}
+#selName{display:block;font:12px/1.4 var(--display);text-transform:uppercase}
+#selRar{display:block;color:var(--muted);font-size:15px;text-transform:uppercase;letter-spacing:.06em}
+#selStats{display:grid;grid-template-columns:auto 1fr;gap:1px 10px;margin:0}
+#selStats dt{color:var(--muted);font-size:16px}
+#selStats dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+#inspect #launch{margin-top:auto}
+#panel h2,#inspect h2,#mapPanel h2{margin:0;font-family:var(--display);font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold);text-shadow:2px 2px 0 #7a2a20}
 .sub{margin:0;color:var(--muted);line-height:1.15}
 .sub b{color:var(--paper);font-weight:400}
-#palette{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .pal{
   display:flex;align-items:center;gap:8px;padding:5px;background:var(--ink);color:var(--paper);
   border:var(--px) solid #34477e;font:inherit;text-align:left;cursor:pointer;min-width:0;
@@ -128,6 +150,9 @@ details li b{color:var(--paper);font-weight:400}
 .ov-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:4px}
 .ov-actions button{font-family:var(--display);font-size:11px;line-height:1.4;text-transform:uppercase;padding:10px 14px;border:0;background:var(--gold);color:var(--ink);cursor:pointer;box-shadow:4px 4px 0 #7a2a20}
 .ov-actions button:active{transform:translate(4px,4px);box-shadow:none}
+.card.menu .ov-actions{flex-direction:column;align-items:stretch}
+.menuInfo{color:var(--muted)}
+.row.locked{opacity:.5}
 .ov-actions button.ghost{background:transparent;color:var(--paper);border:var(--px) solid var(--paper);box-shadow:none}
 .card.wide{max-width:640px}
 /* shop and hangar rows: name, detail, price button */
@@ -173,7 +198,7 @@ details li b{color:var(--paper);font-weight:400}
   background:var(--ink);border:var(--px) solid var(--foe);color:var(--paper);padding:4px 12px;font-size:18px;pointer-events:none;max-width:calc(100% - 32px)}
 
 /* bevels */
-#panel,#mapPanel,.card{background:linear-gradient(to bottom,#3a404b,#262a32);border:var(--px) solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);box-shadow:inset 0 0 0 1px #4a505c,4px 4px 0 #000}
+#panel,#inspect,#mapPanel,.card{background:linear-gradient(to bottom,#3a404b,#262a32);border:var(--px) solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);box-shadow:inset 0 0 0 1px #4a505c,4px 4px 0 #000}
 .pal,.rot,.tag,kbd,.bar{background:var(--well);border-style:solid;border-color:var(--lo) #4a505c #4a505c var(--lo)}
 .pal[aria-pressed="true"]{background:#1e2a3a;border-color:var(--gold)}
 #hud{background:linear-gradient(to bottom,rgba(46,51,61,.96),rgba(30,34,41,.9));border-bottom:var(--px) solid var(--lo);box-shadow:inset 0 -1px 0 #4a505c;padding-bottom:8px}
@@ -203,10 +228,14 @@ details li b{color:var(--paper);font-weight:400}
 @media (prefers-reduced-motion:reduce){#splash,#splash *{animation-duration:.01s!important}#splash{animation-delay:2s}}
 #saveBox p{margin:6px 0 0;color:var(--muted)}
 @media (max-width:760px){
-  #panel{top:auto;left:max(16px,env(safe-area-inset-left,0px));width:auto;max-height:46vh;gap:10px;padding:10px}
+  #panel{top:auto;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));width:auto;max-height:40vh;gap:8px;padding:10px}
+  #inspect{left:max(16px,env(safe-area-inset-left,0px));width:auto;bottom:auto;max-height:24vh;gap:8px;padding:8px}
+  #inspect #launch{order:-1;margin-top:0}
+  #selDesc,#help,#saveBox{display:none}
   #mapPanel{top:auto;left:max(16px,env(safe-area-inset-left,0px));width:auto;max-height:34vh;gap:8px;padding:10px}
   #legend{display:none}
-  #palette{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .palg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+  .palg .pal > span{display:block}
   .pal{flex-direction:column;gap:2px;padding:4px;text-align:center}
   .pal kbd{display:none}
   .pal .nm{font-size:15px}

@@ -1,6 +1,7 @@
 import { BCOL, BEAM, ESH, GCOL, MAXLV, T, def, grpOf, isWeapon, lvOf, shRad } from './catalog';
 import { rangeOf } from './bullets';
 import { cellsFor, placeCheck, placeSpots } from './editor';
+import { WARP } from './fights';
 import { BS, FA, FACE, K, KI, KJ, TAU, angDiff, clamp, rand } from './grid';
 import { laneFwd } from './physics';
 import { wpos } from './ships';
@@ -175,9 +176,30 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
   }
 }
 export function drawShip(s: Ship){
-  const z = G.zoom, p = G.player!;
+  const z = G.zoom, p = G.player!, X0 = (s.x-G.camX)*z + W/2 + (G.camOX||0), Y0 = (s.y-G.camY)*z + H/2 + (G.camOY||0);
+  // space jump: still in hyperspace, a flicker marks the arrival point; then the ship rushes in, stretched along its path
+  const warp = s.warp || 0, wa = s.warpA || 0;
+  if (warp > WARP){
+    const r = (s.r*.6 + 6)*z*(.6 + .4*Math.sin(G.time*30));
+    ctx.globalAlpha = .5; ctx.strokeStyle = '#a8ecff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X0, Y0, r, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+    return;
+  }
+  const wk = warp/WARP, D = wk ? (1400*G.SC + s.r*6)*wk*wk*wk*z : 0, ux = Math.cos(wa), uy = Math.sin(wa), X = X0 + ux*D, Y = Y0 + uy*D;
+  if (wk){
+    // light streaks trailing back along the jump line, fanned across the hull's width
+    const len = D*.8 + (240*G.SC + s.r*4)*z*wk, w = s.r*z;
+    ctx.lineWidth = 1;
+    for (let q=0; q<7; q++){
+      const off = (q/6 - .5)*1.6*w, l = len*(.5 + .5*Math.abs(Math.sin(q*7.3 + G.time*40)));
+      ctx.globalAlpha = .25 + .5*(1-wk); ctx.strokeStyle = q%3 ? '#a8ecff' : q%2 ? '#ffffff' : '#c8b0ff';
+      ctx.beginPath(); ctx.moveTo(X - uy*off, Y + ux*off); ctx.lineTo(X - uy*off + ux*l, Y + ux*off + uy*l); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
   ctx.save();
-  ctx.translate((s.x-G.camX)*z + W/2 + (G.camOX||0), (s.y-G.camY)*z + H/2 + (G.camOY||0)); ctx.rotate(s.a); ctx.scale(z,z);
+  ctx.translate(X, Y);
+  if (wk){ ctx.rotate(wa); ctx.scale(1 + 4*wk, 1 - .55*wk); ctx.rotate(-wa); ctx.globalAlpha = .45 + .55*(1-wk); }
+  ctx.rotate(s.a); ctx.scale(z,z);
   ctx.lineWidth = 1/z;
   const aim = (s.team==='p' ? Math.atan2(G.aim.y-s.y, G.aim.x-s.x) : s.team==='a' ? s.aimA : Math.atan2(p.y-s.y, p.x-s.x)) - s.a;
   if (s.team==='e'){
@@ -279,14 +301,14 @@ export function renderCombat(){
 
   // weapon reach: one dashed ring per weapon type on the player's ship, in its group's colour, labelled at the top
   if (p && p.alive){
-    const seen = new Set<Cell>();
+    const seen = new Set<Cell>(), hudB = $('hud').getBoundingClientRect().bottom/PX + 10;
     ctx.lineWidth = 1; ctx.setLineDash([2,5]); ctx.font = FONT(8); ctx.textAlign = 'center';
     for (const b of [...p.guns, ...p.rails, ...p.lasers, ...p.teslas, ...p.pds]){
       if (seen.has(b.t)) continue; seen.add(b.t);
       const d = def(b.t)!, r = d.pd ? d.pd.range*Math.sqrt(G.S) : rangeOf(b.t as BlockType)*G.SC; if (!r) continue;
       const col = b.t==='core' ? '#ffffff' : d.pd ? '#c9adff' : GCOL[grpOf(K(b.i,b.j), b.t)-1], X = sx(p.x), Y = sy(p.y), rr = r*z;
       ctx.globalAlpha = .28; ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(X, Y, rr, 0, TAU); ctx.stroke();
-      if (Y - rr > 12){ ctx.globalAlpha = .55; ctx.fillStyle = col; ctx.fillText(d.name, X, Math.round(Y - rr - 3)); }
+      if (Y - rr > hudB){ ctx.globalAlpha = .55; ctx.fillStyle = col; ctx.fillText(d.name, X, Math.round(Y - rr - 3)); }
     }
     ctx.setLineDash([]); ctx.globalAlpha = 1;
   }
@@ -303,7 +325,7 @@ export function renderCombat(){
 
   // enemy shield bubbles
   for (const e of G.ships){
-    if (!e.alive || e.team!=='e' || !e.shields || !e.shields.length) continue;
+    if (!e.alive || e.team!=='e' || !e.shields || !e.shields.length || e.warp) continue;
     for (const sb of e.shields){
       const B = sb.bub!; if (B.down > 0 || B.hp <= 0) continue;
       const [wx,wy] = wpos(e,sb), fl = G.time - B.flash < .08;
@@ -460,9 +482,13 @@ export function renderCombat(){
 export function fmtM(m: number){ return m >= 1000 ? (m/1000)+' km' : m+' m'; }
 
 export function layoutBuild(){
-  const pr = $('panel').getBoundingClientRect(), top = ($('hud').getBoundingClientRect().bottom + 6)/PX;
+  // the grid sits between the parts panel (left) and the ship panel (right); on narrow screens, between the ship panel on top and the parts below
+  const lp = $('panel').getBoundingClientRect(), rp = $('inspect').getBoundingClientRect(), top = ($('hud').getBoundingClientRect().bottom + 6)/PX;
   let x0 = 0, y0 = top, x1 = W, y1 = H;
-  if (pr.left/PX > W*.45) x1 = (pr.left - 8)/PX; else y1 = (pr.top - 8)/PX;
+  if (lp.width && rp.width){
+    if (rp.left/PX > W*.45){ x0 = (lp.right + 8)/PX; x1 = (rp.left - 8)/PX; }
+    else { y0 = Math.max(top, (rp.bottom + 6)/PX); y1 = (lp.top - 8)/PX; }
+  }
   const n = 2*buildR() + 1;
   // fit-to-area cell size, times the player's zoom; whole pixels once cells are big enough to stay crisp
   let cs = Math.min(Math.min((x1-x0)*.92, (y1-y0)*.92)/n, 16)*G.bz;

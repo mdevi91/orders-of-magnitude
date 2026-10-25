@@ -139,7 +139,7 @@ export interface RayHit { e: Ship; k: Key; t: number }
 export function rayHits(ox: number, oy: number, dx: number, dy: number, len: number, first: boolean){
   const out: RayHit[] = [];
   for (const e of G.ships){
-    if (!e.alive || e.team!=='e') continue;
+    if (!e.alive || e.team!=='e' || (e.warp || 0) > 0) continue;
     const rx = e.x-ox, ry = e.y-oy, t = rx*dx + ry*dy;
     if (t < -e.r || t - e.r > len) continue;
     if (Math.abs(rx*dy - ry*dx) > e.r) continue;
@@ -153,7 +153,7 @@ export function rayHits(ox: number, oy: number, dx: number, dy: number, len: num
   return first ? out.slice(0,1) : out;
 }
 export function damage(s: Ship, k: Key, dmg: number){
-  const b = s.blocks.get(k); if (!b || !s.alive) return;
+  const b = s.blocks.get(k); if (!b || !s.alive || (s.warp || 0) > 0) return;
   if (b.t==='armor') dmg *= 1 - ARMOR_DR;
   s.life -= Math.min(Math.max(0, b.hp), dmg); b.hp -= dmg; b.hit = G.time;
   if (b.hp <= 0) destroyBlock(s,k,b);
