@@ -1,6 +1,6 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, cockpit, type CockpitId, PAL, PARTS, PLATE, RARITY, T, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
+import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, cockpit, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
 import { aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
@@ -28,7 +28,7 @@ export function buildPalette(){
   });
   for (const t of PAL){
     const el = $('palg-'+groupOf(t));
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'pal'; b.id = 'pal-'+t; b.title = T[t].desc || '';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'pal'; b.id = 'pal-'+t; b.title = blurb(t);
     if (t!=='sell' && !PLATE(t)) b.style.setProperty('--rc', RARITY[rarOf(t)].col);
     const ic = document.createElement('canvas'); ic.width = ic.height = 14; ic.id = 'ic-'+t;
     const sp = document.createElement('span');
@@ -57,7 +57,7 @@ function syncSelCard(S: number){
   $('selName').textContent = d.name;
   $('selName').style.color = t==='sell' || plate ? '' : RARITY[rarOf(t)].col;
   $('selRar').textContent = t==='sell' ? 'Tool' : plate ? 'Plating' : RARITY[rarOf(t)].name + (d.make ? ' · ' + d.make : '');
-  $('selDesc').textContent = (d.desc || '') + (d.rot && !PARTS[t] ? ' Tap a placed one to turn it 45°.' : '');
+  $('selDesc').textContent = blurb(t) + (d.rot && !PARTS[t] ? '. Tap a placed one to turn it.' : '');
   const row = (k: string, v: string) => `<dt>${k}</dt><dd>${v}</dd>`;
   $('selStats').innerHTML = t==='sell' ? '' :
     row('Source', plate ? `${d.cost} cr each` : have ? `${have} in cargo` + (dmgOf(t) ? ` (${dmgOf(t)} damaged)` : '') : canBuyHere(t) ? `${outfitPrice(t)} cr each` : 'none in cargo') +

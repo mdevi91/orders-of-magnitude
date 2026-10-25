@@ -1,4 +1,4 @@
-import { HEAD_OF, PAL, PLATE, RARITY, T, outfitPrice, rarName, rarOf, unlocked } from './catalog';
+import { HEAD_OF, PAL, PLATE, RARITY, T, blurb, outfitPrice, rarName, rarOf, unlocked } from './catalog';
 import { K } from './grid';
 import { undoStack } from './input';
 import { clearRun, load, save, saveMeta } from './save';
@@ -91,7 +91,7 @@ export function showCantina(){
 export function showDeck(){
   const best = G.meta.best || 1, ts = PAL.filter(t => t!=='sell' && !PLATE(t)).sort((a,b) => rarOf(a) - rarOf(b) || (T[a].unlock || 1) - (T[b].unlock || 1));
   const card = (t: BlockType) => tile({ic:icon(t), rc:RARITY[rarOf(t)].col, name:T[t].name, tag:RARITY[rarOf(t)].name + (T[t].make ? ' · ' + T[t].make : ''), locked:!unlocked(t), label:'', act:'',
-    desc:unlocked(t) ? T[t].desc || '' : `Locked. Reach sector ${T[t].unlock} to unlock it.`});
+    desc:unlocked(t) ? blurb(t) : `Locked. Reach sector ${T[t].unlock} to unlock it.`});
   const open = ts.filter(unlocked), shut = ts.filter(t => !unlocked(t));
   showOverlay('Ship deck', `<div class="readouts"><div class="readout"><b>${open.length}/${ts.length}</b><span>Blocks unlocked</span></div><div class="readout"><b>${best}</b><span>Best sector</span></div></div>` +
     'Unlocked blocks turn up in loot and shops from sector 1 on, and Engineering can build them into your starting ship.' +

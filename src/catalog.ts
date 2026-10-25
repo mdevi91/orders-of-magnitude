@@ -142,6 +142,18 @@ export const WGRP: Partial<Record<Cell, number>> = {cannon:1, bigcannon:1, gatli
 export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
 export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t];
 export const grpOf = (k: Key, t: Cell) => G.grp[k] || WGRP[t] || 1;
+// What menus say about a block: weapons, point defense and hangars get a line of numbers; everything else its short description.
+const m = (u: number) => Math.round(u/BS) + ' m', n1 = (v: number) => (Math.round(v*10)/10).toString();
+export function blurb(t: BlockType){
+  const d = T[t], g = d.gun;
+  if (g) return [`${n1(g.dmg*(g.pellets || 1)*(g.mirv || 1)/g.cd)} dmg/s`, g.range ? m(g.range) : '', g.homing ? 'homing' : (g.arc ?? Math.PI) >= Math.PI - .01 ? 'all round' : `±${Math.round((g.arc || 0)*180/Math.PI)}°`, g.over ? 'fires over hull' : ''].filter(Boolean).join(' · ');
+  if (d.laser) return `${d.laser.dps} dmg/s up close · ${m(d.laser.range)} · beam`;
+  if (d.rail) return `pierces ${d.rail.pool} · every ${d.rail.cd} s · ${m(d.rail.range)}`;
+  if (d.tesla) return `${d.tesla.dmg} × ${d.tesla.jumps} chain · every ${d.tesla.cd} s · ${m(d.tesla.range)}`;
+  if (d.pd) return `intercepts every ${d.pd.cd} s · ${m(d.pd.range)}${d.pd.heavy ? ' · stops slugs' : ''}`;
+  if (isCraft(t)){ const C = CRAFT[t]; return `${t==='fbay' ? 'fighter' : 'bomber'} · ${n1(C.gun.dmg/C.gun.cd)} dmg/s · rebuilt in ${C.rebuild} s`; }
+  return d.desc || '';
+}
 // a part's body cells share the level of its head
 export const lvOf = (t: Cell) => G.lv[(HEAD_OF[t] || t) as BlockType] || 1;
 export const LV = (t: Cell) => lvMul(lvOf(t));
