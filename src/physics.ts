@@ -1,4 +1,4 @@
-import { LV, PARTS, T, def } from './catalog';
+import { HM, LV, PARTS, T, def } from './catalog';
 import { cellsFor } from './editor';
 import { DIR, FACE, K } from './grid';
 import { speedOf } from './state';
@@ -16,10 +16,10 @@ export function physics(cells: Iterable<CellInfo>, typeAt: TypeAt): Physics {
   for (const c of cells){
     const d = def(c.t); if (!d) continue;
     const m = d.mass || 0;
-    mass += m; inertia += m*(c.i*c.i + c.j*c.j + .17); torque += (d.torque||0)*LV(c.t);
+    mass += m; inertia += m*(c.i*c.i + c.j*c.j + .17); torque += (d.torque||0)*LV(c.t)*HM.drive();
     if (c.t==='engine'){
       const [fx,fy] = FACE[c.o||0], [ux,uy] = DIR[c.o||0], active = !typeAt(K(c.i-fx, c.j-fy));
-      const thrust = T.engine.thrust!*LV('engine'), tx = ux*thrust, ty = uy*thrust, tau = c.i*ty - c.j*tx;
+      const thrust = T.engine.thrust!*LV('engine')*HM.drive(), tx = ux*thrust, ty = uy*thrust, tau = c.i*ty - c.j*tx;
       engines.push({c: c as Engine['c'], active, tx, ty, tau});
       if (active){
         if (tx > 0) F.px += tx; else F.nx -= tx;

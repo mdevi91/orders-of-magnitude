@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { EB_SPD, eBullet, leadAngle, pBullet } from './bullets';
-import { CRAFT, LV, T, ewOf, isCraft } from './catalog';
+import { CRAFT, HM, LV, T, ewOf, isCraft } from './catalog';
 import { craftCap, eDmg } from './fights';
 import { BS, FA, K, TAU, angDiff, clamp, rand } from './grid';
 import { boomAt, damage, makeShip, rayHits, sparks, wpos } from './ships';
@@ -74,7 +74,7 @@ export function updateCraft(A: Ship, dt: number, enemies: Ship[]){
     if (A.tgt){
       const e = A.tgt, ang = Math.atan2(e.y-A.y, e.x-A.x); A.aimA = ang;
       if (A.cd <= 0 && Math.hypot(e.x-A.x, e.y-A.y) < e.r + C.range*SC){
-        A.cd = C.gun.cd; pBullet(A.x, A.y, ang + (Math.random()-.5)*2*C.gun.spread, C.gun, e, LV(A.kind!)); sfx(C.sfx, .5);
+        A.cd = C.gun.cd; pBullet(A.x, A.y, ang + (Math.random()-.5)*2*C.gun.spread, C.gun, e, LV(A.kind!)*HM.dmg()); sfx(C.sfx, .5);
       }
     } else A.aimA = A.a - Math.PI/2;
   }
@@ -87,7 +87,7 @@ export function updateCraft(A: Ship, dt: number, enemies: Ship[]){
 }
 export function fireRail(p: Ship, wx: number, wy: number, face: number){
   const R = T.rail.rail!, SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = R.range*SC;
-  let pool = R.pool*LV('rail'), end = len;
+  let pool = R.pool*LV('rail')*HM.dmg(), end = len;
   for (const h of rayHits(ox, oy, dx, dy, len, false)){
     if (!h.e.alive) continue;
     const b = h.e.blocks.get(h.k); if (!b) continue;
@@ -104,9 +104,9 @@ export function fireRail(p: Ship, wx: number, wy: number, face: number){
 export function enemyFire(e: Ship, dt: number){
   const p = G.player!;
   if (e.boss){
-    // flagships fight in three phases as they lose blocks: spiral, then fighters, then ring bursts
+    // flagships fight in three phases as they lose blocks or life: spiral, then fighters, then ring bursts
     if (e.flag){
-      const f = e.blocks.size/e.n0, ph = f > .66 ? 1 : f > .33 ? 2 : 3;
+      const f = Math.min(e.blocks.size/e.n0, e.life/e.lifeMax), ph = f > .66 ? 1 : f > .33 ? 2 : 3;
       const nm = e.station ? 'starbase' : 'flagship';
       if (ph > e.phaseN){ e.phaseN = ph; G.banner = {text:`Phase ${ph}`, sub: ph===2 ? `The ${nm} scrambles its hangars` : `The ${nm} fires ring bursts`, red:true, t:2.4}; sfx('pop'); }
       if (ph >= 2 && (e.flT = (e.flT ?? 1) - dt) <= 0){
@@ -132,6 +132,7 @@ export function enemyFire(e: Ship, dt: number){
   e.sights = null;
   const tgt = e.boss ? p : e.tgt || p;
   for (const g of e.guns){
+    if ((g.jam || 0) > G.time) continue;
     const w = ewOf(g.t)!, [wx,wy] = wpos(e,g), sp = w.spd*e.sc;
     g.cd -= dt;
     if (w.aim && g.cd < w.aim) (e.sights ||= []).push([wx, wy, leadAngle(wx,wy,sp,.6,tgt)]);

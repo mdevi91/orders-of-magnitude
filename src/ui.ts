@@ -1,6 +1,6 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, CRAFT, LV, PAL, PARTS, PLATE, T, isCraft, lvOf, owned } from './catalog';
+import { BEAM, CRAFT, HM, LV, PAL, PARTS, PLATE, T, canBuyHere, isCraft, lvOf, outfitPrice, owned } from './catalog';
 import { aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
@@ -8,9 +8,10 @@ import { undoStack } from './input';
 import { dmgOf, repTotal } from './loot';
 import { dirSpeed, laneFwd, physics } from './physics';
 import { save } from './save';
+import { LIFE } from './ships';
 import { ACT, canRepair, openShop } from './shop';
 import { NODE, canJump, curNode, exitNode, nodeDef } from './starmap';
-import { G, blockCount, blockLimit, buildR, scaleOf, turnOf } from './state';
+import { G, blockCount, buildR, scaleOf, turnOf } from './state';
 import type { BlockType } from './types';
 import { $ } from './view';
 
@@ -33,7 +34,7 @@ export function drawIcons(){
     const ic = $<HTMLCanvasElement>('ic-'+t), g = ic.getContext('2d')!, o = T[t].rot ? G.rot : 0;
     g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,14,14);
     g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
-    drawBlock(g, t, o, 'p', 0, 0, FA[o], false, 1, true, t==='engine');
+    drawBlock(g, t, o, 'p', 0, 0, FA[o], false, 1, t==='engine');
   }
 }
 export function select(t: BlockType){
@@ -60,7 +61,8 @@ export function designStats(){
       else dps += (d.rail ? d.rail.pool/d.rail.cd : d.laser ? d.laser.dps*.6 : 0)*m;
     }
   }
-  return {n:cells.length, hp, dps, pd, sh, fb, bb, badW, badT, weakT, eGen, eCap, eUse, badE:ph.engines.filter(e => !e.active).length,
+  // hangar upgrades apply on top of block levels
+  return {n:cells.length, hp:hp*HM.hp(), dps:dps*HM.dmg(), pd, sh, fb, bb, badW, badT, weakT, eGen:eGen*HM.en(), eCap:eCap*HM.en(), eUse, badE:ph.engines.filter(e => !e.active).length,
     fore:dirSpeed(ph,0,-1), side:Math.max(dirSpeed(ph,1,0), dirSpeed(ph,-1,0)), aft:dirSpeed(ph,0,1),
     turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia, ph.mass)};
 }
@@ -69,8 +71,9 @@ export function syncUI(){
   for (const t of PAL){
     const btn = $<HTMLButtonElement>('pal-'+t), ct = $('ct-'+t), have = G.inv[t] || 0;
     btn.setAttribute('aria-pressed', String(G.sel===t)); btn.hidden = !owned(t);
-    ct.textContent = t==='sell' ? 'to cargo' : PLATE(t) ? T[t].cost+' cr' + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '') : `×${have}` + (dmgOf(t) ? ` (${dmgOf(t)} dmg)` : '') + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '');
-    ct.classList.toggle('no', t!=='sell' && (PLATE(t) ? T[t].cost > G.credits : !have));
+    const buy = !have && canBuyHere(t);
+    ct.textContent = t==='sell' ? 'to cargo' : PLATE(t) ? T[t].cost+' cr' + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '') : buy ? `${outfitPrice(t)} cr` : `×${have}` + (dmgOf(t) ? ` (${dmgOf(t)} dmg)` : '') + (lvOf(t) > 1 ? ` · Lv${lvOf(t)}` : '');
+    ct.classList.toggle('no', t!=='sell' && (PLATE(t) ? T[t].cost > G.credits : buy ? outfitPrice(t) > G.credits : !have));
   }
   if (!owned(G.sel)) G.sel = 'hull';
   const rotOk = !!T[G.sel].rot;
@@ -84,11 +87,12 @@ export function syncUI(){
   const rb = $<HTMLButtonElement>('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
   rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;
-  $('gridInfo').innerHTML = `Sector <b>${s}</b> at scale <b>×${S.toFixed(2)}</b>. Blocks <b>${blockCount()} / ${blockLimit()}</b>, more each sector. Plating costs credits; every other block comes from cargo. Upgrades are sold at shops.`;
+  $('gridInfo').innerHTML = G.outfit ? `<b class="gold">Outfitting.</b> Every unlocked block is for sale: buy as many as your <b class="gold">${Math.round(G.credits)} cr</b> allow. What you don't spend carries into the run.`
+    : `Sector <b>${s}</b>. Plating costs credits; every other block comes from cargo. Upgrades are sold at shops.`;
   const st = designStats(), ms = (v: number) => (v/BS).toFixed(1);
   const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
   $('stats').innerHTML =
-    `<dt>Blocks</dt><dd>${blockCount()} / ${blockLimit()}</dd><dt>Structure</dt><dd>${st.hp} hp</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
+    `<dt>Blocks</dt><dd>${blockCount()}</dd><dt>Structure</dt><dd>${Math.round(st.hp)} hp · life ${Math.round(st.hp*LIFE)}</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
     `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Speed side / aft</dt><dd>${ms(st.side)} / ${ms(st.aft)}</dd>` +
     `<dt>Energy</dt><dd class="${st.eUse > st.eGen ? 'gold' : ''}">+${Math.round(st.eGen)}/s · uses ${Math.round(st.eUse)}/s · ${Math.round(st.eCap)}</dd>` +
     `<dt>Turn rate</dt><dd>${Math.round(st.turn*180/Math.PI)}°/s</dd><dt>Shields / PD</dt><dd>${st.sh} / ${st.pd}</dd>` +
@@ -96,11 +100,10 @@ export function syncUI(){
     (G.broken.size ? `<dt class="warn">Damaged</dt><dd class="warn">${G.broken.size} block${G.broken.size>1?'s':''}</dd>` : '') +
     (warn ? `<dt class="warn">Blocked</dt><dd class="warn">${warn}</dd>` : '') +
     (st.weakT ? `<dt class="gold">Boxed in</dt><dd class="gold">${st.weakT} turret${st.weakT>1?'s':''}</dd>` : '');
-  $('launch').textContent = 'Star map';
+  $('launch').textContent = G.outfit ? 'Start run' : 'Star map';
   const m = G.mode, fight = m==='combat' || ((m==='clear' || m==='dead') && G.player);
   $('panel').hidden = m!=='build'; $('mapPanel').hidden = m!=='map';
   $('hudWave').hidden = !fight; $('coreWrap').hidden = !fight; $('pauseBtn').hidden = !fight; $('aimBtn').hidden = !fight; $('zoomIn').hidden = $('zoomOut').hidden = !fight; $('groups').hidden = !fight;
-  $('hudScale').hidden = m==='title';
   if (m==='map') syncMapPanel();
   hudCache = {};
   if (m==='build' || m==='map') save();
@@ -122,15 +125,13 @@ export function syncMapPanel(){
 export let hudCache: Record<string, string | boolean> = {};
 export function setTxt(id: string, v: string){ if (hudCache[id] !== v){ hudCache[id] = v; $(id).textContent = v; } }
 export function syncHud(){
-  const S = G.mode==='combat' ? G.S : scaleOf(G.stage);
   setTxt('hudStage', `Sector ${G.stage}`);
-  setTxt('hudScale', `Scale ×${S.toFixed(2)}`);
   setTxt('hudCredits', String(Math.round(G.credits)));
   const B = G.mode==='combat' && G.boss && G.boss.alive ? G.boss : null;
   if (hudCache.boss !== !!B){ hudCache.boss = !!B; $('bossWrap').hidden = !B; }
   if (B){
     setTxt('bossName', B.flag ? `${B.station ? 'Starbase' : 'Flagship'} · phase ${B.phaseN}` : 'Capital ship');
-    const bw = (100*B.blocks.size/B.n0).toFixed(0)+'%';
+    const bw = (100*Math.max(0, B.life/B.lifeMax)).toFixed(0)+'%';
     if (hudCache.bw !== bw){ hudCache.bw = bw; $('bossBar').style.width = bw; }
   }
   if (G.mode!=='build' && G.mode!=='map' && G.mode!=='title' && G.player){
@@ -138,7 +139,8 @@ export function syncHud(){
     setTxt('hudWave', `${NODE[G.fight].name} · wave ${G.waveIdx}/${G.waves.length} · ${alive} hostile${alive===1 ? '' : 's'}`);
     const core = G.player.blocks.get(CORE), pct = core ? Math.max(0, core.hp/core.max) : 0;
     const w = (pct*100).toFixed(0)+'%';
-    const ew = (Math.max(0, G.player.en/G.player.enMax)*100).toFixed(0)+'%';
+    const ew = (Math.max(0, G.player.en/G.player.enMax)*100).toFixed(0)+'%', lp = Math.max(0, G.player.life/G.player.lifeMax), lw = (lp*100).toFixed(0)+'%';
+    if (hudCache.life !== lw){ hudCache.life = lw; const bar = $('lifeBar'); bar.style.width = lw; bar.style.background = lp < .35 ? 'var(--foe)' : ''; }
     if (hudCache.en !== ew){ hudCache.en = ew; $('enBar').style.width = ew; }
     if (hudCache.core !== w){ hudCache.core = w; const bar = $('coreBar'); bar.style.width = w; bar.style.background = pct < .35 ? 'var(--foe)' : ''; }
   }

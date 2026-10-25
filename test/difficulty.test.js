@@ -1,9 +1,9 @@
-// Difficulty probe: a bot builds a reasonable ship for each sector (block limit, unlocked weapons, some upgrades)
+// Difficulty probe: a bot builds a reasonable ship for each sector (the old block limit as a size, unlocked weapons, some upgrades)
 // and fights with every group on auto while kiting at range. Logs win rates and damage taken; checks the game
 // is beatable early but not a walkover.
 function botShip(s){
-  const tier = tierOf(s), lim = Math.round(blockLimit()*.9);
-  const guns = ['cannon','gatling','scatter','flak','missile','ion','torpedo','tesla'].filter(t => T[t].unlock <= tier);
+  const lim = Math.round((30 + 15*s)*.9);
+  const guns = ['cannon','gatling','scatter','flak','missile','ion','torpedo','tesla'].filter(t => T[t].unlock <= s);
   // cells around the core, nearest first, in mirrored pairs
   const cells = [];
   for (let i=0; i<=12; i++) for (let j=-12; j<=12; j++) cells.push([i,j]);
@@ -27,8 +27,8 @@ function botShip(s){
   inner.slice(Math.round(nW*.6), Math.round(nW*.6) + Math.round(nW*.3)).forEach(k => d.set(k,'battery'));
   // once unlocked, shields and point defense go on like a sensible player would fit them
   const sys = [];
-  if (T.shield.unlock <= tier) for (let n=0; n<Math.floor(d.size/30); n++) sys.push('shield');
-  if (T.pd.unlock <= tier) for (let n=0; n<Math.floor(d.size/25); n++) sys.push('pd');
+  if (T.shield.unlock <= s) for (let n=0; n<Math.floor(d.size/30); n++) sys.push('shield');
+  if (T.pd.unlock <= s) for (let n=0; n<Math.floor(d.size/25); n++) sys.push('pd');
   const free = keys.filter(k => d.get(k)==='hull').sort(() => Math.random() - .5);
   sys.forEach((t,n) => free[n] && d.set(free[n], t));
   for (const k of keys) if (d.get(k)==='hull' && Math.random() < .25 + .03*s) d.set(k,'armor');

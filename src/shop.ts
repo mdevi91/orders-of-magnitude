@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { MAXLV, PAL, T, lvOf, onShip, priceMul, repCost, upCost } from './catalog';
+import { MAXLV, PAL, RARITY, T, lvOf, lvStep, onShip, priceMul, rarName, rarOf, repCost, upCost } from './catalog';
 import { addBlock, cargoTypes, dmgOf, lootPool, repTotal, repair, rollBlock, takeCargo } from './loot';
 import { META, metaCost, metaLv, showTitle } from './runs';
 import { saveMeta } from './save';
@@ -24,9 +24,9 @@ export function openShop(n: MapNode){
   }
   const ups = PAL.filter(t => t!=='sell' && (onShip(t) || (G.inv[t] || 0) > 0)), rep = repTotal(.5);
   let h = `Credits <b class="gold">${Math.round(G.credits)}</b>. Repairs here cost half.<div class="rows"><h3>Buy</h3>` +
-    offers.map((o,i) => row(T[o.t].name + (o.n > 1 ? ` ×${o.n}` : ''), T[o.t].desc || '', o.n ? `${buyPrice(o.t)} cr` : 'sold', `buy:${i}`, !o.n || buyPrice(o.t) > G.credits)).join('');
+    offers.map((o,i) => row(rarName(o.t) + (o.n > 1 ? ` ×${o.n}` : '') + ` <i class="rar">${RARITY[rarOf(o.t)].name}</i>`, T[o.t].desc || '', o.n ? `${buyPrice(o.t)} cr` : 'sold', `buy:${i}`, !o.n || buyPrice(o.t) > G.credits)).join('');
   if (G.broken.size) h += `<h3>Repair</h3>` + row(`${G.broken.size} damaged block${G.broken.size>1?'s':''}`, 'Fixes as many as you can afford.', `${rep} cr`, 'rep:0', !canRepair(.5));
-  h += `<h3>Upgrade</h3>` + (ups.length ? ups.map(t => row(`${T[t].name} Lv${lvOf(t)}`, lvOf(t) < MAXLV ? `+35% to every ${T[t].name.toLowerCase()} block.` : 'Fully upgraded.',
+  h += `<h3>Upgrade</h3>` + (ups.length ? ups.map(t => row(`${T[t].name} Lv${lvOf(t)}`, lvOf(t) < MAXLV ? `+${lvStep(lvOf(t))}% to every ${T[t].name.toLowerCase()} block.` : 'Fully upgraded.',
     lvOf(t) < MAXLV ? `${upCost(t)} cr` : 'max', `up:${t}`, lvOf(t) >= MAXLV || upCost(t) > G.credits)).join('') : '<small>Nothing to upgrade.</small>');
   const cargo = cargoTypes();
   h += `<h3>Sell from cargo</h3>` + (cargo.length ? cargo.map(t => row(`${T[t].name} ×${G.inv[t]}${dmgOf(t) ? ` (${dmgOf(t)} damaged)` : ''}`, dmgOf(t) ? 'Damaged blocks sell first, at half price.' : 'Only blocks in cargo can be sold. Remove them from the ship in drydock first.', `+${dmgOf(t) ? Math.round(sellPrice(t)/2) : sellPrice(t)} cr`, `sell:${t}`, false)).join('') : '<small>Cargo is empty.</small>');

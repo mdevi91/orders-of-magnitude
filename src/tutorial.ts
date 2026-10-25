@@ -8,14 +8,15 @@ import { $ } from './view';
 export const TUT: Record<string, [title: string, text: string]> = {
   title:['Welcome', 'Fly a tiny ship through nine sectors and build it up as you go. Start a <b>New run</b>. Data from finished runs buys permanent hangar upgrades here.'],
   map:['Star map', 'Click a beacon linked to yours to jump there: <b>!</b> fight, <b>$</b> shop, <b>?</b> signal, <b>*</b> wreckage, <b>+</b> repair dock. Reach the gate on the far right to leave the sector. <b>Open drydock</b> (or <b>D</b>) to rebuild between jumps.'],
-  combat:['Fighting', '<b>W/S</b> thrust, <b>A/D</b> turn the ship. Hold <b>Shift</b> and the ship turns toward the mouse while <b>A/D</b> slide sideways. Aim with the mouse and click or hold <b>Space</b> to fire; <b>T</b> turns on auto-aim. On touch, drag to move. The mouse wheel or <b>+ / −</b> zooms. Destroy every hostile to win. Lose the core and the run is over.'],
+  combat:['Fighting', '<b>W/S</b> thrust, <b>A/D</b> turn the ship. Hold <b>Shift</b> and the ship turns toward the mouse while <b>A/D</b> slide sideways. Aim with the mouse and click or hold <b>Space</b> to fire; <b>T</b> turns on auto-aim. On touch, drag to move. The mouse wheel or <b>+ / −</b> zooms. Destroy every hostile to win. Every block adds to your ship’s life (the blue bar); damage anywhere takes from it. Lose all your life, or the core, and the run is over.'],
   loot:['Loot', 'Choose one of the offered blocks, or skip. It goes into cargo, ready to fit in the drydock.'],
   dock:['Drydock', 'Pick a block in the list (the number is how many you have in cargo), then click a cell touching your ship to place it. <b>R</b> turns turrets and engines, <b>M</b> sets mirroring, right-click puts a block back in cargo. Hull and armor cost credits.'],
   groups:['Weapon groups', 'Under the tools, <b>Weapon groups</b>: pick a group number, then click weapons on the ship to put them in it. Set a group to <b>Auto</b> and it fires by itself at the nearest hostile; <b>Man</b> groups fire when you do. Keys <b>1-5</b> switch groups during a fight.'],
   shop:['Shop', 'Buy blocks, upgrade a block type (+35% per level, up to Lv5), repair damaged blocks at half price, or sell spare cargo.'],
   signal:['Signals', 'Signals are random events. A choice can pay off in credits and blocks, or go badly.'],
   damage:['Damage', 'Blocks destroyed in a fight stay damaged: dark, cracked, and left behind until repaired. Repair them in the drydock, at a shop for half price, or for free at a repair dock.'],
-  sector:['New sector', 'Each sector is harder, and your block limit grows. Every third sector ends in a flagship or a starbase.'],
+  sector:['New sector', 'Each sector is harder. Every third sector ends in a flagship or a starbase.'],
+  outfit:['Outfitting', 'Design your starting ship. Every block you have unlocked is for sale here: place as many as your budget allows. Unspent credits carry into the run. Press <b>Start run</b> when you are ready.'],
   data:['Data', 'Every run earns data, even a lost one. Spend it in the hangar on permanent upgrades, then try again.'],
 };
 export let tutSeen: Record<string, boolean> = {}, tutOff = false, tutQ: string[] = [];

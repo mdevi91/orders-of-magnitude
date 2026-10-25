@@ -1,11 +1,12 @@
-import { BCOL, BEAM, COL, ESH, GCOL, MAXLV, T, def, grpOf, isWeapon, lvOf, shRad } from './catalog';
+import { BCOL, BEAM, ESH, GCOL, MAXLV, T, def, grpOf, isWeapon, lvOf, shRad } from './catalog';
+import { rangeOf } from './bullets';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { BS, FA, FACE, K, KI, KJ, TAU, angDiff, clamp, rand } from './grid';
 import { laneFwd } from './physics';
 import { wpos } from './ships';
 import { G, buildR, spanFor } from './state';
 import { JOY_R } from './update';
-import type { BlockType, Bullet, Cell, Facing, Key, Ship, Stick, Team } from './types';
+import type { BlockType, Bullet, BulletKind, Cell, Facing, Key, Ship, Stick, Team } from './types';
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 
 // ---------- drawing ----------
@@ -29,15 +30,10 @@ export function barrel(X: Ctx, x: number, y: number, ca: number, sa: number, len
   X.fillStyle = m[2]; X.beginPath(); X.moveTo(x+px,y+py); X.lineTo(x+px+ca*len,y+py+sa*len); X.lineTo(x-px+ca*len,y-py+sa*len); X.lineTo(x-px,y-py); X.closePath(); X.fill();
   X.fillStyle = m[0]; X.beginPath(); X.moveTo(x+px*.3,y+py*.3); X.lineTo(x+px*.3+ca*len,y+py*.3+sa*len); X.lineTo(x-px*.4+ca*len,y-py*.4+sa*len); X.lineTo(x-px*.4,y-py*.4); X.closePath(); X.fill();
 }
-export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: number, aim: number, hit: boolean, ratio: number, detail: boolean, firing?: boolean){
+export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: number, aim: number, hit: boolean, ratio: number, firing?: boolean){
   const M = MET[team==='e' ? 'e' : 'p'], bx = x, by = y;
   if (t==='sell'){
     X.fillStyle = '#ff3d2a'; X.save(); X.translate(x,y); X.rotate(Math.PI/4); X.fillRect(-5,-1.2,10,2.4); X.fillRect(-1.2,-5,2.4,10); X.restore(); return;
-  }
-  if (!detail){
-    // far out every block keeps its own colour, so weapons and systems still read
-    X.fillStyle = hit ? '#ffffff' : t==='core' ? (team==='p' ? '#7fe0ff' : '#ff8a5a') : t==='armor' ? M.armor[1] : t==='hull' ? M.hull[1] : (COL[team] || COL.p)[t] || M.hull[1];
-    X.fillRect(x-5,y-5,10,10); return;
   }
   const base = t==='armor' ? M.armor : t==='hull' ? M.hull : M.dark;
   plate(X,x,y,base);
@@ -183,7 +179,6 @@ export function drawShip(s: Ship){
   ctx.save();
   ctx.translate((s.x-G.camX)*z + W/2 + (G.camOX||0), (s.y-G.camY)*z + H/2 + (G.camOY||0)); ctx.rotate(s.a); ctx.scale(z,z);
   ctx.lineWidth = 1/z;
-  const detail = BS*z >= 6;
   const aim = (s.team==='p' ? Math.atan2(G.aim.y-s.y, G.aim.x-s.x) : s.team==='a' ? s.aimA : Math.atan2(p.y-s.y, p.x-s.x)) - s.a;
   if (s.team==='e'){
     // bright rim around enemy hulls so they stand out in a crowd and against smoke
@@ -192,7 +187,11 @@ export function drawShip(s: Ship){
     for (const b of s.blocks.values()) ctx.fillRect(b.i*BS-5-m, b.j*BS-5-m, 10+2*m, 10+2*m);
   }
   for (const b of s.blocks.values())
-    drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, detail, b.firing);
+    drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, b.firing);
+  // ion-jammed weapons flicker violet
+  for (const b of s.blocks.values()) if ((b.jam || 0) > G.time){
+    ctx.globalAlpha = .35 + .3*Math.sin(G.time*40 + b.i*3); ctx.fillStyle = '#a070ff'; ctx.fillRect(b.i*BS-5, b.j*BS-5, 10, 10); ctx.globalAlpha = 1;
+  }
   ctx.restore();
 }
 // deep-space backdrop: three parallax star layers and a few nebula clouds, all in screen space
@@ -278,7 +277,29 @@ export function renderCombat(){
   }
   ctx.globalAlpha = 1;
 
+  // weapon reach: one dashed ring per weapon type on the player's ship, in its group's colour, labelled at the top
+  if (p && p.alive){
+    const seen = new Set<Cell>();
+    ctx.lineWidth = 1; ctx.setLineDash([2,5]); ctx.font = FONT(8); ctx.textAlign = 'center';
+    for (const b of [...p.guns, ...p.rails, ...p.lasers, ...p.teslas, ...p.pds]){
+      if (seen.has(b.t)) continue; seen.add(b.t);
+      const d = def(b.t)!, r = d.pd ? d.pd.range*Math.sqrt(G.S) : rangeOf(b.t as BlockType)*G.SC; if (!r) continue;
+      const col = b.t==='core' ? '#ffffff' : d.pd ? '#c9adff' : GCOL[grpOf(K(b.i,b.j), b.t)-1], X = sx(p.x), Y = sy(p.y), rr = r*z;
+      ctx.globalAlpha = .28; ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(X, Y, rr, 0, TAU); ctx.stroke();
+      if (Y - rr > 12){ ctx.globalAlpha = .55; ctx.fillStyle = col; ctx.fillText(d.name, X, Math.round(Y - rr - 3)); }
+    }
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+
   for (const s of G.ships) if (s.alive) drawShip(s);
+
+  // life bars over damaged enemy ships (the capital ship's sits in the HUD)
+  for (const e of G.ships){
+    if (!e.alive || e.team!=='e' || e === G.boss || e.life >= e.lifeMax) continue;
+    const w = Math.max(14, Math.min(60, e.r*z*1.4)), X = Math.round(sx(e.x) - w/2), Y = Math.round(sy(e.y) - e.r*z - 8), k = Math.max(0, e.life/e.lifeMax);
+    ctx.fillStyle = '#000000'; ctx.fillRect(X-1, Y-1, w+2, 4);
+    ctx.fillStyle = k < .35 ? '#ff5a3a' : '#ffc46b'; ctx.fillRect(X, Y, Math.round(w*k), 2);
+  }
 
   // enemy shield bubbles
   for (const e of G.ships){
@@ -340,11 +361,14 @@ export function renderCombat(){
   // sparks and bullets on top, snapped to whole pixels: coloured block with a white hot centre
   for (const f of G.fx) if (f.k==='spk'){ ctx.globalAlpha = f.life/f.max; ctx.fillStyle = f.col; ctx.fillRect(Math.round(sx(f.x)), Math.round(sy(f.y)), 1, 1); }
   ctx.globalAlpha = 1;
+  // enemy rounds share the shape of the player's matching weapon, only the hue differs
+  const SHAPE: Partial<Record<BulletKind, BulletKind>> = {eoval:'oval', egat:'line', emiss:'miss', eflak:'flak', snipe:'oval'};
   const drawB = (arr: Bullet[]) => {
     for (const b of arr){
+      const k = SHAPE[b.kind] || b.kind;
       const X = Math.round(sx(b.x)), Y = Math.round(sy(b.y)), s = Math.max(1, Math.round(b.r*z));
       if (X < -s*4 || Y < -s*4 || X > W+s*4 || Y > H+s*4) continue;
-      if (b.kind!=='line'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3; ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.arc(X, Y, s*2.6+1, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+      if (k!=='line'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3; ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.arc(X, Y, s*2.6+1, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
       if (b.tr && b.tr.length > 2){
         // exhaust trail: fades from hot yellow at the missile to dim orange at the tail
         const n = b.tr.length/2; ctx.lineWidth = 1;
@@ -354,15 +378,25 @@ export function renderCombat(){
         }
         ctx.globalAlpha = 1;
       }
-      if (b.kind==='miss' || b.kind==='mirv' || b.kind==='emiss' || b.kind==='torp'){
-        const ang = Math.atan2(b.vy,b.vx), w = b.kind==='mirv' || b.kind==='torp' ? .75 : .5;
+      if (k==='miss' || k==='mirv' || k==='torp'){
+        const ang = Math.atan2(b.vy,b.vx), w = k==='mirv' || k==='torp' ? .75 : .5;
         ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, s*2.2, Math.max(.6, s*w), ang, 0, TAU); ctx.fill();
         ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(X + Math.cos(ang)*s*1.6), Math.round(Y + Math.sin(ang)*s*1.6), 1, 1);
         continue;
       }
-      if (b.kind==='line' || b.kind==='oval' || b.kind==='eoval' || b.kind==='snipe' || b.kind==='ion'){
+      if (k==='ion'){
+        // ion bolt: a flickering violet-white orb wrapped in crackling sparks, nothing like a cannon slug
+        const R = s*1.6 + 1;
+        ctx.fillStyle = BCOL.ion; ctx.beginPath(); ctx.arc(X, Y, R, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(X, Y, R*.5, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#e8dcff'; ctx.lineWidth = 1; ctx.beginPath();
+        for (let q=0; q<3; q++){ const a = rand(0,TAU), r2 = R*rand(1.6,2.6); ctx.moveTo(X + Math.cos(a)*R, Y + Math.sin(a)*R); ctx.lineTo(X + Math.cos(a+rand(-.5,.5))*r2*.7, Y + Math.sin(a+rand(-.5,.5))*r2*.7); ctx.lineTo(X + Math.cos(a)*r2, Y + Math.sin(a)*r2); }
+        ctx.stroke();
+        continue;
+      }
+      if (k==='line' || k==='oval'){
         const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang);
-        if (b.kind==='line'){
+        if (k==='line'){
           // hairline tracer on the full-resolution layer, one screen pixel wide
           const len = Math.max(6, b.sp*z*.025)*PX, hx = sx(b.x)*PX, hy = sy(b.y)*PX;
           hctx.moveTo(hx - ca*len, hy - sa*len); hctx.lineTo(hx, hy);
@@ -377,9 +411,9 @@ export function renderCombat(){
     }
   };
   hctx.setTransform(DPR,0,0,DPR,0,0); hctx.clearRect(0,0,innerWidth,innerHeight);
-  hctx.strokeStyle = BCOL.line; hctx.lineWidth = 1; hctx.beginPath();
-  drawB(G.pb); drawB(G.eb);
-  hctx.stroke();
+  hctx.lineWidth = 1;
+  hctx.strokeStyle = BCOL.line; hctx.beginPath(); drawB(G.pb); hctx.stroke();
+  hctx.strokeStyle = BCOL.egat; hctx.beginPath(); drawB(G.eb); hctx.stroke();
 
   // off-screen hostiles
   ctx.fillStyle = '#ff7a66';
@@ -505,14 +539,14 @@ export function renderBuild(){
 
   const sc = cs/BS;
   ctx.save(); ctx.translate(cx,cy); ctx.scale(sc,sc); ctx.lineWidth = 1/sc;
-  const detail = cs >= 6, aR = designR(), aLen = R + 1.5;
+  const aR = designR(), aLen = R + 1.5;
   ctx.globalAlpha = .35; ctx.strokeStyle = '#5fd3ff'; ctx.setLineDash([4/sc,3/sc]);
   for (const [k,t] of G.design) if (t==='shield'){ ctx.beginPath(); ctx.arc(KI(k)*BS, KJ(k)*BS, shRad(), 0, TAU); ctx.stroke(); }
   ctx.setLineDash([]); ctx.globalAlpha = 1;
   for (const [k,t] of G.design) if (aimsOut(t) || BEAM(t)) drawArc(KI(k), KJ(k), G.dirs.get(k) || 0, t, t===G.sel ? .35 : .14, aR, aLen);
   for (const [k,t] of G.design){
     const i = KI(k), j = KJ(k), o = G.dirs.get(k) || 0;
-    drawBlock(ctx, t, o, 'p', i*BS, j*BS, FA[o], false, 1, detail, false);
+    drawBlock(ctx, t, o, 'p', i*BS, j*BS, FA[o], false, 1, false);
     // damaged: darkened plate with an orange crack
     if (G.broken.has(k)){
       ctx.globalAlpha = .6; ctx.fillStyle = '#000000'; ctx.fillRect(i*BS-5, j*BS-5, 10, 10); ctx.globalAlpha = 1;
@@ -542,10 +576,10 @@ export function renderBuild(){
   if (h && !G.grpBrush && Math.max(Math.abs(h.i),Math.abs(h.j)) <= R){
     const spots = placeSpots(h.i,h.j,G.rot,G.sel);
     for (const [i,j,o] of spots){
-      if (G.sel==='sell'){ ctx.globalAlpha = .9; drawBlock(ctx,'sell',0,'p',i*BS,j*BS,0,false,1,true,false); continue; }
+      if (G.sel==='sell'){ ctx.globalAlpha = .9; drawBlock(ctx,'sell',0,'p',i*BS,j*BS,0,false,1,false); continue; }
       const ok = placeCheck(i,j,G.sel,o) === true, oo = T[G.sel].rot ? o : 0;
       for (const [ci,cj,ct] of cellsFor<BlockType>(i,j,G.sel,oo)){
-        ctx.globalAlpha = .55; drawBlock(ctx,ct,oo,'p',ci*BS,cj*BS,FA[oo],false,1,true,false);
+        ctx.globalAlpha = .55; drawBlock(ctx,ct,oo,'p',ci*BS,cj*BS,FA[oo],false,1,false);
         if (ct===G.sel && (aimsOut(ct) || BEAM(ct))) drawArc(ci, cj, oo, ct, .75, aR, aLen);
         if (!ok){ ctx.globalAlpha = .8; ctx.strokeStyle = '#ff7a66'; ctx.strokeRect(ci*BS-5,cj*BS-5,10,10); }
       }

@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { PD_KINDS, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
-import { BCOL, CRAFT, ESH, LV, T, def, grpOf, isCraft } from './catalog';
+import { BCOL, CRAFT, ESH, HM, LV, T, def, grpOf, isCraft } from './catalog';
 import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx } from './craft';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
 import { BS, FA, K, NB, SWING, angDiff, clamp, rand } from './grid';
@@ -18,6 +18,11 @@ export const JOY_R = 26;
 export function wobble(e: Ship, d: number): [number, number] {
   const w = e.wob ??= Math.random()*99, amp = e.r*1.1 + d*.03;
   return [Math.sin(G.time*1.7 + w)*Math.cos(G.time*.6 + w*.4)*amp, Math.sin(G.time*2.3 + w*1.3)*Math.cos(G.time*.8 + w*.9)*amp];
+}
+// An ion bolt jams the enemy weapons near the block it hits (turrets, point defense, carrier bays) for ION_T seconds.
+export const ION_R = 2.5, ION_T = 1.5;
+export function ionJam(e: Ship, hit: Block){
+  for (const g of [...e.guns, ...e.epd, ...e.bays]) if (Math.hypot(g.i-hit.i, g.j-hit.j) <= ION_R) g.jam = G.time + ION_T;
 }
 export function update(dt: number){
   G.time += dt;
@@ -152,7 +157,7 @@ export function update(dt: number){
       if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
       const n = gun.pellets || 1;
-      for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t));
+      for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t)*HM.dmg());
       sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
       if (gun.fx==='oval') boomAt(wx + Math.cos(ang)*6, wy + Math.sin(ang)*6, 5*SC, .07);
     }
@@ -182,7 +187,7 @@ export function update(dt: number){
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
     if (hit && spend(L.en*dt)){
       sfx('laser');
-      damage(hit.e, hit.k, L.dps*LV('laser')*(1 - .75*hit.t/range)*dt);
+      damage(hit.e, hit.k, L.dps*LV('laser')*HM.dmg()*(1 - .75*hit.t/range)*dt);
       h.beam = [ox, oy, ox + dx*hit.t, oy + dy*hit.t];
       if (Math.random() < .35) sparks(ox + dx*hit.t, oy + dy*hit.t, face+Math.PI, 1, 140*SC, ['#9dff8a','#ffffff']);
     }
@@ -210,7 +215,7 @@ export function update(dt: number){
       const [bx,by] = wpos(e, e.blocks.get(k)!);
       G.beams.push({x1:lx, y1:ly, x2:bx, y2:by, life:.15, max:.15, kind:'tesla'});
       sparks(bx, by, 0, 3, 120*SC, ['#e8dcff','#ffffff']);
-      damage(e, k, Z.dmg*LV('tesla')); done.add(k); lx = bx; ly = by;
+      damage(e, k, Z.dmg*LV('tesla')*HM.dmg()); done.add(k); lx = bx; ly = by;
       // jump to the closest untouched block within two cells
       let nk: number | null = null, nd = (2.2*BS)**2;
       if (e.alive) for (const [kk,b2] of e.blocks){ if (done.has(kk)) continue; const [x2,y2] = wpos(e,b2), q = (x2-lx)**2 + (y2-ly)**2; if (q < nd){ nd = q; nk = kk; } }
@@ -256,9 +261,10 @@ export function update(dt: number){
       const k = hitShip(p, e.x, e.y, e.r*.5);
       if (k >= 0){ damage(p, k, 1 + e.blocks.size*.4); G.shake = Math.max(G.shake, 2); sfx('ram'); killShip(e); continue; }
     }
-    if (p.alive && !((e.jam || 0) > G.time)) enemyFire(e, dt*e.fireMul);
+    if (p.alive) enemyFire(e, dt*e.fireMul);
     // point defense: shoots down the player's missiles and MIRV warheads
     for (const d of e.epd){
+      if ((d.jam || 0) > G.time) continue;
       d.cd = (d.cd ?? rand(0,.6)) - dt; if (d.cd > 0) continue;
       const [wx,wy] = wpos(e,d), R = 75*e.sc;
       let best: typeof G.pb[number] | null = null, bd = R*R;
@@ -272,7 +278,7 @@ export function update(dt: number){
     }
     // carriers fly the player's fighters and bombers: one craft per bay at a time, a new one some time after it is lost
     if (e.bays.length && p.alive) for (const b of e.bays){
-      if (b.craft && b.craft.alive) continue;
+      if ((b.craft && b.craft.alive) || (b.jam || 0) > G.time) continue;
       b.bt = (b.bt ?? rand(2,5)) - dt;
       if (b.bt <= 0 && G.ships.filter(x => x.alive && x.craft).length < craftCap()){ b.bt = 14; b.craft = launchECraft(e, b); }
     }
@@ -310,9 +316,9 @@ export function update(dt: number){
         const burst = b.kind==='flak' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse || 0 : b.r);
         if (k >= 0 && burst){ flakBurst(b); break; }
         if (k >= 0){
-          b.dmg *= fallOff(b); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); if (b.homing) missileBlast(b,e,k);
+          const hb = e.blocks.get(k)!; b.dmg *= fallOff(b); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); if (b.homing) missileBlast(b,e,k);
           if (b.kind==='torp'){ missileBlast(b,e,k); impact(b,e,k); }
-          if (b.ion){ e.jam = G.time + (e.boss ? .4 : 1.5); sparks(b.x, b.y, 0, 6, 120*SC, ['#5fe0ff','#ffffff']); } G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
+          if (b.ion){ ionJam(e, hb); sparks(b.x, b.y, 0, 8, 140*SC, ['#a070ff','#e8dcff','#ffffff']); } G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }
     }
     b.life -= dt;

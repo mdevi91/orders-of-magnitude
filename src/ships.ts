@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { COL, ESH, ET, LV, PARTS, T, def, ewOf, isCraft, pickWeapon } from './catalog';
+import { COL, ESH, ET, HM, LV, PARTS, T, def, ewOf, isCraft, pickWeapon } from './catalog';
 import { BS, CORE, K, KI, KJ, NB, rand } from './grid';
 import { laneFwd, partComplete, physics } from './physics';
 import { metaLv } from './runs';
@@ -7,6 +7,9 @@ import { G } from './state';
 import type { Block, Cell, EnemyCell, Facing, Key, Physics, Ship, Team } from './types';
 import { REDUCE } from './view';
 
+// Life: every block adds its hit points times LIFE to the ship's life, and every point of damage a block takes comes off it too.
+// At 0 life the whole ship explodes, core or not. Armor plates shrug off part of every hit.
+export const LIFE = .6, ARMOR_DR = .3;
 const NO_PHYSICS: Physics = {mass:0, inertia:0, torque:0, coreT:0, jetCW:0, jetCCW:0, F:{px:0, nx:0, py:0, ny:0}, engines:[]};
 
 // ---------- ships ----------
@@ -16,12 +19,14 @@ export function makeShip(design: Map<Key, Cell>, team: Team, x: number, y: numbe
     ph:NO_PHYSICS, en:0, enMax:0, enRegen:0, w:0,
     boss:false, elite:false, flag:false, station:false, fodder:false, craft:false, n0:design.size, phaseN:1, sc:G.SC,
     fireMul:1, ft:0, phase:0, spin:1, orb:0, orbSpd:0, pref:0, vmax:0, turn:0, value:0, tgt:null, sights:null,
-    kind:null, bay:null, sortie:0, aimA:0, cd:0, pick:0};
+    kind:null, bay:null, sortie:0, aimA:0, cd:0, pick:0, life:0, lifeMax:0};
   for (const [k,t] of design){
-    const hp = (team==='e' ? ET[t as EnemyCell].hp : def(t)!.hp!*LV(t)*(team==='p' && t==='core' ? 1 + .25*metaLv('core') : 1)) * hpMul;
+    const hp = (team==='e' ? ET[t as EnemyCell].hp : def(t)!.hp!*LV(t)*HM.hp()*(team==='p' && t==='core' ? 1 + .25*metaLv('core') : 1)) * hpMul;
+    s.lifeMax += hp*LIFE;
     const b: Block = {t, i:KI(k), j:KJ(k), o:dirs ? dirs.get(k)||0 : 0, hp, max:hp, cd:Math.random()*.4, hit:-1};
     s.blocks.set(k, b);
   }
+  s.life = s.lifeMax;
   recalc(s); return s;
 }
 export function recalc(s: Ship){
@@ -58,9 +63,9 @@ export function recalc(s: Ship){
   for (const b of s.blocks.values()){ if (b.t==='gen') regen += T.gen.en!.regen!*LV('gen'); if (b.t==='battery') cap += T.battery.en!.cap!*LV('battery'); }
   // a fresh ship starts with full batteries; losing a battery later only trims what is stored
   const fresh = s.enMax === 0;
-  s.enMax = cap; s.enRegen = regen; s.en = fresh ? cap : Math.min(s.en, cap);
+  s.enMax = cap*HM.en(); s.enRegen = regen*HM.en(); s.en = fresh ? cap : Math.min(s.en, cap);
   // each shield block keeps its own bubble state
-  for (const b of s.shields) if (!b.bub){ const max = T.shield.sh!.hp*LV('shield'); b.bub = {hp:max, max, down:0, last:-9, flash:-9}; }
+  for (const b of s.shields) if (!b.bub){ const max = T.shield.sh!.hp*LV('shield')*HM.sh(); b.bub = {hp:max, max, down:0, last:-9, flash:-9}; }
 }
 export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
   const d = new Map<Key, EnemyCell>([[CORE,'core']]), keys = [CORE];
@@ -148,9 +153,11 @@ export function rayHits(ox: number, oy: number, dx: number, dy: number, len: num
   return first ? out.slice(0,1) : out;
 }
 export function damage(s: Ship, k: Key, dmg: number){
-  const b = s.blocks.get(k); if (!b) return;
-  b.hp -= dmg; b.hit = G.time;
+  const b = s.blocks.get(k); if (!b || !s.alive) return;
+  if (b.t==='armor') dmg *= 1 - ARMOR_DR;
+  s.life -= Math.min(Math.max(0, b.hp), dmg); b.hp -= dmg; b.hit = G.time;
   if (b.hp <= 0) destroyBlock(s,k,b);
+  if (s.alive && s.life <= 0) killShip(s);
 }
 export function destroyBlock(s: Ship, k: Key, b: Block){
   s.blocks.delete(k); debris(s,b,true);

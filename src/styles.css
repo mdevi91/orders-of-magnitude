@@ -136,6 +136,7 @@ details li b{color:var(--paper);font-weight:400}
 .row{display:flex;align-items:center;gap:8px;padding:3px 6px;background:var(--well);border:var(--px) solid;border-color:var(--lo) #4a505c #4a505c var(--lo)}
 .row span{flex:1;min-width:0;color:var(--paper)}
 .row small{display:block;color:var(--muted);font-size:16px}
+.row .rar{font-style:normal;color:var(--muted);font-size:14px;text-transform:uppercase;letter-spacing:.04em}
 .row .rot{flex:none;color:var(--gold)}
 .row .rot:disabled{color:var(--muted)}
 #legend{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;color:var(--muted)}
@@ -184,6 +185,7 @@ details li b{color:var(--paper);font-weight:400}
 @media (prefers-reduced-motion:reduce){#launch{animation:none}}
 .bar i{background:linear-gradient(to bottom,#9fffa0,#2ac83a)}
 #enBar{background:linear-gradient(to bottom,#fff0a0,#e0a020)}
+#lifeBar{background:linear-gradient(to bottom,#a8ecff,#2a90d0)}
 #crt{background:repeating-linear-gradient(to bottom,rgba(0,0,0,.18) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 65%,rgba(0,0,0,.5) 100%)}
 #stats{border-color:#4a505c}
 /* Devigili Studios splash: logo fades up, gold rule sweeps out, then the whole card fades away. Any key or tap skips. */
@@ -213,5 +215,4 @@ details li b{color:var(--paper);font-weight:400}
   #selDesc{min-height:0;font-size:16px}
   .upg,.rot{min-height:36px}
   #launch{padding:12px 10px;font-size:13px}
-  #hudScale{display:none}
 }

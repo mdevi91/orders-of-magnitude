@@ -1,9 +1,11 @@
 import { sfx } from './audio';
+import { T } from './catalog';
 import { runEvent } from './events';
 import { startFight } from './fights';
 import { clamp, rand } from './grid';
 import { shipWeapons } from './groups';
 import { repairDock, salvage } from './loot';
+import { reachSector } from './runs';
 import { save } from './save';
 import { openShop } from './shop';
 import { G } from './state';
@@ -96,6 +98,9 @@ export function mapAction(){
 export function nextSector(){
   G.stage++; G.map = genMap(G.stage); G.node = curNode(); tut('sector');
   toMap(); toast(`Sector ${G.stage}${G.stage%3===0 ? ': a capital fight waits at the end' : ''}`); save();
+  // a first visit to this sector unlocks new blocks for good: they can drop from here on, in this run and every later one
+  const got = reachSector(G.stage);
+  if (got.length) setTimeout(() => { sfx('unlock'); toast(`Unlocked: ${got.map(t => T[t].name).join(', ')}`); }, 1800);
 }
 export function toMap(){
   G.mode = 'map'; G.paused = false; hideOverlay(); G.mapHover = null;

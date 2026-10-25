@@ -34,7 +34,8 @@ export interface GunDef {
 }
 export interface BlockDef {
   name: string; cost: number; desc?: string;
-  key?: string; unlock?: number; hp?: number; mass?: number; rot?: boolean; thrust?: number; torque?: number;
+  /** unlock: the sector a run must reach for the block to join loot and shops; rar: rarity 0 (common) to 4 (legendary) */
+  key?: string; unlock?: number; rar?: number; hp?: number; mass?: number; rot?: boolean; thrust?: number; torque?: number;
   gun?: GunDef;
   laser?: { dps: number; range: number; en: number };
   rail?: { cd: number; pool: number; en: number; range: number };
@@ -72,6 +73,8 @@ export interface Block {
   bt?: number;
   ally?: Ship | null;
   craft?: Ship;
+  /** enemy weapons: jammed by an ion hit until this time */
+  jam?: number;
   /** enemy gatlings: shots so far in the current burst */
   shots?: number;
   beam?: [number, number, number, number] | null;
@@ -100,9 +103,11 @@ export interface Ship {
   /** enemy scale: bullet speed and reach */
   sc: number;
   fireMul: number; ft: number; phase: number; spin: number; orb: number; orbSpd: number; pref: number; vmax: number; turn: number; value: number;
-  tgt: Ship | null; armed?: boolean; sights: [number, number, number][] | null; jam?: number; wob?: number; flT?: number; rbT?: number;
+  tgt: Ship | null; armed?: boolean; sights: [number, number, number][] | null; wob?: number; flT?: number; rbT?: number;
   // hangar craft (either side)
   kind: CraftKind | null; bay: Block | null; sortie: number; aimA: number; cd: number; pick: number;
+  /** shared life pool: every block adds to it, damage to any block takes from it, and the ship explodes at 0 */
+  life: number; lifeMax: number;
 }
 
 export interface Bullet {
@@ -140,7 +145,8 @@ export interface MapNode {
 }
 export interface StarMap { nodes: MapNode[]; cur: number; done: boolean; seen: number[] }
 export interface RunStats { kills: number; nodes: number; elites: number; flags: number; sectors: number; bonus: number; won: boolean }
-export interface Meta { data: number; lv: Record<string, number> }
+/** The hangar: data to spend, upgrade levels, and the furthest sector any run has reached. */
+export interface Meta { data: number; lv: Record<string, number>; best?: number }
 export interface Stick { id: number; x0: number; y0: number; x: number; y: number }
 export interface Banner { text: string; sub: string; t: number; red?: boolean }
 export type Mode = 'title' | 'map' | 'build' | 'combat' | 'clear' | 'dead';
@@ -156,6 +162,8 @@ export interface GameState {
   broken: Set<Key>; lost: Set<Key>; fresh: Set<BlockType>;
   map: StarMap | null; node: MapNode | null; pendingNode: MapNode | null; shopNode: MapNode | null; mapHover: MapNode | null;
   stats: RunStats | null; meta: Meta; bounty: number;
+  /** outfitting the starting ship: blocks can be bought straight from the palette until the first launch */
+  outfit: boolean;
   pick: ((t: BlockType | null) => void) | null;
   // the fight
   fight: FightKind; ships: Ship[]; player: Ship | null; boss: Ship | null; pb: Bullet[]; eb: Bullet[]; fx: Fx[]; beams: Beam[];

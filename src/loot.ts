@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { MAXLV, PAL, PLATE, T, lvOf, onShip, owned, repCost, tierOf } from './catalog';
+import { MAXLV, PAL, PLATE, RARITY, T, lvOf, onShip, owned, rarName, rarOf, repCost, unlocked } from './catalog';
 import { startFight } from './fights';
 import { CORE, rand } from './grid';
 import { metaLv } from './runs';
@@ -12,10 +12,13 @@ import type { BlockType, MapNode } from './types';
 import { showOverlay } from './ui';
 
 // ---------- loot ----------
-export const lootPool = () => PAL.filter(t => t!=='sell' && !PLATE(t) && (T[t].unlock || 1) <= tierOf(G.stage) + metaLv('proto'));
-// cheap blocks are common and expensive ones rare; boost flattens the odds
+export const lootPool = () => PAL.filter(t => t!=='sell' && !PLATE(t) && unlocked(t));
+// Odds by rarity. Each step up is rarer, but deeper sectors, better sources (boost) and the hangar's prototype access
+// multiply every step, so legendaries grow from a long shot in sector 1 to a regular find late in a run.
+const RW = [100, 45, 20, 8, 3];
 export function rollBlock(boost=1, pool=lootPool()): BlockType {
-  const w = pool.map(t => Math.pow(40/T[t].cost, .8/boost));
+  const f = (1 + .2*(G.stage-1))*(1 + .3*(boost-1))*(1 + .12*metaLv('proto'));
+  const w = pool.map(t => RW[rarOf(t)]*Math.pow(f, rarOf(t)));
   let r = Math.random()*w.reduce((a,b) => a+b, 0);
   for (let n=0; n<pool.length; n++) if ((r -= w[n]) < 0) return pool[n];
   return pool[0];
@@ -38,15 +41,15 @@ export function chooseLoot(n: number, boost: number, title: string, intro: strin
     for (let q=0; offers.length < 3 && q < 30; q++){ const t = rollBlock(boost); if (!offers.includes(t)) offers.push(t); }
     G.pick = t => { G.pick = null; if (t){ addBlock(t); got.push(t); sfx('place'); } else got.push(null); step(); };
     showOverlay(title, intro + `<div class="rows"><h3>Choose a block${n > 1 ? ` · ${got.length+1} of ${n}` : ''}</h3>` +
-      offers.map(t => row(T[t].name + (owned(t) ? '' : ' · new'), T[t].desc || '', 'Take', `pick:${t}`)).join('') + '</div>',
+      offers.map(t => row(rarName(t) + ` <i class="rar">${RARITY[rarOf(t)].name}${owned(t) ? '' : ' · new'}</i>`, T[t].desc || '', 'Take', `pick:${t}`)).join('') + '</div>',
       [['Skip', () => G.pick && G.pick(null), 'ghost']], true);
   };
   step();
 }
-export const lootText = (got: (BlockType | null)[]) => { const ts = got.filter((t): t is BlockType => !!t); return ts.length ? ` Found: <b class="gold">${ts.map(t => T[t].name).join(', ')}</b>.` : ''; };
+export const lootText = (got: (BlockType | null)[]) => { const ts = got.filter((t): t is BlockType => !!t); return ts.length ? ` Found: ${ts.map(rarName).join(', ')}.` : ''; };
 export const chance = (p: number) => Math.random() < p;
-// credit income: every source pays half of what it used to
-export const inc = (v: number) => Math.round(v*.5);
+// credit income: every source pays half of what it used to, plus the hangar's salvage rights
+export const inc = (v: number) => Math.round(v*.5*(1 + .08*metaLv('salv')));
 export const cargoTypes = () => (Object.keys(G.inv) as BlockType[]).filter(t => (G.inv[t] || 0) > 0);
 export function damageRandom(n: number){
   const ks = [...G.design.keys()].filter(k => k!==CORE && !G.broken.has(k));

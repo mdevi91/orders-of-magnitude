@@ -1,10 +1,10 @@
 import { sfx } from './audio';
-import { HEAD_OF, PARTS, PLATE, T, def, isPart, partOffsets, repCost } from './catalog';
+import { HEAD_OF, PARTS, PLATE, T, canBuyHere, def, isPart, outfitPrice, partOffsets, repCost } from './catalog';
 import { layoutBuild } from './draw';
 import { CORE, FACE, K, NB, flipO, mirrorO } from './grid';
 import { assignAt } from './groups';
 import { dmgOf, takeCargo } from './loot';
-import { G, blockCount, blockLimit, buildR } from './state';
+import { G, buildR } from './state';
 import type { BlockType, Cell, Facing, Key } from './types';
 import { syncUI, toast } from './ui';
 
@@ -49,11 +49,13 @@ export function placeCheck(i: number, j: number, t: BlockType, o: Facing): true 
   if (cur && isPart(cur)) return `Sell that ${T[cur].name.toLowerCase()} first`;
   if (PARTS[t]) for (const [a,b] of cells) if (G.design.has(K(a,b))) return `${T[t].name} needs ${cells.length} empty cells`;
   if (cur===t && (!T[t].rot || (G.dirs.get(k)||0)===oo)) return 'Already placed';
-  if (!cur && blockCount() >= blockLimit()) return `Block limit reached (${blockLimit()}): it grows each sector`;
   if (PLATE(t)){
     const back = cur && PLATE(cur) && !G.broken.has(k) ? T[cur].cost : 0;
     if (T[t].cost - back > G.credits) return `Not enough credits for ${T[t].name.toLowerCase()}`;
-  } else if (!((G.inv[t] || 0) > 0)) return `No ${T[t].name.toLowerCase()} left in cargo`;
+  } else if (!((G.inv[t] || 0) > 0)){
+    if (!canBuyHere(t)) return `No ${T[t].name.toLowerCase()} left in cargo`;
+    if (outfitPrice(t) > G.credits) return `Not enough credits for ${T[t].name.toLowerCase()}`;
+  }
   if (!cur){
     const own = new Set(cells.map(([a,b]) => K(a,b)));
     if (!cells.some(([a,b]) => NB.some(d => { const n = K(a,b)+d; return !own.has(n) && G.design.has(n); }))) return 'Blocks must touch your ship';
@@ -64,6 +66,7 @@ export function tryPlace(i: number, j: number, t: BlockType, o: Facing): true | 
   const why = placeCheck(i,j,t,o); if (why !== true) return why;
   const k = K(i,j), oo = T[t].rot ? o : 0;
   if (G.design.has(k)) removeCell(k);
+  if (!PLATE(t) && !((G.inv[t] || 0) > 0)){ G.credits -= outfitPrice(t); G.inv[t] = 1; } // outfitting: bought on the spot
   const hurt = PLATE(t) ? (G.credits -= T[t].cost, false) : takeCargo(t);
   for (const [a,b,ct] of cellsFor(i,j,t,oo)){
     const kk = K(a,b); G.design.set(kk,ct);
