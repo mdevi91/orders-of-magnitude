@@ -441,7 +441,7 @@ export function renderCombat(){
         const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang);
         if (k==='line'){
           // hairline tracer on the full-resolution layer, one screen pixel wide
-          const len = Math.max(6, b.sp*z*.025)*PX, hx = sx(b.x)*PX, hy = sy(b.y)*PX;
+          const len = Math.max(5, b.sp*z*.019)*PX, hx = sx(b.x)*PX, hy = sy(b.y)*PX;
           hctx.moveTo(hx - ca*len, hy - sa*len); hctx.lineTo(hx, hy);
         } else {
           ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, s*2.2, s*1.1, ang, 0, TAU); ctx.fill();
@@ -454,7 +454,8 @@ export function renderCombat(){
     }
   };
   hctx.setTransform(DPR,0,0,DPR,0,0); hctx.clearRect(0,0,innerWidth,innerHeight);
-  hctx.lineWidth = 1;
+  // tracers: shorter and a touch heavier than a hairline
+  hctx.lineWidth = 1.6;
   hctx.strokeStyle = BCOL.line; hctx.beginPath(); drawB(G.pb); hctx.stroke();
   hctx.strokeStyle = BCOL.egat; hctx.beginPath(); drawB(G.eb); hctx.stroke();
 

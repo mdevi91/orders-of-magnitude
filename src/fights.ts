@@ -212,13 +212,13 @@ export function fightResult(kind: FightKind, cap: boolean, text: string, dmg: nu
     if (cap && G.stage >= 9 && !G.stats!.won){
       G.stats!.won = true; save();
       showOverlay('Victory', text + ` The third ${kind==='station' ? 'starbase' : 'flagship'} is down: the run is won. Keep going for more data, or end the run here.`,
-        [['Keep going', nextSector], ['End run', () => runOver('won'), 'ghost']]);
+        [['Keep going', nextSector], ['End run', () => runOver('won'), 'ghost']], false, {eye:'Combat report · run won', ac:'var(--gold)'});
       return;
     }
     const nx = G.stage + 1;
     showOverlay(kind==='station' ? 'Starbase destroyed' : kind==='boss' ? 'Flagship destroyed' : `Sector ${G.stage} cleared`, text + ` The gate is open. Sector ${nx} is next${nx%3===0 ? ', and a flagship or starbase guards it' : ''}.`,
-      [[`Jump to sector ${nx}`, nextSector], ['Star map', toMap, 'ghost']]);
-  } else showOverlay('Victory', text, [[G.pendingNode ? 'Continue' : 'Star map', goOn]]);
+      [[`Jump to sector ${nx}`, nextSector], ['Star map', toMap, 'ghost']], false, {eye:'Combat report · gate open', ac:'var(--gold)'});
+  } else showOverlay('Victory', text, [[G.pendingNode ? 'Continue' : 'Star map', goOn]], false, {eye:'Combat report'});
   save();
 }
 export function playerDied(){ G.mode = 'dead'; runOver('dead'); }
@@ -227,6 +227,6 @@ export function togglePause(){
   if (G.mode!=='combat') return;
   G.paused = !G.paused;
   if (G.paused) showOverlay('Paused', `${NODE[G.fight].name}, wave ${G.waveIdx} of ${G.waves.length}. Fleeing keeps the damage you took and gives no reward.`,
-    [['Resume', togglePause], ['Flee', flee, 'ghost']]);
+    [['Resume', togglePause], ['Flee', flee, 'ghost']], false, {eye:'Paused'});
   else hideOverlay();
 }

@@ -4,12 +4,11 @@ import { startFight } from './fights';
 import { CORE, rand } from './grid';
 import { metaLv } from './runs';
 import { save } from './save';
-import { row } from './shop';
 import { toMap } from './starmap';
 import { G } from './state';
 import { tut } from './tutorial';
 import type { BlockType, MapNode } from './types';
-import { showOverlay } from './ui';
+import { icon, showOverlay } from './ui';
 
 // ---------- loot ----------
 export const lootPool = () => PAL.filter(t => t!=='sell' && !PLATE(t) && unlocked(t));
@@ -40,9 +39,10 @@ export function chooseLoot(n: number, boost: number, title: string, intro: strin
     const offers: BlockType[] = [];
     for (let q=0; offers.length < 3 && q < 30; q++){ const t = rollBlock(boost); if (!offers.includes(t)) offers.push(t); }
     G.pick = t => { G.pick = null; if (t){ addBlock(t); got.push(t); sfx('place'); } else got.push(null); step(); };
-    showOverlay(title, intro + `<div class="rows"><h3>Choose a block${n > 1 ? ` · ${got.length+1} of ${n}` : ''}</h3>` +
-      offers.map(t => row(rarName(t) + ` <i class="rar">${RARITY[rarOf(t)].name}${owned(t) ? '' : ' · new'}</i>`, T[t].desc || '', 'Take', `pick:${t}`)).join('') + '</div>',
-      [['Skip', () => G.pick && G.pick(null), 'ghost']], true);
+    showOverlay(title, intro + `<div class="rows"><h3>Salvage · choose one${n > 1 ? ` · ${got.length+1} of ${n}` : ''}</h3></div><div class="picks">` +
+      offers.map((t, i) => `<button class="pick" type="button" data-act="pick:${t}" style="--rc:${RARITY[rarOf(t)].col}">${icon(t)}<i>${RARITY[rarOf(t)].name}</i><b>${T[t].name}</b>` +
+        `<small>${T[t].desc || ''}</small>${owned(t) ? '' : '<span class="new">New</span>'}<kbd>${i+1}</kbd></button>`).join('') + '</div>',
+      [['Skip', () => G.pick && G.pick(null), 'ghost']], true, {eye:'Salvage recovered'});
   };
   step();
 }
@@ -76,7 +76,7 @@ export function repair(mul=1){
 }
 export function salvage(n: MapNode){
   n.used = true;
-  if (chance(.3)){ showOverlay('Wreckage', 'The wreck is bait. Hostiles are closing in.', [['Fight', () => startFight('ambush')]]); return; }
+  if (chance(.3)){ showOverlay('Wreckage', 'The wreck is bait. Hostiles are closing in.', [['Fight', () => startFight('ambush')]], false, {eye:'Ambush', ac:'var(--foe)'}); return; }
   const cr = inc(rand(15,30) + 6*G.stage), head = `You strip the wreck for <b class="gold">${cr}</b> credits.`;
   G.credits += cr; save();
   chooseLoot(chance(.35) ? 2 : 1, 1, 'Wreckage', head, got => { save(); showOverlay('Wreckage', head + lootText(got), [['Star map', toMap]]); });

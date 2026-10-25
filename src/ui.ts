@@ -177,19 +177,45 @@ export function syncHud(){
 }
 /** An overlay button: label, handler, and an optional class ('ghost' for the quiet style). */
 export type OverlayAction = [string, () => void, string?];
-export function showOverlay(title: string, html: string, actions: OverlayAction[], wide=false){
-  $('ovTitle').textContent = title; $('ovText').innerHTML = html;
-  $('ovTitle').closest('.card')!.classList.toggle('wide', wide);
-  const a = $('ovActions'); a.innerHTML = '';
-  for (const [label, fn, cls] of actions){ const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', fn); a.append(b); }
-  $('overlay').hidden = false; (a.firstChild as HTMLElement | null)?.focus();
+/** Panel extras: eye is the small line above the title naming where you are, ac the accent colour, list numbers the choices down the panel. */
+export interface OverlayOpts { eye?: string; ac?: string; list?: boolean }
+export function showOverlay(title: string, html: string, actions: OverlayAction[], wide=false, o: OverlayOpts = {}){
+  $('ovTitle').textContent = title; $('ovText').innerHTML = html; $('ovEye').textContent = o.eye || '';
+  const card = $('ovTitle').closest<HTMLElement>('.card')!;
+  card.classList.toggle('wide', wide); card.style.setProperty('--ac', o.ac || 'var(--line)');
+  const a = $('ovActions'); a.innerHTML = ''; a.classList.toggle('list', !!o.list);
+  actions.forEach(([label, fn, cls], n) => {
+    const b = document.createElement('button'); b.type = 'button'; if (cls) b.className = cls; b.addEventListener('click', fn);
+    if (o.list){ const k = document.createElement('span'); k.className = 'num'; k.textContent = (n+1)+'.'; b.append(k, label); } else b.textContent = label;
+    a.append(b);
+  });
+  $('overlay').hidden = false; (card.querySelector<HTMLElement>('.pick') || a.firstChild as HTMLElement | null)?.focus();
 }
+// small pictures of blocks for menus, drawn once with the game's own sprites
+const icons: Partial<Record<BlockType, string>> = {};
+export function iconURL(t: BlockType){
+  if (icons[t]) return icons[t]!;
+  const c = document.createElement('canvas'); c.width = c.height = 14;
+  const g = c.getContext('2d')!; g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
+  drawBlock(g, t, 0, 'p', 0, 0, FA[0], false, 1, t==='engine');
+  return icons[t] = c.toDataURL();
+}
+export const icon = (t: BlockType) => `<img class="bi" src="${iconURL(t)}" alt="">`;
+/** A segmented level bar. */
+export const pips = (lv: number, max: number) => `<span class="pips" aria-label="level ${lv} of ${max}">${Array.from({length:max}, (_, i) => `<i${i < lv ? ' class="on"' : ''}></i>`).join('')}</span>`;
 export function hideOverlay(){ $('overlay').hidden = true; }
 export let toastTimer = 0;
 export function toast(msg: string){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1600); }
 
 // wiring that runs once at start-up
 export function init(){
+  // number keys pick a card from a loot draft or a numbered choice from a signal
+  addEventListener('keydown', e => {
+    if ($('overlay').hidden || !/^[1-9]$/.test(e.key)) return;
+    const n = +e.key - 1, picks = document.querySelectorAll<HTMLButtonElement>('#ovText .pick'), list = $('ovActions').classList.contains('list') ? $('ovActions').children : null;
+    const b = (picks.length ? picks[n] : list ? list[n] : null) as HTMLButtonElement | null | undefined;
+    if (b){ e.preventDefault(); e.stopImmediatePropagation(); b.click(); }
+  }, true);
   // shop and hangar buttons inside the overlay text
   $('ovText').addEventListener('click', e => {
     const b = (e.target as Element).closest<HTMLButtonElement>('button[data-act]'); if (!b || b.disabled) return;

@@ -74,7 +74,7 @@ export function jumpTo(n: MapNode){
   save();
   // random encounters on the way: raiders intercept a quiet jump, or a signal comes in mid-jump; the beacon waits until it is dealt with
   const r = Math.random(), quiet = n.type!=='fight' && n.type!=='elite' && !exitNode(n);
-  if (quiet && r < .15){ G.pendingNode = n; showOverlay('Intercepted', 'Raiders drop out of the jump lane across your path.', [['Fight', () => startFight('ambush')]]); return; }
+  if (quiet && r < .15){ G.pendingNode = n; showOverlay('Intercepted', 'Raiders drop out of the jump lane across your path.', [['Fight', () => startFight('ambush')]], false, {eye:'Proximity alert', ac:'var(--foe)'}); return; }
   if (r > .85){ G.pendingNode = n; runEvent({id:-1, col:n.col, x:0, y:0, type:'event', links:[]}); return; }
   enterNode(n);
 }

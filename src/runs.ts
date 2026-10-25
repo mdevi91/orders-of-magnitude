@@ -2,12 +2,12 @@ import { HEAD_OF, PAL, PLATE, RARITY, T, outfitPrice, rarName, rarOf, unlocked }
 import { K } from './grid';
 import { undoStack } from './input';
 import { clearRun, load, save, saveMeta } from './save';
-import { row } from './shop';
+import { tile } from './shop';
 import { curNode, genMap, toDrydock, toMap } from './starmap';
 import { G } from './state';
 import { tut } from './tutorial';
 import type { BlockType, Key, StartDesign } from './types';
-import { hideOverlay, showOverlay, syncUI, toast } from './ui';
+import { hideOverlay, icon, pips, showOverlay, syncUI, toast } from './ui';
 import { $ } from './view';
 
 // ---------- runs and the space base ----------
@@ -29,7 +29,6 @@ export const META: MetaDef[] = [
 ];
 export function metaLv(id: string){ return G.meta.lv[id] || 0; }
 export const metaCost = (m: MetaDef) => 2*m.cost*(metaLv(m.id) + 1);
-const metaRow = (m: MetaDef) => row(m.name + (metaLv(m.id) ? ` Lv${metaLv(m.id)}/${m.max}` : ''), m.desc, metaLv(m.id) >= m.max ? 'max' : `${metaCost(m)} data`, `meta:${m.id}`, metaLv(m.id) >= m.max || metaCost(m) > G.meta.data);
 // Blocks that join loot and shops once a run first reaches sector s.
 const unlocksAt = (s: number) => PAL.filter(t => t!=='sell' && !PLATE(t) && (T[t].unlock || 1)===s);
 function unlockLine(){
@@ -54,21 +53,27 @@ export function station(id: string){
 // Hangar: carry on with the run in progress, or launch a new one in the ship Engineering designed.
 function hangar(){
   const st = startDesign(), left = budget() - designCost(new Map(st.d));
-  if (G.stats) showOverlay('Hangar', `Your ship waits in sector <b>${G.stage}</b>.`, [['Continue run', () => { G.outfit = false; toMap(); }],
-    ['New run', () => { if (confirm('Abandon the saved run? You keep the data you already have.')) newRun(); }, 'ghost'], ['Back', showTitle, 'ghost']]);
-  else showOverlay('Hangar', `Your ${st.d.length}-block starting ship is fueled and ready. The <b class="gold">${Math.max(0, left)} cr</b> of budget it didn’t use comes with you. Redesign it in Engineering.`,
-    [['Launch', newRun], ['Back', showTitle, 'ghost']]);
+  const ro = (v: string | number, k: string) => `<div class="readout"><b>${v}</b><span>${k}</span></div>`;
+  if (G.stats) showOverlay('Hangar', `<div class="readouts">${ro(G.stage, 'Sector')}${ro(G.stats.nodes, 'Jumps')}${ro(G.stats.kills, 'Kills')}${ro(Math.round(G.credits), 'Credits')}</div>Your ship is still out there, waiting at the last beacon.`,
+    [['Continue run', () => { G.outfit = false; toMap(); }], ['New run', () => { if (confirm('Abandon the saved run? You keep the data you already have.')) newRun(); }, 'ghost'], ['Back', showTitle, 'ghost']],
+    false, {eye:'Hangar · run in progress', ac:STATION_AC.hangar});
+  else showOverlay('Hangar', `<div class="readouts">${ro(st.d.length, 'Blocks')}${ro(Math.max(0, left), 'Credits aboard')}${ro(G.meta.best || 1, 'Best sector')}</div>Fueled and cleared for launch. The budget your design didn’t use rides along as credits. Change the design in Engineering.`,
+    [['Launch', newRun], ['Back', showTitle, 'ghost']], false, {eye:'Hangar · launch bay', ac:STATION_AC.hangar});
 }
 // Research & Development: the data upgrades, one section per kind.
 export function showRnD(){
-  const sec = (name: string, intro: string, ms: MetaDef[]) => `<h3>${name}</h3><small>${intro}</small>` + ms.map(metaRow).join('');
-  showOverlay('Research & Development', `Data from every run, won or lost, pays for permanent upgrades. <b class="gold">${G.meta.data} data</b> available.` +
-    '<div class="rows">' +
-    sec('Logistics', 'Help every run get going.', META.filter(m => !m.ship)) +
-    sec('Ship systems', 'Make every block of every ship stronger.', META.filter(m => m.ship)) + '</div>',
-    [['Back', showTitle]], true);
+  const t = (m: MetaDef) => { const lv = metaLv(m.id), max = lv >= m.max;
+    return tile({name:m.name, tag:max ? 'Complete' : `Level ${lv} of ${m.max}`, desc:m.desc, foot:pips(lv, m.max), label:max ? 'max' : `${metaCost(m)} data`, act:`meta:${m.id}`, dis:max || metaCost(m) > G.meta.data}); };
+  const spent = META.reduce((a, m) => a + metaLv(m.id), 0), total = META.reduce((a, m) => a + m.max, 0);
+  showOverlay('Research & Development', `<div class="readouts"><div class="readout"><b class="gold">${G.meta.data}</b><span>Data</span></div><div class="readout"><b>${spent}/${total}</b><span>Projects done</span></div></div>` +
+    '<div class="rows"><h3>Logistics · every run starts stronger</h3></div><div class="tiles">' + META.filter(m => !m.ship).map(t).join('') + '</div>' +
+    '<div class="rows"><h3>Ship systems · every block hits harder</h3></div><div class="tiles">' + META.filter(m => m.ship).map(t).join('') + '</div>',
+    [['Back', showTitle]], true, {eye:'Station · Research & Development', ac:STATION_AC.rnd});
 }
 // Cantina: your records, a rumor from the bar, and the ship deck.
+const PILOTS = ['Vex, freighter captain', 'a bored dockhand', 'Okafor, ex-navy gunner', 'a pilot nursing a drink', 'Lin, salvage crew', 'the bartender'];
+// station accent colours, matching their doorways in the base
+const STATION_AC = {cantina:'#7fe07a', rnd:'#c88aff', eng:'#5fd8ff', hangar:'#ffc46b'};
 const RUMORS = [
   'Pilots say armor plates shrug off a third of every hit. Wrap your core in them.',
   'Ion bolts jam the guns near where they hit. Aim them at a turret cluster.',
@@ -82,20 +87,22 @@ const RUMORS = [
 export function showCantina(){
   const m = G.meta, best = m.best || 1, next = PAL.map(t => T[t].unlock || 1).filter(u => u > best).sort((a,b) => a-b)[0];
   const rumor = next && Math.random() < .4 ? `Word is that the sector ${next} yards build ${unlocksAt(next).map(rarName).join(' and ')}. Get there and they’re yours.` : RUMORS[(Math.random()*RUMORS.length)|0];
-  const rec = (k: string, v: string | number) => `<div class="row"><span>${k}</span><b>${v}</b></div>`;
-  showOverlay('Cantina', `The bar hums with pilots between jumps.<div class="rows"><h3>Records</h3>` +
-    rec('Runs flown', m.runs || 0) + rec('Runs won', m.wins || 0) + rec('Furthest sector', best) + rec('Data earned', m.earned || 0) + rec('Ships destroyed', m.kills || 0) +
-    `<h3>Overheard</h3><small>“${rumor}”</small></div>`,
-    [['Ship deck', showDeck], ['Back', showTitle, 'ghost']], true);
+  const ro = (v: string | number, k: string) => `<div class="readout"><b>${v}</b><span>${k}</span></div>`;
+  const who = PILOTS[(Math.random()*PILOTS.length)|0];
+  showOverlay('Cantina', `<div class="rows"><h3>Your record</h3></div><div class="readouts">${ro(m.runs || 0, 'Runs')}${ro(m.wins || 0, 'Won')}${ro(best, 'Best sector')}${ro(m.earned || 0, 'Data earned')}${ro(m.kills || 0, 'Kills')}</div>` +
+    `<div class="rows"><h3>Overheard at the bar</h3></div><blockquote class="quote">“${rumor}”<cite>— ${who}</cite></blockquote>`,
+    [['Ship deck', showDeck], ['Back', showTitle, 'ghost']], true, {eye:'Station · Cantina', ac:STATION_AC.cantina});
 }
 // Ship deck: every block, what it does, how rare it is, and where it unlocks.
 export function showDeck(){
   const best = G.meta.best || 1, ts = PAL.filter(t => t!=='sell' && !PLATE(t)).sort((a,b) => rarOf(a) - rarOf(b) || (T[a].unlock || 1) - (T[b].unlock || 1));
-  const card = (t: BlockType) => `<div class="row${unlocked(t) ? '' : ' locked'}"><span>${rarName(t)} <i class="rar">${RARITY[rarOf(t)].name}</i><small>${unlocked(t) ? T[t].desc || '' : `Unlocks when a run reaches sector ${T[t].unlock}.`}</small></span></div>`;
+  const card = (t: BlockType) => tile({ic:icon(t), rc:RARITY[rarOf(t)].col, name:T[t].name, tag:RARITY[rarOf(t)].name, locked:!unlocked(t), label:'', act:'',
+    desc:unlocked(t) ? T[t].desc || '' : `Locked. Reach sector ${T[t].unlock} to unlock it.`});
   const open = ts.filter(unlocked), shut = ts.filter(t => !unlocked(t));
-  showOverlay('Ship deck', `${open.length} of ${ts.length} blocks unlocked. Furthest sector reached: <b>${best}</b>. Unlocked blocks can turn up in loot and shops from sector 1 on, and Engineering can build them into your starting ship.` +
-    '<div class="rows"><h3>Unlocked</h3>' + open.map(card).join('') + (shut.length ? '<h3>Locked</h3>' + shut.map(card).join('') : '') + '</div>',
-    [['Back', showCantina]], true);
+  showOverlay('Ship deck', `<div class="readouts"><div class="readout"><b>${open.length}/${ts.length}</b><span>Blocks unlocked</span></div><div class="readout"><b>${best}</b><span>Best sector</span></div></div>` +
+    'Unlocked blocks turn up in loot and shops from sector 1 on, and Engineering can build them into your starting ship.' +
+    '<div class="rows"><h3>Unlocked</h3></div><div class="tiles">' + open.map(card).join('') + '</div>' + (shut.length ? '<div class="rows"><h3>Locked</h3></div><div class="tiles">' + shut.map(card).join('') + '</div>' : ''),
+    [['Back', showCantina]], true, {eye:'Cantina · ship deck', ac:STATION_AC.cantina});
 }
 // ---------- Engineering: the starting ship ----------
 // The design every run starts with, kept in the hangar save. It is paid for out of a small budget; what is left becomes the run's first credits.
@@ -137,7 +144,9 @@ export function runOver(why: 'dead' | 'won' | 'abandoned'){
   const data = st.sectors*6 + st.elites*2 + st.flags*15 + Math.floor(st.nodes/2) + Math.floor(st.kills/8) + (st.bonus||0) + (st.won ? 25 : 0);
   const m = G.meta; m.data += data; m.earned = (m.earned || 0) + data; m.runs = (m.runs || 0) + 1; m.kills = (m.kills || 0) + st.kills; if (st.won) m.wins = (m.wins || 0) + 1;
   saveMeta(); clearRun(); tut('data');
-  showOverlay(why==='dead' ? 'Core destroyed' : why==='won' ? 'Run complete' : 'Run abandoned',
-    `Sector <b>${G.stage}</b>, ${st.nodes} jumps, ${st.kills} kills, ${st.flags} flagship${st.flags===1 ? '' : 's'}. You earned <b class="gold">${data} data</b> for research.`,
-    [['Main menu', showTitle]]);
+  const ro = (v: string | number, k: string, c = '') => `<div class="readout"><b${c}>${v}</b><span>${k}</span></div>`;
+  showOverlay(why==='dead' ? 'Ship lost' : why==='won' ? 'Run complete' : 'Run abandoned',
+    `<div class="readouts">${ro(G.stage, 'Sector')}${ro(st.nodes, 'Jumps')}${ro(st.kills, 'Kills')}${ro(st.flags, 'Capital ships')}${ro('+'+data, 'Data', ' class="gold"')}</div>` +
+    (why==='dead' ? 'The wreck goes dark. What your sensors logged on the way still counts: the data goes to Research &amp; Development.' : 'The data you brought back goes to Research &amp; Development.'),
+    [['Back to base', showTitle]], false, {eye:'After-action report', ac:why==='dead' ? 'var(--foe)' : 'var(--gold)'});
 }

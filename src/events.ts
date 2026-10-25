@@ -94,8 +94,8 @@ export function runEvent(n: MapNode){
   const E = EVENTS[n.ev];
   const acts = E.choices.filter(c => !c[2] || c[2]()).map(([label, fn]): [string, () => void] => [label, () => {
     n.used = true; const r = fn(); save();
-    if (typeof r !== 'string') showOverlay(E.title, r.text, [['Fight', () => startFight(r.fight)]]);
-    else showOverlay(E.title, r, [[G.pendingNode ? 'Continue' : 'Star map', goOn]]);
+    if (typeof r !== 'string') showOverlay(E.title, r.text, [['Fight', () => startFight(r.fight)]], false, {eye:'Signal · hostile', ac:'var(--foe)'});
+    else showOverlay(E.title, r, [[G.pendingNode ? 'Continue' : 'Star map', goOn]], false, {eye:'Signal · resolved', ac:'#ff9a5a'});
   }]);
-  showOverlay(E.title, E.text, acts);
+  showOverlay(E.title, E.text, acts, false, {eye:`Incoming signal · sector ${G.stage}`, ac:'#ff9a5a', list:true});
 }
