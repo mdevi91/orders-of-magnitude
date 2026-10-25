@@ -201,7 +201,8 @@ const CRAFT_SHAPE: Record<CraftKind, number[]> = {
   bbay:[0,-12, 8,-6, 24,4, 24,8, 12,8, 8,12, -8,12, -12,8, -24,8, -24,4, -8,-6],
 };
 function drawCraft(s: Ship){
-  const k = s.kind!, P = CRAFT_SHAPE[k], foe = s.team==='e', z = G.zoom;
+  const k = s.kind!, P = CRAFT_SHAPE[k], foe = s.team==='e', z = G.zoom, sc = k==='fbay' ? .42 : .3;
+  ctx.scale(sc, sc); // fighters are about one block across, bombers a little wider
   let hp = 0, max = 0, hit = false;
   for (const b of s.blocks.values()){ hp += b.hp; max += b.max; if (G.time - b.hit < .06) hit = true; }
   const path = () => { ctx.beginPath(); ctx.moveTo(P[0], P[1]); for (let i=2; i<P.length; i+=2) ctx.lineTo(P[i], P[i+1]); ctx.closePath(); };
@@ -209,7 +210,7 @@ function drawCraft(s: Ship){
   // engine flames, flickering
   for (const [ex, ey] of eng){ const l = 4 + 3*Math.random(); ctx.fillStyle = '#ffb27a'; ctx.fillRect(ex-1.5, ey, 3, l); ctx.fillStyle = '#fff0c0'; ctx.fillRect(ex-.7, ey, 1.4, l*.6); }
   // outline for contrast, the hull, a darker underside panel, then the cockpit glass
-  ctx.lineWidth = 2/z; ctx.strokeStyle = foe ? (s.boss || s.elite ? '#ffd04a' : '#ff5a3a') : '#0a1830'; path(); ctx.stroke();
+  ctx.lineWidth = 2/(z*sc); ctx.strokeStyle = foe ? (s.boss || s.elite ? '#ffd04a' : '#ff5a3a') : '#0a1830'; path(); ctx.stroke();
   ctx.fillStyle = hit ? '#ffffff' : hull[0]; path(); ctx.fill();
   if (!hit){
     ctx.save(); path(); ctx.clip(); ctx.fillStyle = hull[1]; ctx.fillRect(-30, 2, 60, 20);

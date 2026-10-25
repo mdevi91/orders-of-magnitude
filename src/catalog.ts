@@ -61,9 +61,11 @@ export const isPart = (t: Cell | undefined) => !!(t && (PARTS[t] || HEAD_OF[t]))
 export const BEAM = (t: Cell) => t==='rail' || t==='laser';
 // Hangar craft flown out of the bays. hp scales the craft's blocks; it circles its target at target radius*over + orbit.
 export const CRAFT = {
-  fbay:{design:[[0,0,'core'],[0,-1,'gatling'],[-1,0,'hull'],[1,0,'hull'],[0,1,'engine']], hp:.28, spd:320, agi:3, turn:6, orbit:60, over:1, orbSpd:1.1, range:220, sortie:30, rearm:3, rebuild:15, sfx:'gatling',
+  // a fighter is a single block: small to hit, with its hit points scaled up to match the old five-block airframe
+  fbay:{design:[[0,0,'core']], hp:.54, spd:320, agi:3, turn:6, orbit:60, over:1, orbSpd:1.1, range:220, sortie:30, rearm:3, rebuild:15, sfx:'gatling',
     gun:{cd:.35, spd:720, dmg:5.2, spread:.05, r:1.6, fx:'line'}},
-  bbay:{design:[[0,0,'core'],[0,-1,'armor'],[-1,0,'armor'],[1,0,'armor'],[-2,0,'hull'],[2,0,'hull'],[-1,1,'engine'],[1,1,'engine'],[0,1,'hull']], hp:.45, spd:170, agi:1.4, turn:2.2, orbit:10, over:.5, orbSpd:.5, range:60, sortie:30, rearm:3, rebuild:25, sfx:'cannon',
+  // a bomber is a single block too, a little wider on screen, as tough as the old nine-block airframe
+  bbay:{design:[[0,0,'core']], hp:2.16, spd:170, agi:1.4, turn:2.2, orbit:10, over:.5, orbSpd:.5, range:60, sortie:30, rearm:3, rebuild:25, sfx:'cannon',
     gun:{cd:1.6, spd:200, dmg:30, spread:.05, r:3, fx:'flak', life:2, fuse:6, blast:32}},
 } satisfies Record<string, CraftDef>;
 /** Is this cell a hangar that launches craft? */
