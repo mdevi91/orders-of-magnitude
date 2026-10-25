@@ -44,3 +44,14 @@ fresh();
   for (const [i,j,ct] of cellsFor(0,-3,'bigcannon',0)){ G.design.set(K(i,j), ct); G.dirs.set(K(i,j), 0); }
   ok('big cannon cells find their head', [[-1,-1],[1,-1],[0,-1],[0,-2]].every(([i,j]) => headOf(i,j).join()==='0,-3'));
 }
+// the gatling fires over its own hull: one sitting behind the core still hits a target ahead
+fresh();
+{
+  G.design = new Map([[CORE,'core'],[K(0,1),'gatling'],[K(-1,0),'gen'],[K(1,0),'gen'],[K(-1,1),'battery']]); G.dirs = new Map([[K(0,1),0]]); G.broken = new Set();
+  startFight('fight'); G.waves = []; G.ships = [G.player];
+  G.auto = [false,false,false,false,false]; G.aimAuto = false; G.mouse.has = true; G.fireHeld = true; G.aimJoy = {x0:0, y0:0, x:0, y:-50};
+  G.player.guns = G.player.guns.filter(g => g.t!=='core');
+  const e = dummy(rangeOf('gatling')*G.SC*.5);
+  sim(4);
+  ok('gatling fires over its own hull', hpLost(e) > 0, `damage ${Math.round(hpLost(e))}`);
+}

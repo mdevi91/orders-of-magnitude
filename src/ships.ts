@@ -178,6 +178,12 @@ export function killShip(s: Ship){
   s.alive = false;
   for (const b of s.blocks.values()) debris(s,b,false,1.6);
   s.blocks.clear();
+  // the core goes up last: a white-hot blast at the heart of the ship, with secondary blasts across the hull
+  const SC = G.SC, big = s.team!=='a';
+  boomAt(s.x, s.y, (big ? 12 + s.r*.3 : 6)*SC, big ? .55 : .3);
+  if (big) for (let n=0; n<Math.min(6, 1 + s.r/BS/2); n++){ const a = rand(0, Math.PI*2), d = rand(.2, .8)*s.r; boomAt(s.x + Math.cos(a)*d, s.y + Math.sin(a)*d, rand(6, 11)*SC, rand(.25, .45)); }
+  sparks(s.x, s.y, 0, big ? 22 : 8, (big ? 380 : 200)*SC, s.team==='e' ? ['#ffffff','#ffd0a0','#ff8a5a'] : ['#ffffff','#a8ecff','#5fd8ff']);
+  if (big && !REDUCE) G.shake = Math.min(6, G.shake + (s.team==='p' || s.boss ? 5 : 2.5));
   G.fx.push({k:'ring', x:s.x, y:s.y, r:s.r*1.8 + 20*G.SC, life:.7, max:.7, col:s.team==='p' ? '#ffffff' : '#ff9a7a'});
   if (s.team==='e'){
     sfx(s.boss ? 'big' : 'boom', Math.min(1.5, .4 + s.r/60));

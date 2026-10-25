@@ -53,7 +53,10 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.fillStyle = base[0]; for (const [a,b] of [[-3.4,-3.4],[2.6,-3.4],[-3.4,2.6],[2.6,2.6]]) X.fillRect(x+a,y+b,.9,.9); break;
     case 'core':
       orb(X,x,y,4.2, team==='p' ? ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff'] : ['#5a1008','#c0301a','#ff8a5a','#fff0d0']);
-      X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill(); X.globalAlpha = 1; break;
+      X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill();
+      // a pulsing halo ring so the core stands out on any hull
+      X.globalAlpha = .55 + .35*Math.sin(G.time*4); X.strokeStyle = team==='p' ? '#7fe8ff' : '#ffb08a'; X.lineWidth = .9;
+      X.beginPath(); X.arc(x,y,5.6 + .5*Math.sin(G.time*4),0,TAU); X.stroke(); X.globalAlpha = 1; break;
     case 'cannon': case 'gun':
       barrel(X,x,y,ca,sa,7,2.4,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
     case 'bigcannon':
@@ -534,6 +537,7 @@ export function rayOut(i: number, j: number, a: number, R: number){
 const arcOf = (t: Cell) => def(t)?.gun?.arc || 0;
 export const ARC_N = 16, arcRays = (o: Facing, t: Cell) => Array.from({length:ARC_N}, (_,n) => FA[o] - arcOf(t) + 2*arcOf(t)*n/(ARC_N-1));
 export function arcClear(i: number, j: number, o: Facing, t: Cell){
+  if (def(t)?.gun?.over) return 1;
   const R = designR(); let ok = 0;
   for (const a of arcRays(o,t)) if (rayOut(i,j,a,R) === Infinity) ok++;
   return ok/ARC_N;
@@ -544,7 +548,7 @@ export function drawArc(i: number, j: number, o: Facing, t: Cell, alpha: number,
   ctx.globalAlpha = alpha; ctx.lineWidth = ctx.lineWidth || 1;
   if (aimsOut(t)){
     for (const a of arcRays(o,t)){
-      const h = rayOut(i,j,a,R), L = Math.min(h, len)*BS;
+      const h = def(t)?.gun?.over ? Infinity : rayOut(i,j,a,R), L = Math.min(h, len)*BS;
       ctx.strokeStyle = h === Infinity ? '#5fd8ff' : '#ff5a3a';
       ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x + Math.cos(a)*L, y + Math.sin(a)*L); ctx.stroke();
     }

@@ -31,6 +31,8 @@ export interface GunDef {
   arc?: number;
   fx?: BulletKind; homing?: boolean; mirv?: number; pellets?: number; fan?: number; ion?: boolean;
   life?: number; fuse?: number; blast?: number; lob?: boolean; nofall?: boolean;
+  /** fires over the ship's own hull, so nothing on board blocks it */
+  over?: boolean;
 }
 export interface BlockDef {
   name: string; cost: number; desc?: string;

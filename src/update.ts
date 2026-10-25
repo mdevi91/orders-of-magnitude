@@ -162,7 +162,7 @@ export function update(dt: number){
       // out of range: hold fire rather than waste the shot
       if (gun.range && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > gun.range*SC)){ g.cd = .1; continue; }
       if (Math.abs(angDiff(ang, p.a + FA[g.o])) > arc) continue;
-      if (!gun.homing && !gun.lob && !laneClear(p,g,ang)) continue;
+      if (!gun.homing && !gun.lob && !gun.over && !laneClear(p,g,ang)) continue;
       if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
       const n = gun.pellets || 1;
