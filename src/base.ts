@@ -4,7 +4,7 @@ import { KI, KJ, clamp } from './grid';
 import { startDesign } from './runs';
 import { G } from './state';
 import type { BlockType, Cell } from './types';
-import { $, H, PX, W, ctx } from './view';
+import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 
 // ---------- the space base ----------
 // The main menu is the inside of a space base, drawn as flat-shaded 3D polygons into the low-res game canvas (90s VGA style).
@@ -19,12 +19,13 @@ type RGB = [number, number, number];
  */
 interface Face { p: V3[]; c: RGB; layer: number; glow?: boolean; n?: V3; blink?: number; st?: number; lit?: RGB }
 
-export interface Station { id: string; name: string; col: RGB }
+/** sign: the short name lit on the sign over its doorway */
+export interface Station { id: string; name: string; sign: string; col: RGB }
 export const STATIONS: Station[] = [
-  {id:'cantina', name:'Cantina', col:[127,224,122]},
-  {id:'rnd', name:'Research & Development', col:[200,138,255]},
-  {id:'eng', name:'Engineering', col:[95,216,255]},
-  {id:'hangar', name:'Hangar', col:[255,196,107]},
+  {id:'cantina', name:'Cantina', sign:'CANTINA', col:[127,224,122]},
+  {id:'rnd', name:'Research & Development', sign:'R&D', col:[200,138,255]},
+  {id:'eng', name:'Engineering', sign:'ENGINEERING', col:[95,216,255]},
+  {id:'hangar', name:'Hangar', sign:'HANGAR', col:[255,196,107]},
 ];
 
 const R = 8, ZC = -1, WALL_H = 6, DOOR_W = 2.4, DOOR_H = 2.8, WIN_LO = 3.6, WIN_HI = 5.4, DEEP = 3.2, HOLO: V3 = [0, 0, 1.2];
@@ -88,7 +89,7 @@ function prism(cx: number, cz: number, r: number, y0: number, y1: number, col: R
 // ---------- the room ----------
 let room: Face[] | null = null;
 /** Each doorway: its local frame (for the sliding doors) and its opening's corners (for the buttons). */
-const doors: {at: (x: number, y: number, d?: number) => V3; d0: number; d1: number; open: number; q: V3[]}[] = [];
+const doors: {at: (x: number, y: number, d?: number) => V3; d0: number; d1: number; open: number; q: V3[]; sign: V3[]}[] = [];
 function buildRoom(){
   faces = [];
   // floor tiles, two shades, and the ceiling
@@ -154,7 +155,7 @@ function buildRoom(){
     quad(at(d0-.22,DOOR_H+.12,.23), at(d0-.08,DOOR_H+.12,.23), at(d0-.08,DOOR_H+.24,.23), at(d0-.22,DOOR_H+.24,.23), [255,80,60], 5.5, {glow:true, blink:k*1.3});
     quad(at(d1+.08,DOOR_H+.12,.23), at(d1+.22,DOOR_H+.12,.23), at(d1+.22,DOOR_H+.24,.23), at(d1+.08,DOOR_H+.24,.23), [90,255,120], 5.5, {glow:true, blink:k*1.3+2});
     wbox(d0+.1, d1-.1, DOOR_H+.45, DOOR_H+.95, 0, .12, DARK, 5);
-    quad(at(d0+.2,DOOR_H+.52,.13), at(d1-.2,DOOR_H+.52,.13), at(d1-.2,DOOR_H+.88,.13), at(d0+.2,DOOR_H+.88,.13), col, 5.5, {glow:true, st});
+    quad(at(d0+.2,DOOR_H+.52,.13), at(d1-.2,DOOR_H+.52,.13), at(d1-.2,DOOR_H+.88,.13), at(d0+.2,DOOR_H+.88,.13), scale(col, .16), 5.5, {glow:true, st});
     // hazard stripes across the threshold, and a lit strip leading into the room
     for (let q=0; q<8; q++){ const x0 = d0 + q*DOOR_W/8; quad(at(x0,.012,.55), at(x0+DOOR_W/8,.012,.55), at(x0+DOOR_W/8,.012,.05), at(x0,.012,.05), q & 1 ? DARK : HAZ, 1, {n:[0,1,0]}); }
     quad(at(w/2-.18,.01,4), at(w/2+.18,.01,4), at(w/2+.18,.01,.6), at(w/2-.18,.01,.6), scale(col, .5), 1, {glow:true, st});
@@ -168,7 +169,7 @@ function buildRoom(){
     for (let q=0; q<5; q++) quad(at(d1+.6,1.3+q*.18,.02), at(d1+1.3,1.3+q*.18,.02), at(d1+1.3,1.36+q*.18,.02), at(d1+.6,1.36+q*.18,.02), TRIM, 5.5, {n});
     wbox(0, w, 3.12, 3.34, 0, .24, RUST, 5);
     wbox(0, w, .22, .32, 0, .14, scale(TRIM, .8), 5);
-    doors[k] = {at, d0, d1, open:0, q:[at(d0,0), at(d1,0), at(d1,DOOR_H), at(d0,DOOR_H)]};
+    doors[k] = {at, d0, d1, open:0, q:[at(d0,0), at(d1,0), at(d1,DOOR_H), at(d0,DOOR_H)], sign:[at(d0+.25,DOOR_H+.86,.14), at(d1-.25,DOOR_H+.86,.14), at(d0+.25,DOOR_H+.54,.14)]};
   }
   // window mullions: thick struts at the panel corners
   for (let k=0; k<5; k++){
@@ -219,9 +220,8 @@ function buildOutside(){
   outside = faces;
 }
 
-// the camera eases toward the hovered station and drifts with the pointer
 const cam = {x:0, y:1.75, z:6.2, yaw:0, pitch:.06};
-let hover = -1, mx = 0;
+let hover = -1;
 const FOG: RGB = [10,14,26];
 let FL = 1;
 /** World point to camera space: right, up, depth. */
@@ -315,9 +315,9 @@ export function renderBase(dt: number){
   if (!room) buildRoom();
   if (!outside) buildOutside();
   FL = Math.min(W*.5, H*.95);
-  // ease the camera: a slow sway, a pull toward the hovered doorway, and a little toward the pointer
-  const want = (hover >= 0 ? (ANG[hover] + ANG[hover+1])/2*.32 : 0) + mx*.06 + Math.sin(G.time*.3)*.02;
-  cam.yaw += (want - cam.yaw)*Math.min(1, dt*3);
+  // the camera holds still apart from a barely-there sway: the station buttons ride on the doorways,
+  // so a camera that turned toward the hovered door would slide the button out from under the pointer
+  cam.yaw = Math.sin(G.time*.3)*.003;
   // space through the window: stars, a ringed planet, then the station's exterior
   drawSpace(G.time*4, 0, 1);
   const pc = toCam([-30, 26, -140]);
@@ -334,7 +334,25 @@ export function renderBase(dt: number){
   const [bx, by] = toScreen(toCam([HOLO[0], .95, HOLO[2]])), [tx, ty] = toScreen(toCam([HOLO[0], 2.2, HOLO[2]])), bw = 1.2/toCam([HOLO[0], 1.5, HOLO[2]])[2]*FL;
   const g = ctx.createLinearGradient(0, by, 0, ty); g.addColorStop(0, 'rgba(95,216,255,.28)'); g.addColorStop(1, 'rgba(95,216,255,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(bx - bw*.55, by); ctx.lineTo(bx + bw*.55, by); ctx.lineTo(tx + bw, ty); ctx.lineTo(tx - bw, ty); ctx.closePath(); ctx.fill();
+  signs();
   placeButtons();
+}
+// The station names, lit on the signs over the doorways. The text is laid onto each sign's plane so it sits in the room,
+// and drawn on the full-resolution layer so even the far signs stay legible.
+function signs(){
+  const X = hctx, k0 = PX*DPR;
+  X.textBaseline = 'middle'; X.textAlign = 'center';
+  doors.forEach((D, k) => {
+    const cs = D.sign.map(toCam); if (cs.some(c => c[2] < .2)) return;
+    const [tl, tr, bl] = cs.map(toScreen), S = STATIONS[k];
+    X.setTransform(1,0,0,1,0,0); X.font = FONT(16); const tw = Math.max(X.measureText(S.sign).width + 16, 90), th = 26;
+    // map the text box onto the sign: left to right along its top edge, top to bottom down its side
+    X.setTransform((tr[0]-tl[0])/tw*k0, (tr[1]-tl[1])/tw*k0, (bl[0]-tl[0])/th*k0, (bl[1]-tl[1])/th*k0, tl[0]*k0, tl[1]*k0);
+    const lit = hover === k ? 1 : .6 + .4*(.5 + .5*Math.sin(G.time*2 + k));
+    X.globalAlpha = .4*lit; X.fillStyle = `rgb(${S.col.join(',')})`; X.fillText(S.sign, tw/2 + 1.5, th/2 + 1.5);
+    X.globalAlpha = lit; X.fillStyle = hover === k ? '#ffffff' : `rgb(${S.col.map(v => Math.min(255, v + 50)).join(',')})`; X.fillText(S.sign, tw/2, th/2);
+  });
+  X.setTransform(1,0,0,1,0,0); X.globalAlpha = 1;
 }
 // keep each station's button over its doorway
 function placeButtons(){
@@ -352,7 +370,7 @@ export function initBase(act: (id: string) => void){
   for (const [k, s] of STATIONS.entries()){
     const b = document.createElement('button'); b.type = 'button'; b.className = 'station'; b.id = 'st-'+s.id;
     b.style.setProperty('--sc', `rgb(${s.col.join(',')})`);
-    b.innerHTML = `<span><b>${s.name}</b></span>`;
+    b.setAttribute('aria-label', s.name); b.title = s.name;
     b.addEventListener('pointerenter', () => { hover = k; });
     b.addEventListener('pointerleave', () => { if (hover === k) hover = -1; });
     b.addEventListener('focus', () => { hover = k; });
@@ -360,5 +378,4 @@ export function initBase(act: (id: string) => void){
     b.addEventListener('click', () => act(s.id));
     root.append(b);
   }
-  addEventListener('pointermove', e => { mx = e.clientX/innerWidth*2 - 1; });
 }
