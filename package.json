@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node test/run.js"
+    "test": "node test/run.js",
+    "itch": "tsc --noEmit && vite build --base ./ --outDir itch/game --emptyOutDir"
   },
   "devDependencies": {
     "javascript-obfuscator": "^4.1.1",
