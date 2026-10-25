@@ -2,7 +2,7 @@ import { BCOL, BEAM, ESH, GCOL, MAXLV, T, def, grpOf, isWeapon, lvOf, shRad } fr
 import { rangeOf } from './bullets';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { WARP } from './fights';
-import { BS, FA, FACE, K, KI, KJ, TAU, angDiff, clamp, rand } from './grid';
+import { BS, FA, FACE, K, KI, KJ, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { laneFwd } from './physics';
 import { wpos } from './ships';
 import { G, buildR, spanFor } from './state';
@@ -311,16 +311,25 @@ export function renderCombat(){
   }
   ctx.globalAlpha = 1;
 
-  // weapon reach: one dashed ring per weapon type on the player's ship, in its group's colour, labelled at the top
+  // weapon reach, in each weapon's group colour: weapons that fire all round get one faint ring per type around the ship;
+  // turrets and beams get their firing arc, a wedge out from the weapon to its range
   if (p && p.alive){
-    const seen = new Set<Cell>(), hudB = $('hud').getBoundingClientRect().bottom/PX + 10;
-    ctx.lineWidth = 1; ctx.setLineDash([2,5]); ctx.font = FONT(8); ctx.textAlign = 'center';
+    const seen = new Set<Cell>();
+    ctx.lineWidth = 1;
     for (const b of [...p.guns, ...p.rails, ...p.lasers, ...p.teslas, ...p.pds]){
-      if (seen.has(b.t)) continue; seen.add(b.t);
       const d = def(b.t)!, r = d.pd ? d.pd.range*Math.sqrt(G.S) : rangeOf(b.t as BlockType)*G.SC; if (!r) continue;
-      const col = b.t==='core' ? '#ffffff' : d.pd ? '#c9adff' : GCOL[grpOf(K(b.i,b.j), b.t)-1], X = sx(p.x), Y = sy(p.y), rr = r*z;
-      ctx.globalAlpha = .28; ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(X, Y, rr, 0, TAU); ctx.stroke();
-      if (Y - rr > hudB){ ctx.globalAlpha = .55; ctx.fillStyle = col; ctx.fillText(d.name, X, Math.round(Y - rr - 3)); }
+      const col = b.t==='core' ? '#ffffff' : d.pd ? '#c9adff' : GCOL[grpOf(K(b.i,b.j), b.t)-1], rr = r*z;
+      const arc = d.gun ? d.gun.arc ?? Math.PI : d.rail || d.laser ? SWING : Math.PI;
+      ctx.strokeStyle = ctx.fillStyle = col;
+      if (arc >= Math.PI - .01){
+        if (seen.has(b.t)) continue; seen.add(b.t);
+        ctx.setLineDash([2,6]); ctx.globalAlpha = .13; ctx.beginPath(); ctx.arc(sx(p.x), sy(p.y), rr, 0, TAU); ctx.stroke();
+        continue;
+      }
+      const [wx, wy] = wpos(p, b), X = sx(wx), Y = sy(wy), f = p.a + FA[b.o];
+      ctx.beginPath(); ctx.moveTo(X, Y); ctx.arc(X, Y, rr, f - arc, f + arc); ctx.closePath();
+      ctx.setLineDash([]); ctx.globalAlpha = .035; ctx.fill();
+      ctx.setLineDash([2,6]); ctx.globalAlpha = .12; ctx.stroke();
     }
     ctx.setLineDash([]); ctx.globalAlpha = 1;
   }

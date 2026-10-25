@@ -51,7 +51,7 @@ export const fallOff = (b: Pick<Bullet, 'fall' | 'life' | 'life0'>) => b.fall ? 
 // Reach of a weapon in world units at scale 1 (times G.SC in a fight)
 export const rangeOf = (t: BlockType) => { const d = def(t); return !d ? 0 : d.gun ? d.gun.range || 0 : d.laser ? d.laser.range : d.rail ? d.rail.range : d.tesla ? d.tesla.range : 0; };
 export function pBullet(x: number, y: number, ang: number, gun: GunDef, target: Ship | null, mul=1){
-  const sp = gun.spd*G.SC, life = gun.homing ? 6 : gun.life || (gun.range ? gun.range/gun.spd : 3);
+  const sp = gun.spd*G.SC, life = gun.homing ? 8 : gun.life || (gun.range ? gun.range/gun.spd : 3);
   G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC,
     life, life0:life, fall:!!gun.range && !gun.homing && !gun.lob && !gun.nofall, homing:!!gun.homing, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0,
     kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot'});

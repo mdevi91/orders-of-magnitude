@@ -158,11 +158,10 @@ details li b{color:var(--paper);font-weight:400}
 .station{position:absolute;pointer-events:auto;display:flex;align-items:flex-start;justify-content:center;padding:0;background:none;border:0;cursor:pointer;color:var(--paper);font:inherit}
 .station > span{transform:translateY(-70%);display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 8px;background:rgba(10,14,26,.85);border:var(--px) solid var(--sc);box-shadow:3px 3px 0 #000;white-space:nowrap}
 .station b{font:10px/1.4 var(--display);color:var(--sc);text-transform:uppercase}
-.station small{color:var(--muted);font-size:15px}
 .station:hover > span,.station:focus-visible > span{background:var(--sc);color:var(--ink)}
-.station:hover b,.station:focus-visible b,.station:hover small,.station:focus-visible small{color:var(--ink)}
+.station:hover b,.station:focus-visible b{color:var(--ink)}
 .station:focus-visible{outline:none}
-@media (max-width:760px){.station small{display:none}.station b{font-size:8px}}
+@media (max-width:760px){.station b{font-size:8px}}
 .row.locked{opacity:.5}
 .ov-actions button.ghost{background:transparent;color:var(--paper);border:var(--px) solid var(--paper);box-shadow:none}
 .card.wide{max-width:640px}

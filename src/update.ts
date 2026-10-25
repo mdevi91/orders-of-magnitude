@@ -314,7 +314,7 @@ export function update(dt: number){
         b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp;
       }
       if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > 36) b.tr.splice(0, 2); }
-      if (b.mirv && (b.life < 5.2 || (b.target && Math.hypot(b.target.x-b.x, b.target.y-b.y) < b.target.r + 90*SC))){ mirvSplit(b, enemies); continue; }
+      if (b.mirv && ((b.life0 || 0) - b.life > .8 || (b.target && Math.hypot(b.target.x-b.x, b.target.y-b.y) < b.target.r + 90*SC))){ mirvSplit(b, enemies); continue; }
       if (Math.random() < .18) G.fx.push({k:'smoke', x:b.x, y:b.y, vx:rand(-6,6)*SC, vy:rand(-6,6)*SC, r:2.2*SC, life:rand(.5,.9), max:.9});
     }
     const steps = Math.min(3, Math.ceil(b.sp*dt/(BS*.8)));
