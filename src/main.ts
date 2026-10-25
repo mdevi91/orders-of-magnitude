@@ -28,7 +28,15 @@ init_tutorial();
 initBase(station);
 
 const splash = $('splash');
-function endSplash(){ if (!splash.isConnected) return; splash.remove(); removeEventListener('keydown', skipKey, true); }
+function endSplash(){ if (!splash.isConnected) return; splash.remove(); removeEventListener('keydown', skipKey, true); earlyAccess(); }
+// After the splash: a short early-access notice that fades on its own, or on any key or tap.
+function earlyAccess(){
+  const ea = $('ea'); ea.hidden = false;
+  const done = () => { if (ea.hidden) return; ea.classList.add('out'); setTimeout(() => { ea.hidden = true; }, 400); removeEventListener('keydown', key, true); };
+  const key = (e: KeyboardEvent) => { e.stopImmediatePropagation(); e.preventDefault(); done(); };
+  addEventListener('keydown', key, true); ea.addEventListener('pointerdown', e => { e.stopPropagation(); done(); }, {once:true});
+  setTimeout(done, 3200);
+}
 function skipKey(e: KeyboardEvent){ e.stopImmediatePropagation(); e.preventDefault(); endSplash(); }
 addEventListener('keydown', skipKey, true);
 splash.addEventListener('pointerdown', e => { e.stopPropagation(); endSplash(); });

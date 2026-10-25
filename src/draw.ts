@@ -7,7 +7,7 @@ import { laneFwd } from './physics';
 import { wpos } from './ships';
 import { G, buildR, spanFor } from './state';
 import { JOY_R } from './update';
-import type { BlockType, Bullet, BulletKind, Cell, Facing, Key, Ship, Stick, Team } from './types';
+import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship, Stick, Team } from './types';
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 
 // ---------- drawing ----------
@@ -194,6 +194,32 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     if (L >= MAXLV){ X.globalAlpha = .7; X.fillRect(bx-5,by-5,10,.8); X.globalAlpha = 1; }
   }
 }
+// Hangar craft (fighters and bombers, on either side) are drawn as ship sprites, not block grids; their blocks still
+// take the hits, so they flash when struck and darken as they are worn down. The nose points to local -y.
+const CRAFT_SHAPE: Record<CraftKind, number[]> = {
+  fbay:[0,-13, 3,-4, 13,6, 12,9, 4,6, 3,11, -3,11, -4,6, -12,9, -13,6, -3,-4],
+  bbay:[0,-12, 8,-6, 24,4, 24,8, 12,8, 8,12, -8,12, -12,8, -24,8, -24,4, -8,-6],
+};
+function drawCraft(s: Ship){
+  const k = s.kind!, P = CRAFT_SHAPE[k], foe = s.team==='e', z = G.zoom;
+  let hp = 0, max = 0, hit = false;
+  for (const b of s.blocks.values()){ hp += b.hp; max += b.max; if (G.time - b.hit < .06) hit = true; }
+  const path = () => { ctx.beginPath(); ctx.moveTo(P[0], P[1]); for (let i=2; i<P.length; i+=2) ctx.lineTo(P[i], P[i+1]); ctx.closePath(); };
+  const hull = foe ? ['#ff7a66','#a83a2e'] : ['#bcd0f5','#5a78b8'], glass = foe ? '#ffd6cc' : '#7fe8ff', eng = k==='fbay' ? [[0, 11]] : [[-7, 12], [7, 12]];
+  // engine flames, flickering
+  for (const [ex, ey] of eng){ const l = 4 + 3*Math.random(); ctx.fillStyle = '#ffb27a'; ctx.fillRect(ex-1.5, ey, 3, l); ctx.fillStyle = '#fff0c0'; ctx.fillRect(ex-.7, ey, 1.4, l*.6); }
+  // outline for contrast, the hull, a darker underside panel, then the cockpit glass
+  ctx.lineWidth = 2/z; ctx.strokeStyle = foe ? (s.boss || s.elite ? '#ffd04a' : '#ff5a3a') : '#0a1830'; path(); ctx.stroke();
+  ctx.fillStyle = hit ? '#ffffff' : hull[0]; path(); ctx.fill();
+  if (!hit){
+    ctx.save(); path(); ctx.clip(); ctx.fillStyle = hull[1]; ctx.fillRect(-30, 2, 60, 20);
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-.6, -12, 1.2, 22); ctx.restore();
+    ctx.fillStyle = glass; ctx.beginPath(); ctx.ellipse(0, k==='fbay' ? -4 : -5, k==='fbay' ? 1.8 : 3, k==='fbay' ? 3.4 : 2.4, 0, 0, TAU); ctx.fill();
+    if (k==='bbay'){ ctx.fillStyle = '#20242c'; ctx.fillRect(-4, 3, 8, 4); }
+    // wear: darker as the blocks lose hit points
+    const wear = 1 - hp/Math.max(1, max); if (wear > .15){ ctx.globalAlpha = wear*.6; ctx.fillStyle = '#000000'; path(); ctx.fill(); ctx.globalAlpha = 1; }
+  }
+}
 export function drawShip(s: Ship){
   const z = G.zoom, p = G.player!, X0 = (s.x-G.camX)*z + W/2 + (G.camOX||0), Y0 = (s.y-G.camY)*z + H/2 + (G.camOY||0);
   // space jump: still in hyperspace, a flicker marks the arrival point; then the ship rushes in, stretched along its path
@@ -220,6 +246,7 @@ export function drawShip(s: Ship){
   if (wk){ ctx.rotate(wa); ctx.scale(1 + 4*wk, 1 - .55*wk); ctx.rotate(-wa); ctx.globalAlpha = .45 + .55*(1-wk); }
   ctx.rotate(s.a); ctx.scale(z,z);
   ctx.lineWidth = 1/z;
+  if (s.kind){ drawCraft(s); ctx.restore(); return; }
   const aim = (s.team==='p' ? Math.atan2(G.aim.y-s.y, G.aim.x-s.x) : s.team==='a' ? s.aimA : Math.atan2(p.y-s.y, p.x-s.x)) - s.a;
   if (s.team==='e'){
     // bright rim around enemy hulls so they stand out in a crowd and against smoke
@@ -253,7 +280,6 @@ export function drawSpace(cx: number, cy: number, z: number){
     if (st.f > .2 && Math.sin(G.time*2 + st.tw) > .7){ ctx.globalAlpha = .5; ctx.fillRect(X-1,Y,3,1); ctx.fillRect(X,Y-1,1,3); ctx.globalAlpha = 1; }
   }
 }
-export function niceStep(z: number){ let sp = 10; if (!(z > 0)) return sp; while (sp*z < 12) sp *= 10; return sp; }
 export function renderCombat(){
   const S = G.S, p = G.player!;
   // never so far out that a block shrinks under two pixels; off-screen hostiles get edge arrows
@@ -268,7 +294,6 @@ export function renderCombat(){
   G.camOX = ox; G.camOY = oy;
 
   drawSpace(cx, cy, z);
-  const major = niceStep(z);
   // arena edge: faint warning line
   ctx.setLineDash([6,6]); ctx.strokeStyle = 'rgba(255,110,60,.3)'; ctx.lineWidth = 1;
   ctx.strokeRect(sx(0), sy(0), G.AW*z, G.AH*z); ctx.setLineDash([]);
@@ -489,13 +514,7 @@ export function renderCombat(){
     ctx.globalAlpha = 1;
   }
 
-  // scale bar: one major grid square
-  const barPx = Math.round(major*z), bx = 8, by = H - 10;
-  ctx.fillStyle = '#e2ecff';
-  ctx.fillRect(bx, by, barPx, 1); ctx.fillRect(bx, by-3, 1, 3); ctx.fillRect(bx+barPx-1, by-3, 1, 3);
-  ctx.font = FONT(8); ctx.textAlign = 'left';
-  ctx.fillText(fmtM(major/BS), bx + barPx + 4, by + 1);
-  if (G.aimAuto) ctx.fillText('AUTO-AIM', bx, by - 8);
+  if (G.aimAuto){ ctx.fillStyle = '#e2ecff'; ctx.font = FONT(8); ctx.textAlign = 'left'; ctx.fillText('AUTO-AIM', 8, H - 10); }
 
   // banner
   if (G.banner){
@@ -508,7 +527,6 @@ export function renderCombat(){
     ctx.fillText(b.sub.toUpperCase(), Math.round(W/2), y + big + 6); ctx.globalAlpha = 1;
   }
 }
-export function fmtM(m: number){ return m >= 1000 ? (m/1000)+' km' : m+' m'; }
 
 export function layoutBuild(){
   // the grid sits between the parts panel (left) and the ship panel (right); on narrow screens, between the ship panel on top and the parts below
