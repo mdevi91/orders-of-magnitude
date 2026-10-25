@@ -29,7 +29,7 @@ export function openShop(n: MapNode){
   const ups = PAL.filter(t => t!=='sell' && (onShip(t) || (G.inv[t] || 0) > 0)), rep = repTotal(.5);
   let h = `<div class="readouts"><div class="readout"><b class="gold">${Math.round(G.credits)}</b><span>Credits</span></div><div class="readout"><b>${offers.reduce((a, o) => a + o.n, 0)}</b><span>In stock</span></div>` +
     `<div class="readout"><b>${G.broken.size}</b><span>Damaged</span></div></div><div class="rows"><h3>Stock</h3></div><div class="tiles">` +
-    offers.map((o,i) => tile({ic:icon(o.t), rc:RARITY[rarOf(o.t)].col, name:T[o.t].name, tag:RARITY[rarOf(o.t)].name, desc:T[o.t].desc || '', foot:o.n ? `×${o.n} left` : 'Sold out',
+    offers.map((o,i) => tile({ic:icon(o.t), rc:RARITY[rarOf(o.t)].col, name:T[o.t].name, tag:RARITY[rarOf(o.t)].name + (T[o.t].make ? ' · ' + T[o.t].make : ''), desc:T[o.t].desc || '', foot:o.n ? `×${o.n} left` : 'Sold out',
       label:o.n ? `${buyPrice(o.t)} cr` : 'sold', act:`buy:${i}`, dis:!o.n || buyPrice(o.t) > G.credits})).join('') + '</div><div class="rows">';
   if (G.broken.size) h += `<h3>Repair · half price here</h3>` + row(`${G.broken.size} damaged block${G.broken.size>1?'s':''}`, 'Fixes as many as you can afford.', `${rep} cr`, 'rep:0', !canRepair(.5));
   h += `<h3>Upgrade</h3>` + (ups.length ? ups.map(t => row(`${T[t].name} ${pips(lvOf(t), MAXLV)}`, lvOf(t) < MAXLV ? `+${lvStep(lvOf(t))}% to every ${T[t].name.toLowerCase()} block.` : 'Fully upgraded.',

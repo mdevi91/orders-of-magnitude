@@ -35,7 +35,8 @@ export interface GunDef {
   over?: boolean;
 }
 export interface BlockDef {
-  name: string; cost: number; desc?: string;
+  /** make: the manufacturer, for weapons and hangars */
+  name: string; make?: string; cost: number; desc?: string;
   /** unlock: the sector a run must reach for the block to join loot and shops; rar: rarity 0 (common) to 4 (legendary) */
   key?: string; unlock?: number; rar?: number; hp?: number; mass?: number; rot?: boolean; thrust?: number; torque?: number;
   gun?: GunDef;

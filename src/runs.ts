@@ -8,7 +8,6 @@ import { G } from './state';
 import { tut } from './tutorial';
 import type { BlockType, Key, StartDesign } from './types';
 import { hideOverlay, icon, pips, showOverlay, syncUI, toast } from './ui';
-import { $ } from './view';
 
 // ---------- runs and the space base ----------
 // Data is earned at the end of every run and buys permanent upgrades in Research & Development.
@@ -31,10 +30,6 @@ export function metaLv(id: string){ return G.meta.lv[id] || 0; }
 export const metaCost = (m: MetaDef) => 2*m.cost*(metaLv(m.id) + 1);
 // Blocks that join loot and shops once a run first reaches sector s.
 const unlocksAt = (s: number) => PAL.filter(t => t!=='sell' && !PLATE(t) && (T[t].unlock || 1)===s);
-function unlockLine(){
-  const best = G.meta.best || 1, next = PAL.map(t => T[t].unlock || 1).filter(u => u > best).sort((a,b) => a-b)[0];
-  return `Furthest sector reached: <b>${best}</b>.` + (next ? ` Reach sector ${next} to unlock ${unlocksAt(next).map(rarName).join(', ')}.` : ' Every block is unlocked.');
-}
 /** Record the sector a run has reached; returns the blocks that sector unlocks for the first time. */
 export function reachSector(s: number){
   const best = G.meta.best || 1; if (s <= best) return [];
@@ -45,7 +40,6 @@ export function reachSector(s: number){
 // The main menu is the space base (base.ts): each doorway is a station.
 export function showTitle(){
   G.mode = 'title'; G.ships = []; G.pb = []; G.eb = []; G.fx = []; hideOverlay(); syncUI(); tut('title');
-  $('baseInfo').innerHTML = `<b class="gold">${G.meta.data} data</b> · ${unlockLine()}` + (G.stats ? ` · Run in progress: sector <b>${G.stage}</b>.` : '');
 }
 export function station(id: string){
   if (id==='hangar') hangar(); else if (id==='eng') enterEngineering(); else if (id==='rnd') showRnD(); else showCantina();
@@ -96,7 +90,7 @@ export function showCantina(){
 // Ship deck: every block, what it does, how rare it is, and where it unlocks.
 export function showDeck(){
   const best = G.meta.best || 1, ts = PAL.filter(t => t!=='sell' && !PLATE(t)).sort((a,b) => rarOf(a) - rarOf(b) || (T[a].unlock || 1) - (T[b].unlock || 1));
-  const card = (t: BlockType) => tile({ic:icon(t), rc:RARITY[rarOf(t)].col, name:T[t].name, tag:RARITY[rarOf(t)].name, locked:!unlocked(t), label:'', act:'',
+  const card = (t: BlockType) => tile({ic:icon(t), rc:RARITY[rarOf(t)].col, name:T[t].name, tag:RARITY[rarOf(t)].name + (T[t].make ? ' · ' + T[t].make : ''), locked:!unlocked(t), label:'', act:'',
     desc:unlocked(t) ? T[t].desc || '' : `Locked. Reach sector ${T[t].unlock} to unlock it.`});
   const open = ts.filter(unlocked), shut = ts.filter(t => !unlocked(t));
   showOverlay('Ship deck', `<div class="readouts"><div class="readout"><b>${open.length}/${ts.length}</b><span>Blocks unlocked</span></div><div class="readout"><b>${best}</b><span>Best sector</span></div></div>` +

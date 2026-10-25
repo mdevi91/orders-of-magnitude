@@ -155,9 +155,6 @@ details li b{color:var(--paper);font-weight:400}
 .ov-actions button:active{transform:translate(4px,4px);box-shadow:none}
 /* the space base: station buttons sit over their doorways in the 3D room */
 #base{position:fixed;inset:0;z-index:4;pointer-events:none}
-#baseInfo{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 58px);margin:0;padding:4px 10px;max-width:calc(100% - 32px);
-  text-align:center;color:var(--muted);background:rgba(10,14,26,.8);border:var(--px) solid #34477e}
-#baseInfo b{color:var(--paper);font-weight:400}
 .station{position:absolute;pointer-events:auto;display:flex;align-items:flex-start;justify-content:center;padding:0;background:none;border:0;cursor:pointer;color:var(--paper);font:inherit}
 .station > span{transform:translateY(-70%);display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 8px;background:rgba(10,14,26,.85);border:var(--px) solid var(--sc);box-shadow:3px 3px 0 #000;white-space:nowrap}
 .station b{font:10px/1.4 var(--display);color:var(--sc);text-transform:uppercase}
@@ -340,6 +337,7 @@ details li b{color:var(--paper);font-weight:400}
 .pick{position:relative}
 .pick kbd{position:absolute;top:6px;right:6px;font-size:14px;color:var(--muted);border-color:rgba(140,170,220,.25)}
 .readout b.gold{color:var(--gold)}
+.pick .mk{font-size:14px;letter-spacing:.06em;text-transform:uppercase;margin-top:-6px}
 .pick .new{font:8px/1 var(--display);color:var(--ink);background:var(--gold);padding:3px 5px}
 .ovt .sub2{color:var(--muted)}
 @media (max-width:760px){.card{padding:16px}.tiles{grid-template-columns:1fr}.picks{grid-template-columns:1fr}.pick{flex-direction:row;text-align:left;align-items:center}.pick .bi{width:40px;height:40px}}

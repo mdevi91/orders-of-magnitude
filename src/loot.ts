@@ -40,7 +40,7 @@ export function chooseLoot(n: number, boost: number, title: string, intro: strin
     for (let q=0; offers.length < 3 && q < 30; q++){ const t = rollBlock(boost); if (!offers.includes(t)) offers.push(t); }
     G.pick = t => { G.pick = null; if (t){ addBlock(t); got.push(t); sfx('place'); } else got.push(null); step(); };
     showOverlay(title, intro + `<div class="rows"><h3>Salvage · choose one${n > 1 ? ` · ${got.length+1} of ${n}` : ''}</h3></div><div class="picks">` +
-      offers.map((t, i) => `<button class="pick" type="button" data-act="pick:${t}" style="--rc:${RARITY[rarOf(t)].col}">${icon(t)}<i>${RARITY[rarOf(t)].name}</i><b>${T[t].name}</b>` +
+      offers.map((t, i) => `<button class="pick" type="button" data-act="pick:${t}" style="--rc:${RARITY[rarOf(t)].col}">${icon(t)}<i>${RARITY[rarOf(t)].name}</i><b>${T[t].name}</b>${T[t].make ? `<small class="mk">${T[t].make}</small>` : ''}` +
         `<small>${T[t].desc || ''}</small>${owned(t) ? '' : '<span class="new">New</span>'}<kbd>${i+1}</kbd></button>`).join('') + '</div>',
       [['Skip', () => G.pick && G.pick(null), 'ghost']], true, {eye:'Salvage recovered'});
   };

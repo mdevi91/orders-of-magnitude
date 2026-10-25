@@ -56,7 +56,7 @@ function syncSelCard(S: number){
   const t = G.sel, d = T[t], plate = PLATE(t), rg = rangeOf(t), have = G.inv[t] || 0, L = lvOf(t);
   $('selName').textContent = d.name;
   $('selName').style.color = t==='sell' || plate ? '' : RARITY[rarOf(t)].col;
-  $('selRar').textContent = t==='sell' ? 'Tool' : plate ? 'Plating' : RARITY[rarOf(t)].name;
+  $('selRar').textContent = t==='sell' ? 'Tool' : plate ? 'Plating' : RARITY[rarOf(t)].name + (d.make ? ' · ' + d.make : '');
   $('selDesc').textContent = (d.desc || '') + (d.rot && !PARTS[t] ? ' Tap a placed one to turn it 45°.' : '');
   const row = (k: string, v: string) => `<dt>${k}</dt><dd>${v}</dd>`;
   $('selStats').innerHTML = t==='sell' ? '' :
