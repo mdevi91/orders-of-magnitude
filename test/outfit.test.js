@@ -21,3 +21,12 @@ ok('design is kept', G.meta.start && G.meta.start.d.length === blocks);
 newRun();
 ok('a new run starts in the saved design with the budget left over', G.design.size === blocks && G.design.get(K(2,0))==='battery' && G.credits === Math.max(0, budget() - designCost(G.design)) && G.mode==='map');
 ok('nothing for sale in a run', placeCheck(3,0,'battery',0) !== true);
+// cockpits: picked in Engineering, kept with the design, and their abilities apply in the run
+enterEngineering();
+const turn0 = designStats().turn;
+G.cockpit = 'fighter';
+ok('interceptor turns 40% faster', Math.abs(designStats().turn/turn0 - 1.4) < 1e-6, `${designStats().turn/turn0}`);
+$('launch').click(); newRun();
+ok('the cockpit carries into the run', G.cockpit === 'fighter' && G.meta.start.c === 'fighter');
+G.cockpit = 'battle';
+ok('command bridge reaches 10% further', Math.abs(cockpit().range - 1.1) < 1e-9);

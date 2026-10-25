@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { EB_SPD, eBullet, leadAngle, pBullet } from './bullets';
-import { CRAFT, HM, LV, T, ewOf, isCraft } from './catalog';
+import { CRAFT, HM, LV, T, cockpit, ewOf, isCraft } from './catalog';
 import { craftCap, eDmg } from './fights';
 import { BS, FA, K, TAU, angDiff, clamp, rand } from './grid';
 import { boomAt, damage, makeShip, rayHits, sparks, wpos } from './ships';
@@ -86,7 +86,7 @@ export function updateCraft(A: Ship, dt: number, enemies: Ship[]){
   if (A.vx*A.vx + A.vy*A.vy > 4) A.a += clamp(angDiff(Math.atan2(A.vx,-A.vy), A.a), -C.turn*dt, C.turn*dt);
 }
 export function fireRail(p: Ship, wx: number, wy: number, face: number){
-  const R = T.rail.rail!, SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = R.range*SC;
+  const R = T.rail.rail!, SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = R.range*SC*cockpit().range;
   let pool = R.pool*LV('rail')*HM.dmg(), end = len;
   for (const h of rayHits(ox, oy, dx, dy, len, false)){
     if (!h.e.alive) continue;

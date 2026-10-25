@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { PD_KINDS, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
-import { BCOL, CRAFT, ESH, HM, LV, T, def, grpOf, isCraft } from './catalog';
+import { BCOL, CRAFT, ESH, HM, LV, T, cockpit, def, grpOf, isCraft } from './catalog';
 import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx } from './craft';
 import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
@@ -26,6 +26,7 @@ export function ionJam(e: Ship, hit: Block){
   for (const g of [...e.guns, ...e.epd, ...e.bays]) if (Math.hypot(g.i-hit.i, g.j-hit.j) <= ION_R) g.jam = G.time + ION_T;
 }
 export function update(dt: number){
+  const RM = cockpit().range; // the command bridge stretches every weapon's reach
   G.time += dt;
   const p = G.player!, SC = G.SC;
   for (const s of G.ships){ s.c = Math.cos(s.a); s.sn = Math.sin(s.a); }
@@ -109,7 +110,7 @@ export function update(dt: number){
     p.a += drift/ph.inertia*dt;
     // nose swings toward the aim point (or turns on A/D); engines whose push helps the turn act as jets
     const aimTurn = !kb || shift, want = Math.atan2(ax!-p.x, -(ay-p.y)), da = aimTurn ? angDiff(want,p.a) : turnIn, cw = da > 0;
-    const rate = turnOf(ph.torque + (cw ? ph.jetCW : ph.jetCCW), ph.inertia, ph.mass);
+    const rate = turnOf(ph.torque + (cw ? ph.jetCW : ph.jetCCW), ph.inertia, ph.mass)*cockpit().turn;
     // angular momentum: heavy hulls take time to start and stop a turn
     const wWant = aimTurn ? clamp(da*4, -rate, rate) : turnIn*rate, acc = rate*2.5;
     p.w = (p.w||0) + clamp(wWant - (p.w||0), -acc*dt, acc*dt);
@@ -154,13 +155,13 @@ export function update(dt: number){
       const gun = def(g.t)!.gun!, arc = gun.arc || 0, [wx,wy] = wpos(p,g);
       let tg = tgtM, tx = aimX(g), ty = aimY(g);
       if (isAuto(g)){
-        const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak');
+        const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RM, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak');
         if (!P){ g.cd = .15; continue; }
         [tg, tx, ty] = P;
       }
       const ang = Math.atan2(ty-wy, tx-wx);
       // out of range: hold fire rather than waste the shot
-      if (gun.range && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > gun.range*SC)){ g.cd = .1; continue; }
+      if (gun.range && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > gun.range*SC*RM)){ g.cd = .1; continue; }
       if (Math.abs(angDiff(ang, p.a + FA[g.o])) > arc) continue;
       if (!gun.homing && !gun.lob && !gun.over && !laneClear(p,g,ang)) continue;
       if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
@@ -176,10 +177,10 @@ export function update(dt: number){
       if (!may(h)) continue;
       if (h.cd > 0){ h.cd -= dt; if (h.cd > 0) continue; }
       if (!h.lane) continue;
-      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, RG.range*SC, 0, true) : null;
+      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, RG.range*SC*RM, 0, true) : null;
       if (isAuto(h) && !P) continue;
       const tg = P ? P[0] : tgtM, off = angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), face);
-      if (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > RG.range*SC) continue;
+      if (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > RG.range*SC*RM) continue;
       if (Math.abs(off) > SWING + .02) continue;
       if (!spend(RG.en)) continue;
       h.cd = RG.cd; fireRail(p, wx, wy, face + clamp(off, -SWING, SWING)); sfx('rail');
@@ -189,10 +190,10 @@ export function update(dt: number){
   if (p.alive) for (const h of p.lasers){
     h.beam = null; if (!h.lane || !enemies.length || !may(h)) continue;
     const L = T.laser.laser!, [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
-    const P = isAuto(h) ? pick(wx, wy, base, SWING, L.range*SC, 0, true) : null;
+    const P = isAuto(h) ? pick(wx, wy, base, SWING, L.range*SC*RM, 0, true) : null;
     if (isAuto(h) && !P) continue;
     const face = base + clamp(angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), base), -SWING, SWING), dx = Math.cos(face), dy = Math.sin(face);
-    const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC;
+    const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC*RM;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
     if (hit && spend(L.en*dt)){
       sfx('laser');
@@ -204,7 +205,7 @@ export function update(dt: number){
   // tesla coils: lightning to the nearest enemy block in reach, then on to blocks close by; an enemy missile if no hull is in reach
   if (p.alive) for (const c of p.teslas){
     if (!may(c) || (c.cd -= dt) > 0) continue;
-    const Z = T.tesla.tesla!, [wx,wy] = wpos(p,c), R = Z.range*SC;
+    const Z = T.tesla.tesla!, [wx,wy] = wpos(p,c), R = Z.range*SC*RM;
     let hit: [Ship, number, number, number] | null = null, hd = R*R;
     for (const e of enemies){
       if (!e.alive || Math.hypot(e.x-wx, e.y-wy) > R + e.r) continue;
@@ -235,7 +236,7 @@ export function update(dt: number){
   if (p.alive) for (const d of p.pds){
     d.cd -= dt; if (d.cd > 0) continue;
     // a multi-cell battery fires from the middle of its footprint
-    const PD = def(d.t)!.pd!, cs = cellsFor(d.i, d.j, d.t, d.o), [wx,wy] = wpos(p, {i:cs.reduce((a,c) => a + c[0], 0)/cs.length, j:cs.reduce((a,c) => a + c[1], 0)/cs.length}), R = PD.range*Math.sqrt(G.S);
+    const PD = def(d.t)!.pd!, cs = cellsFor(d.i, d.j, d.t, d.o), [wx,wy] = wpos(p, {i:cs.reduce((a,c) => a + c[0], 0)/cs.length, j:cs.reduce((a,c) => a + c[1], 0)/cs.length}), R = PD.range*Math.sqrt(G.S)*RM;
     let best: typeof G.eb[number] | null = null, bd = R*R;
     for (const b of G.eb){ if (b.dead || !(PD_KINDS.has(b.kind) || (PD.heavy && b.kind==='eoval'))) continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < bd){ bd = q; best = b; } }
     if (best && spend(PD.en)){ sfx('pd'); best.dead = true; d.cd = PD.cd/LV(d.t); G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09}); }

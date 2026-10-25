@@ -106,6 +106,14 @@ export const outfitPrice = (t: BlockType) => Math.round(T[t].cost*priceMul());
 export const canBuyHere = (t: BlockType) => G.outfit && !PLATE(t) && unlocked(t);
 // sectors map onto the old stage tiers: which blocks drop and which weapons enemies carry
 export const tierOf = (s: number) => Math.floor(s*1.5 + 1);
+// Cockpits: the core comes in variants picked in Engineering, each with its own ability for the whole run.
+export const COCKPITS = {
+  std:    {name:'Standard cockpit', desc:'Balanced. No special ability.', turn:1, range:1},
+  fighter:{name:'Interceptor cockpit', desc:'Light and agile: the ship turns 40% faster.', turn:1.4, range:1},
+  battle: {name:'Command bridge', desc:'Fire control: every weapon reaches 10% further.', turn:1, range:1.1},
+};
+export type CockpitId = keyof typeof COCKPITS;
+export const cockpit = () => COCKPITS[G.cockpit] || COCKPITS.std;
 // block levels: bought per type at shops, +35% to the block's main stat per level up to Lv5, then +20% per level up to Lv10
 export const MAXLV = 10;
 const lvMul = (L: number) => L <= 5 ? 1 + .35*(L-1) : 2.4 + .2*(L-5);

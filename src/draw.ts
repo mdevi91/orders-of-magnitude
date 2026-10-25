@@ -1,4 +1,4 @@
-import { BCOL, BEAM, ESH, GCOL, MAXLV, T, def, grpOf, isWeapon, lvOf, shRad } from './catalog';
+import { BCOL, BEAM, ESH, GCOL, MAXLV, T, cockpit, def, grpOf, isWeapon, lvOf, shRad } from './catalog';
 import { rangeOf } from './bullets';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { WARP } from './fights';
@@ -51,12 +51,16 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     case 'armor':
       X.fillStyle = base[2]; X.fillRect(x-3,y-3,6,6); X.fillStyle = base[0]; X.fillRect(x-3,y-3,5,1); X.fillRect(x-3,y-3,1,5);
       X.fillStyle = base[0]; for (const [a,b] of [[-3.4,-3.4],[2.6,-3.4],[-3.4,2.6],[2.6,2.6]]) X.fillRect(x+a,y+b,.9,.9); break;
-    case 'core':
-      orb(X,x,y,4.2, team==='p' ? ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff'] : ['#5a1008','#c0301a','#ff8a5a','#fff0d0']);
+    case 'core': {
+      // the player's cockpit variant: swept wings for the interceptor, a gold-cornered armoured bridge for the command bridge
+      const cp = team==='p' ? G.cockpit : 'std';
+      if (cp==='fighter'){ X.fillStyle = '#7a8496'; X.beginPath(); X.moveTo(x, y-5); X.lineTo(x+5, y+4.5); X.lineTo(x, y+2.5); X.lineTo(x-5, y+4.5); X.closePath(); X.fill(); }
+      if (cp==='battle'){ X.fillStyle = '#ffc46b'; for (const [sx2, sy2] of [[-1,-1],[1,-1],[1,1],[-1,1]]){ X.fillRect(x + sx2*4.6 - (sx2 > 0 ? 1.6 : 0), y + sy2*4.6 - (sy2 > 0 ? .7 : 0), 1.6, .7); X.fillRect(x + sx2*4.6 - (sx2 > 0 ? .7 : 0), y + sy2*4.6 - (sy2 > 0 ? 1.6 : 0), .7, 1.6); } }
+      orb(X,x,y,cp==='fighter' ? 3.4 : 4.2, team!=='p' ? ['#5a1008','#c0301a','#ff8a5a','#fff0d0'] : cp==='fighter' ? ['#0a4a3a','#1ab08a','#7fffd0','#e8fff8'] : cp==='battle' ? ['#4a3008','#c08a1a','#ffd27a','#fff8e0'] : ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff']);
       X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill();
       // a pulsing halo ring so the core stands out on any hull
-      X.globalAlpha = .55 + .35*Math.sin(G.time*4); X.strokeStyle = team==='p' ? '#7fe8ff' : '#ffb08a'; X.lineWidth = .9;
-      X.beginPath(); X.arc(x,y,5.6 + .5*Math.sin(G.time*4),0,TAU); X.stroke(); X.globalAlpha = 1; break;
+      X.globalAlpha = .55 + .35*Math.sin(G.time*4); X.strokeStyle = team!=='p' ? '#ffb08a' : cp==='fighter' ? '#7fffd0' : cp==='battle' ? '#ffd27a' : '#7fe8ff'; X.lineWidth = .9;
+      X.beginPath(); X.arc(x,y,5.6 + .5*Math.sin(G.time*4),0,TAU); X.stroke(); X.globalAlpha = 1; break; }
     case 'cannon': case 'gun':
       barrel(X,x,y,ca,sa,7,2.4,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
     case 'bigcannon':
@@ -320,7 +324,7 @@ export function renderCombat(){
     const seen = new Set<Cell>();
     ctx.lineWidth = 1;
     for (const b of [...p.guns, ...p.rails, ...p.lasers, ...p.teslas, ...p.pds]){
-      const d = def(b.t)!, r = d.pd ? d.pd.range*Math.sqrt(G.S) : rangeOf(b.t as BlockType)*G.SC; if (!r) continue;
+      const d = def(b.t)!, r = (d.pd ? d.pd.range*Math.sqrt(G.S) : rangeOf(b.t as BlockType)*G.SC)*cockpit().range; if (!r) continue;
       const col = b.t==='core' ? '#ffffff' : d.pd ? '#c9adff' : GCOL[grpOf(K(b.i,b.j), b.t)-1], rr = r*z;
       const arc = d.gun ? d.gun.arc ?? Math.PI : d.rail || d.laser ? SWING : Math.PI;
       ctx.strokeStyle = ctx.fillStyle = col;

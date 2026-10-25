@@ -1,6 +1,6 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, CRAFT, HM, LV, MAXLV, PAL, PARTS, PLATE, RARITY, T, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
+import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, cockpit, type CockpitId, PAL, PARTS, PLATE, RARITY, T, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
 import { aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
@@ -62,7 +62,7 @@ function syncSelCard(S: number){
   $('selStats').innerHTML = t==='sell' ? '' :
     row('Source', plate ? `${d.cost} cr each` : have ? `${have} in cargo` + (dmgOf(t) ? ` (${dmgOf(t)} damaged)` : '') : canBuyHere(t) ? `${outfitPrice(t)} cr each` : 'none in cargo') +
     (d.hp ? row('Hit points', String(Math.round(d.hp*LV(t)*HM.hp()))) : '') +
-    (rg ? row('Range', `${Math.round(rg*Math.pow(S,.8)/BS)} m`) : '') +
+    (rg ? row('Range', `${Math.round(rg*cockpit().range*Math.pow(S,.8)/BS)} m`) : '') +
     row('Level', `${L} / ${MAXLV}`) +
     (PARTS[t] ? row('Size', `${partOffsets(PARTS[t]!).length} cells`) : '');
 }
@@ -93,7 +93,7 @@ export function designStats(){
   // hangar upgrades apply on top of block levels
   return {n:cells.length, hp:hp*HM.hp(), dps:dps*HM.dmg(), pd, sh, fb, bb, badW, badT, weakT, eGen:eGen*HM.en(), eCap:eCap*HM.en(), eUse, badE:ph.engines.filter(e => !e.active).length,
     fore:dirSpeed(ph,0,-1), side:Math.max(dirSpeed(ph,1,0), dirSpeed(ph,-1,0)), aft:dirSpeed(ph,0,1),
-    turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia, ph.mass)};
+    turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia, ph.mass)*cockpit().turn};
 }
 export function syncUI(){
   const s = G.stage, R = buildR(), S = scaleOf(s);
@@ -112,6 +112,10 @@ export function syncUI(){
   $('rotArrow').textContent = ARROW[G.rot]; $('rotName').textContent = FACING[G.rot];
   $('rot').title = rotOk ? 'Facing for the next block. Tip: tap a placed block of this type to turn it.' : 'This block has no facing';
   syncSelCard(S);
+  // Engineering picks the cockpit; in a run it is fixed
+  const cps = $('cockpits'); cps.hidden = !G.outfit;
+  if (G.outfit) cps.innerHTML = '<h3 class="palh">Cockpit</h3>' + (Object.keys(COCKPITS) as CockpitId[]).map(id =>
+    `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"><span><span class="nm">${COCKPITS[id].name}</span><span class="ct">${COCKPITS[id].desc}</span></span></button>`).join('');
   GROUPS.forEach((_, n) => { $('palh-'+n).hidden = !PAL.some(t => groupOf(t)===n && owned(t)); });
   const rb = $<HTMLButtonElement>('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
@@ -121,7 +125,7 @@ export function syncUI(){
   const st = designStats(), ms = (v: number) => (v/BS).toFixed(1);
   const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
   $('stats').innerHTML =
-    `<dt>Blocks</dt><dd>${blockCount()}</dd><dt>Structure</dt><dd>${Math.round(st.hp)} hp</dd><dt>Life</dt><dd>${Math.round(st.hp*LIFE)}</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
+    `<dt>Cockpit</dt><dd>${cockpit().name.replace(' cockpit', '')}</dd><dt>Blocks</dt><dd>${blockCount()}</dd><dt>Structure</dt><dd>${Math.round(st.hp)} hp</dd><dt>Life</dt><dd>${Math.round(st.hp*LIFE)}</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
     `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Speed side / aft</dt><dd>${ms(st.side)} / ${ms(st.aft)}</dd>` +
     `<dt>Energy</dt><dd class="${st.eUse > st.eGen ? 'gold' : ''}">+${Math.round(st.eGen)}/s · uses ${Math.round(st.eUse)}/s · ${Math.round(st.eCap)}</dd>` +
     `<dt>Turn rate</dt><dd>${Math.round(st.turn*180/Math.PI)}°/s</dd><dt>Shields / PD</dt><dd>${st.sh} / ${st.pd}</dd>` +
@@ -209,6 +213,7 @@ export function toast(msg: string){ const t = $('toast'); t.textContent = msg; t
 
 // wiring that runs once at start-up
 export function init(){
+  $('cockpits').addEventListener('click', e => { const b = (e.target as Element).closest<HTMLElement>('[data-cp]'); if (b){ G.cockpit = b.dataset.cp as CockpitId; syncUI(); } });
   // number keys pick a card from a loot draft or a numbered choice from a signal
   addEventListener('keydown', e => {
     if ($('overlay').hidden || !/^[1-9]$/.test(e.key)) return;

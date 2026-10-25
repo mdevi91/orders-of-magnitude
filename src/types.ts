@@ -1,5 +1,5 @@
 // Shared shapes for the whole game. Runtime data lives in the modules; this file only describes it.
-import type { BLOCKS, CRAFT, ET, EW } from './catalog';
+import type { BLOCKS, CRAFT, CockpitId, ET, EW } from './catalog';
 import type { NODE } from './starmap';
 
 /** Grid key from K(i,j): one number per cell. */
@@ -151,7 +151,7 @@ export interface MapNode {
 export interface StarMap { nodes: MapNode[]; cur: number; done: boolean; seen: number[] }
 export interface RunStats { kills: number; nodes: number; elites: number; flags: number; sectors: number; bonus: number; won: boolean }
 /** A starting ship from Engineering: cells, facings, weapon groups. */
-export interface StartDesign { d: [Key, BlockType][]; o: [Key, Facing][]; g?: Record<Key, number> }
+export interface StartDesign { d: [Key, BlockType][]; o: [Key, Facing][]; g?: Record<Key, number>; c?: CockpitId }
 /** What outlives every run: data to spend, research levels, the furthest sector reached, the starting ship, and records. */
 export interface Meta { data: number; lv: Record<string, number>; best?: number; start?: StartDesign; runs?: number; wins?: number; earned?: number; kills?: number }
 export interface Stick { id: number; x0: number; y0: number; x: number; y: number }
@@ -164,6 +164,8 @@ export interface GameState {
   bz: number; bpx: number; bpy: number; mir: number; sel: BlockType; rot: Facing; mirror: boolean;
   hover: { i: number; j: number } | null; drag: 'place' | 'sell' | null; dragR?: number; lastCell: string | null; grpBrush: number;
   // the run
+  /** the cockpit variant this run flies with */
+  cockpit: CockpitId;
   stage: number; credits: number; design: Map<Key, BlockType>; dirs: Map<Key, Facing>; lv: Partial<Record<BlockType, number>>;
   inv: Partial<Record<BlockType, number>>; dmg: Partial<Record<BlockType, number>>; grp: Record<Key, number>; auto: boolean[];
   broken: Set<Key>; lost: Set<Key>; fresh: Set<BlockType>;
