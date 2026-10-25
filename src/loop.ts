@@ -1,4 +1,5 @@
 import { updateFx } from './craft';
+import { renderBase } from './base';
 import { drawSpace, renderBuild, renderCombat } from './draw';
 import { renderMap } from './mapdraw';
 import { G } from './state';
@@ -20,7 +21,8 @@ export function frame(now: number){
     const clearHi = () => { hctx.setTransform(1,0,0,1,0,0); hctx.clearRect(0,0,hi.width,hi.height); };
     if (G.mode==='build'){ clearHi(); renderBuild(); }
     else if (G.mode==='map'){ clearHi(); renderMap(); }
-    else if (G.mode==='title' || !G.player){ clearHi(); drawSpace(G.time*14, 0, 1); }
+    else if (G.mode==='title'){ clearHi(); renderBase(dt); }
+    else if (!G.player){ clearHi(); drawSpace(G.time*14, 0, 1); }
     else renderCombat();
     syncHud();
   } catch (err) { console.error(err); }

@@ -49,7 +49,7 @@ export function recalc(s: Ship){
     const d = def(b.t)!;
     // a MIRV fires only while its whole launcher is intact
     if (d.gun && !(PARTS[b.t] && !partComplete(typeAt, b.i, b.j, b.t, b.o))) s.guns.push(b);
-    if (d.pd) s.pds.push(b);
+    if (d.pd && !(PARTS[b.t] && !partComplete(typeAt, b.i, b.j, b.t, b.o))) s.pds.push(b);
     if (d.tesla) s.teslas.push(b);
     if (b.t==='shield') s.shields.push(b);
     if (PARTS[b.t] && !d.gun && partComplete(typeAt, b.i, b.j, b.t, b.o)){

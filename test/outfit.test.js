@@ -1,13 +1,23 @@
-// A new run opens in the drydock for outfitting: any unlocked block can be bought onto the ship until the first launch.
+// Engineering: the starting ship is designed in the drydock from any unlocked block, paid out of a small budget, and kept for every run.
 fresh();
-ok('run opens in the drydock', G.mode==='build' && G.outfit);
-const cr = G.credits, price = outfitPrice('gatling');
-ok('gatling is for sale', owned('gatling') && placeCheck(2,0,'gatling',0) === true, placeCheck(2,0,'gatling',0));
-tryPlace(2,0,'gatling',0);
-ok('buying spends the budget', G.design.get(K(2,0))==='gatling' && G.credits === cr - price, `${cr} -> ${G.credits}`);
+const runStage = G.stage = 2; save();
+enterEngineering();
+ok('engineering opens the drydock', G.mode==='build' && G.outfit && !G.stats);
+const cr = G.credits, price = outfitPrice('battery');
+ok('budget pays for the default ship', cr === budget() - designCost(G.design), `${cr}`);
+ok('battery is for sale', owned('battery') && placeCheck(2,0,'battery',0) === true, placeCheck(2,0,'battery',0));
+tryPlace(2,0,'battery',0);
+ok('buying spends the budget', G.design.get(K(2,0))==='battery' && G.credits === cr - price, `${cr} -> ${G.credits}`);
+sellAt(2,0);
+ok('taking it off refunds it', G.credits === cr && !G.inv.battery, `${G.credits}`);
+tryPlace(2,0,'battery',0);
 ok('locked blocks are not for sale', !owned('bbay'));
 let n = 0; for (let j=1; j<=40; j++) if (tryPlace(-1,j,'hull',0) === true) n++;
-ok('no block limit', n === 40 || G.credits < T.hull.cost, `${n} hull placed`);
+ok('no block limit, only the budget', n > 0 && (n === 40 || G.credits < T.hull.cost), `${n} hull placed`);
+const blocks = G.design.size;
 $('launch').click();
-ok('launch ends outfitting', !G.outfit && G.mode==='map');
-ok('nothing for sale after launch', placeCheck(3,0,'gatling',0) !== true);
+ok('saving goes back to the base and brings the run back', G.mode==='title' && !G.outfit && G.stats && G.stage === runStage);
+ok('design is kept', G.meta.start && G.meta.start.d.length === blocks);
+newRun();
+ok('a new run starts in the saved design with the budget left over', G.design.size === blocks && G.design.get(K(2,0))==='battery' && G.credits === Math.max(0, budget() - designCost(G.design)) && G.mode==='map');
+ok('nothing for sale in a run', placeCheck(3,0,'battery',0) !== true);

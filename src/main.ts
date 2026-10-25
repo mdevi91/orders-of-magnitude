@@ -1,12 +1,13 @@
 import './styles.css';
 import { init as init_audio } from './audio';
+import { initBase } from './base';
 import { init as init_blueprints } from './blueprints';
 import { init as init_catalog } from './catalog';
 import { init as init_controls } from './controls';
 import { init as init_groups } from './groups';
 import { init as init_input } from './input';
 import { frame } from './loop';
-import { showTitle } from './runs';
+import { showTitle, station } from './runs';
 import { init as init_save, load, loadMeta } from './save';
 import { init as init_state } from './state';
 import { init as init_tutorial } from './tutorial';
@@ -24,6 +25,7 @@ init_save();
 init_controls();
 init_groups();
 init_tutorial();
+initBase(station);
 
 const splash = $('splash');
 function endSplash(){ if (!splash.isConnected) return; splash.remove(); removeEventListener('keydown', skipKey, true); }

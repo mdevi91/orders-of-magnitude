@@ -19,7 +19,7 @@ export const BLOCKS = {
   scatter:{name:'Scatter gun', key:'c', unlock:1, rar:0, cost:40, hp:18, mass:1.5, rot:true, gun:{range:170, cd:1.1, en:4, spd:520, dmg:3.2, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32}, desc:'Turret. Blasts 7 pellets in a wide cone: about 20 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
   ion:    {name:'Ion cannon', key:'i', unlock:1, rar:2, cost:85, hp:18, mass:1.5, rot:true, gun:{range:380, cd:1.4, en:9, spd:420, dmg:6, spread:.03, r:2.6, arc:.8, fx:'ion', ion:true}, desc:'Turret. Ion bolts do 5× damage to shield bubbles and jam the enemy weapons within 2 cells of the hit for 1.5 s. Weak against hull. Covers 46° either side of its facing.'},
   tesla:  {name:'Tesla coil', key:'z', unlock:5, rar:3, cost:120, hp:22, mass:2, tesla:{cd:.9, range:110, dmg:14, jumps:3, en:6}, desc:'Arcs lightning to the nearest enemy block within 11 m, then jumps to 2 more blocks close by. Reaches in every direction, through your own hull, and zaps enemy fighters and missiles too.'},
-  torpedo:{name:'Torpedo', key:'o', unlock:1, rar:3, cost:140, hp:22, mass:2.5, rot:true, gun:{range:1000, cd:5, en:22, spd:150, dmg:70, spread:.01, r:3.4, arc:.35, fx:'torp', nofall:true}, desc:'Slow, unguided heavy torpedo fired along its facing (20° either side to aim): 70 damage and a wide blast. Point defense cannot stop it.'},
+  torpedo:{name:'Torpedo', key:'o', unlock:1, rar:3, cost:140, hp:22, mass:1.5, rot:true, gun:{range:1000, cd:5, en:22, spd:150, dmg:70, spread:.01, r:3.4, arc:.35, fx:'torp', nofall:true}, desc:'2 blocks long. Slow, unguided heavy torpedo fired along its facing (20° either side to aim): 70 damage and a wide blast. Point defense cannot stop it.'},
   mine:   {name:'Mine layer', key:'n', unlock:2, rar:1, cost:60, hp:18, mass:1.5, gun:{range:320, cd:2.4, en:5, spd:70, dmg:20, spread:.5, r:2.4, arc:Math.PI, fx:'mine', life:20, fuse:24, blast:34, lob:true}, desc:'Drops proximity mines that drift to a stop and wait up to 20 s, bursting when an enemy comes near. Launched over your own hull in any direction.'},
   laser:  {name:'Laser', key:'6', unlock:3, rar:2, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:70, range:150, en:10}, desc:'2 blocks long. Continuous beam along its facing, swinging 5° to aim. Short range, and hits hardest up close.'},
   rail:   {name:'Railgun', key:'7', unlock:6, rar:3, cost:150, hp:28, mass:2, rot:true, rail:{cd:4, pool:65, en:49.5, range:1100}, desc:'3 blocks long. Fires along its facing and pierces block after block. Swings 5° to aim; line up the ship to shoot.'},
@@ -27,6 +27,7 @@ export const BLOCKS = {
   gyro:   {name:'Gyro', key:'9', unlock:1, rar:0, cost:30, hp:18, mass:1.5, torque:25, desc:'Turns the ship faster. Blocks far from the core make turning slower.'},
   shield: {name:'Shield', key:'0', unlock:1, rar:1, cost:60, hp:18, mass:1.5, sh:{hp:45, regen:10, delay:3.5, down:7, en:.6}, desc:'Projects a bubble that stops shots from any side, covering blocks up to 2 cells away (+1 per level). Stops 45 damage, then pops for 7 s.'},
   pd:     {name:'Point defense', key:'q', unlock:2, rar:1, cost:40, hp:16, mass:1.5, pd:{cd:.45, range:85, en:2}, desc:'Shoots down enemy missiles, flak and gatling rounds that come close. Cannon slugs, rail rounds and capital-ship orbs are too heavy to stop.'},
+  aegis:  {name:'Aegis array', key:'y', unlock:5, rar:3, cost:230, hp:60, mass:6, pd:{cd:.16, range:210, en:3, heavy:true}, desc:'4×4 point defense battery. Reaches two and a half times as far as point defense and fires three times as fast, and its heavy guns stop cannon slugs as well as missiles, flak and gatling rounds.'},
   gen:    {name:'Generator', key:'g', unlock:1, rar:0, cost:25, hp:14, mass:2, en:{regen:8}, desc:'Makes 8 energy per second. Weapons and shields run on energy. Safe deep inside the hull.'},
   battery:{name:'Battery', key:'b', unlock:1, rar:0, cost:15, hp:12, mass:1.5, en:{cap:60}, desc:'Stores 60 energy for bursts of fire. Safe deep inside the hull.'},
   fbay:   {name:'Fighter bay', key:'h', unlock:4, rar:2, cost:95, hp:20, mass:1.5, rot:true, desc:'1×4 hangar. Launches a fighter out of its front end that dogfights nearby enemies. Every 30 s it docks to rearm and repair, then flies out again. A lost fighter takes 15 s to replace.'},
@@ -39,14 +40,16 @@ export const BLOCKS = {
   bigcannon_b:{name:'Big cannon', cost:0, hp:30, mass:2.5, rot:true},
   hgatling_b:{name:'Heavy gatling', cost:0, hp:22, mass:2, rot:true},
   mirv_b: {name:'MIRV', cost:0, hp:18, mass:2.5},
+  torpedo_b:{name:'Torpedo', cost:0, hp:22, mass:1.5, rot:true},
+  aegis_b:{name:'Aegis array', cost:0, hp:40, mass:2},
 } satisfies Record<string, BlockDef>;
 export const T: Record<BlockType, BlockDef> = BLOCKS;
 /** The catalogue entry for a cell, if the player can build it (enemy-only cells such as carrier bays have none). */
 export const def = (t: Cell): BlockDef | undefined => T[t as BlockType];
 // multi-cell parts: len cells trailing behind the head along its facing, w columns wide extending to the head's starboard,
 // or an explicit shape: cells as [cells behind the head, cells to its starboard]
-export const PARTS: Partial<Record<Cell, PartDef>> = {bigcannon:{len:3, cells:[[1,0],[2,0],[2,-1],[2,1]], body:'bigcannon_b'}, hgatling:{len:2, body:'hgatling_b'}, rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}};
-export const HEAD_OF: Partial<Record<Cell, BlockType>> = {bigcannon_b:'bigcannon', hgatling_b:'hgatling', rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv'};
+export const PARTS: Partial<Record<Cell, PartDef>> = {bigcannon:{len:3, cells:[[1,0],[2,0],[2,-1],[2,1]], body:'bigcannon_b'}, hgatling:{len:2, body:'hgatling_b'}, rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}, torpedo:{len:2, body:'torpedo_b'}, aegis:{len:4, w:4, body:'aegis_b'}};
+export const HEAD_OF: Partial<Record<Cell, BlockType>> = {bigcannon_b:'bigcannon', hgatling_b:'hgatling', rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv', torpedo_b:'torpedo', aegis_b:'aegis'};
 /** Every cell of a part as [behind, starboard] from its head, the head first. */
 export const partOffsets = (P: PartDef): [number, number][] => {
   if (P.cells) return [[0,0], ...P.cells];
@@ -85,11 +88,11 @@ export function pickWeapon(stage: number): EnemyGun {
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL: BlockType[] = ['hull','armor','cannon','bigcannon','gatling','hgatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','gen','battery','sell'];
+export const PAL: BlockType[] = ['hull','armor','cannon','bigcannon','gatling','hgatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
-     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', tesla:'#c8b0ff', torpedo:'#ffe08a', mine:'#ffb27a'},
+     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', tesla:'#c8b0ff', torpedo:'#ffe08a', torpedo_b:'#c0a050', aegis:'#c9adff', aegis_b:'#8a70c0', mine:'#ffb27a'},
   e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
   a:{},
 }; // hangar craft

@@ -83,6 +83,10 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     }
     case 'torpedo':
       barrel(X,x,y,ca,sa,6.4,3.2,['#ffe8a0','#a07a20','#2a2008']); orb(X,x,y,2.6, ['#2a2008','#a07a20','#ffe08a']); break;
+    case 'torpedo_b':
+      // the tube's rear: the next torpedo waiting in the rack
+      X.fillStyle = '#20242c'; X.fillRect(x-3.6,y-4,7.2,8); X.fillStyle = '#a07a20'; X.fillRect(x-1.8,y-4,3.6,7);
+      X.fillStyle = '#ffe08a'; X.fillRect(x-1.8,y-4,1,7); X.fillStyle = '#5a6270'; X.fillRect(x-2.6,y+2,5.2,1.6); break;
     case 'mine':
       X.fillStyle = '#20242c'; X.fillRect(x-3.6,y-3.6,7.2,7.2);
       for (const [a,b] of [[-1.8,-1.8],[1.8,-1.8],[-1.8,1.8],[1.8,1.8]]){ X.fillStyle = '#ff7a3a'; X.fillRect(x+a-1,y+b-1,2,2); }
@@ -164,6 +168,14 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.fillStyle = '#9aa4b4'; X.fillRect(x-1,y-4,2,1); break;
     case 'pd':
       orb(X,x,y,3.2, ['#2a1a4a','#7a4ad0','#d8c0ff']); X.fillStyle = '#ffffff'; X.fillRect(x-.5,y-.5,1,1); break;
+    case 'aegis':
+      // the battery's fire-control dome, with a twin gun mount
+      orb(X,x,y,4.2, ['#2a1a4a','#7a4ad0','#d8c0ff']); X.fillStyle = '#d8c0ff'; X.fillRect(x-3,y-4.4,1.2,3); X.fillRect(x+1.8,y-4.4,1.2,3);
+      X.fillStyle = '#ffffff'; X.fillRect(x-.6,y-.6,1.2,1.2); break;
+    case 'aegis_b':
+      // sensor plating: a small violet emitter on a vented panel
+      X.fillStyle = '#20242c'; X.fillRect(x-4,y-4,8,8); X.fillStyle = '#4a3a6a'; for (let q=-3; q<4; q+=2) X.fillRect(x-3,y+q-.4,6,.8);
+      orb(X,x,y,1.6, ['#2a1a4a','#9a6af0','#e8dcff']); break;
   }
   if (rot) X.restore();
   // battle damage: scorch the plate as it loses hit points

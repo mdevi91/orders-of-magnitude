@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { HEAD_OF, PLATE, T } from './catalog';
+import { HEAD_OF, PLATE, T, canBuyHere, outfitPrice } from './catalog';
 import { cellsFor, removeCell } from './editor';
 import { CORE, K, KI, KJ, NB } from './grid';
 import { snap, undoStack } from './input';
@@ -37,8 +37,10 @@ export function bpLoad(n: number){
   for (const [k,t] of heads){
     const o = dirs.get(k) || 0, cells = cellsFor(KI(k), KJ(k), t, T[t].rot ? o : 0);
     if (cells.some(([a,c]) => G.design.has(K(a,c)))) continue;
-    if (PLATE(t) ? T[t].cost > G.credits : !((G.inv[t] || 0) > 0)){ missing[t] = (missing[t]||0) + 1; continue; }
-    if (PLATE(t)) G.credits -= T[t].cost; else G.inv[t] = (G.inv[t] || 0) - 1;
+    // in Engineering blocks not in cargo are bought on the spot
+    const buy = !PLATE(t) && !((G.inv[t] || 0) > 0) && canBuyHere(t);
+    if (PLATE(t) ? T[t].cost > G.credits : buy ? outfitPrice(t) > G.credits : !((G.inv[t] || 0) > 0)){ missing[t] = (missing[t]||0) + 1; continue; }
+    if (PLATE(t)) G.credits -= T[t].cost; else if (buy) G.credits -= outfitPrice(t); else G.inv[t] = (G.inv[t] || 0) - 1;
     for (const [a,c,ct] of cells){ G.design.set(K(a,c), ct); if (T[ct].rot) G.dirs.set(K(a,c), o); }
   }
   // drop anything left floating, back into cargo

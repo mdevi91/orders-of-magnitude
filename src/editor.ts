@@ -92,6 +92,7 @@ export function removeCell(k: Key){
   const was = G.broken.delete(k); G.design.delete(k); G.dirs.delete(k); delete G.grp[k];
   if (HEAD_OF[t]) return;
   if (PLATE(t)) G.credits += was ? Math.max(0, T[t].cost - repCost(t)) : T[t].cost;
+  else if (G.outfit) G.credits += outfitPrice(t); // Engineering: blocks are bought on the spot, so taking one off refunds it
   else { G.inv[t] = (G.inv[t]||0) + 1; if (was) G.dmg[t] = dmgOf(t) + 1; }
 }
 export function sellAt(i: number, j: number){

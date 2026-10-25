@@ -2,6 +2,7 @@ import { sfx } from './audio';
 import { PD_KINDS, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
 import { BCOL, CRAFT, ESH, HM, LV, T, def, grpOf, isCraft } from './catalog';
 import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx } from './craft';
+import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
 import { BS, FA, K, NB, SWING, angDiff, clamp, rand } from './grid';
 import { dirSpeed } from './physics';
@@ -233,10 +234,11 @@ export function update(dt: number){
   // point defense
   if (p.alive) for (const d of p.pds){
     d.cd -= dt; if (d.cd > 0) continue;
-    const PD = T.pd.pd!, [wx,wy] = wpos(p,d), R = PD.range*Math.sqrt(G.S);
+    // a multi-cell battery fires from the middle of its footprint
+    const PD = def(d.t)!.pd!, cs = cellsFor(d.i, d.j, d.t, d.o), [wx,wy] = wpos(p, {i:cs.reduce((a,c) => a + c[0], 0)/cs.length, j:cs.reduce((a,c) => a + c[1], 0)/cs.length}), R = PD.range*Math.sqrt(G.S);
     let best: typeof G.eb[number] | null = null, bd = R*R;
-    for (const b of G.eb){ if (b.dead || !PD_KINDS.has(b.kind)) continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < bd){ bd = q; best = b; } }
-    if (best && spend(PD.en)){ sfx('pd'); best.dead = true; d.cd = PD.cd/LV('pd'); G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09}); }
+    for (const b of G.eb){ if (b.dead || !(PD_KINDS.has(b.kind) || (PD.heavy && b.kind==='eoval'))) continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < bd){ bd = q; best = b; } }
+    if (best && spend(PD.en)){ sfx('pd'); best.dead = true; d.cd = PD.cd/LV(d.t); G.beams.push({x1:wx, y1:wy, x2:best.x, y2:best.y, life:.09, max:.09}); }
     else d.cd = .05;
   }
   // hangar bays: launch a craft, take it back after its sortie, send it out again; a lost craft takes longer to replace

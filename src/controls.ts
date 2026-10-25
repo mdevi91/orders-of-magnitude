@@ -4,8 +4,7 @@ import { rotate } from './editor';
 import { togglePause } from './fights';
 import { undo, undoStack, zoomAt } from './input';
 import { repair } from './loot';
-import { runOver } from './runs';
-import { save } from './save';
+import { leaveEngineering, runOver } from './runs';
 import { NODE, mapAction, nodeDef, toDrydock, toMap } from './starmap';
 import { G } from './state';
 import { syncUI, toast } from './ui';
@@ -36,6 +35,6 @@ export function init(){
   setMute(muted);
   $('mirror').addEventListener('click', cycleMirror);
   $('rot').addEventListener('click', rotate);
-  // the first launch ends outfitting
-  $('launch').addEventListener('click', () => { if (G.outfit){ G.outfit = false; save(); } toMap(); });
+  // in Engineering the button saves the starting ship and goes back to the base
+  $('launch').addEventListener('click', () => { if (G.outfit) leaveEngineering(); else toMap(); });
 }

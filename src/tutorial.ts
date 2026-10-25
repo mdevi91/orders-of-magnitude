@@ -6,7 +6,7 @@ import { $ } from './view';
 // ---------- tutorial ----------
 // One tip the first time each screen or mechanic comes up, remembered in this browser. Skip turns them all off.
 export const TUT: Record<string, [title: string, text: string]> = {
-  title:['Welcome', 'Fly a tiny ship through nine sectors and build it up as you go. Start a <b>New run</b>. Data from finished runs buys permanent hangar upgrades here.'],
+  title:['Welcome aboard', 'This is your base. Walk into the <b>Hangar</b> to launch a run, <b>Engineering</b> to design the ship every run starts with, <b>Research &amp; Development</b> to spend data on upgrades, and the <b>Cantina</b> for records and rumors.'],
   map:['Star map', 'Click a beacon linked to yours to jump there: <b>!</b> fight, <b>$</b> shop, <b>?</b> signal, <b>*</b> wreckage, <b>+</b> repair dock. Reach the gate on the far right to leave the sector. <b>Open drydock</b> (or <b>D</b>) to rebuild between jumps.'],
   combat:['Fighting', '<b>W/S</b> thrust, <b>A/D</b> turn the ship. Hold <b>Shift</b> and the ship turns toward the mouse while <b>A/D</b> slide sideways. Aim with the mouse and click or hold <b>Space</b> to fire; <b>T</b> turns on auto-aim. On touch, drag to move. The mouse wheel or <b>+ / −</b> zooms. Destroy every hostile to win. Every block adds to your ship’s life (the blue bar); damage anywhere takes from it. Lose all your life, or the core, and the run is over.'],
   loot:['Loot', 'Choose one of the offered blocks, or skip. It goes into cargo, ready to fit in the drydock.'],
@@ -16,7 +16,7 @@ export const TUT: Record<string, [title: string, text: string]> = {
   signal:['Signals', 'Signals are random events. A choice can pay off in credits and blocks, or go badly.'],
   damage:['Damage', 'Blocks destroyed in a fight stay damaged: dark, cracked, and left behind until repaired. Repair them in the drydock, at a shop for half price, or for free at a repair dock.'],
   sector:['New sector', 'Each sector is harder. Every third sector ends in a flagship or a starbase.'],
-  outfit:['Outfitting', 'Design your starting ship. Every block you have unlocked is for sale here: place as many as your budget allows. Unspent credits carry into the run. Press <b>Start run</b> when you are ready.'],
+  eng:['Engineering', 'Design the ship every run starts with. Every block you have unlocked is for sale, paid from a small budget that Research &amp; Development can grow. What you leave unspent comes along as credits. <b>Save design</b> keeps it for every run.'],
   data:['Data', 'Every run earns data, even a lost one. Spend it in the hangar on permanent upgrades, then try again.'],
 };
 export let tutSeen: Record<string, boolean> = {}, tutOff = false, tutQ: string[] = [];

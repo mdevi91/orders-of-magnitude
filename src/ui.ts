@@ -116,7 +116,7 @@ export function syncUI(){
   const rb = $<HTMLButtonElement>('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
   rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;
-  $('gridInfo').innerHTML = G.outfit ? `<b class="gold">Outfitting.</b> Every unlocked block is for sale: buy as many as your <b class="gold">${Math.round(G.credits)} cr</b> allow. What you don't spend carries into the run.`
+  $('gridInfo').innerHTML = G.outfit ? `<b class="gold">Engineering.</b> Design the ship every run starts with. Any unlocked block is for sale; <b class="gold">${Math.round(G.credits)} cr</b> of budget left, and what you don't spend comes along as credits.`
     : `Sector <b>${s}</b>. Plating costs credits; every other block comes from cargo. Upgrades are sold at shops.`;
   const st = designStats(), ms = (v: number) => (v/BS).toFixed(1);
   const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
@@ -129,7 +129,8 @@ export function syncUI(){
     (G.broken.size ? `<dt class="warn">Damaged</dt><dd class="warn">${G.broken.size} block${G.broken.size>1?'s':''}</dd>` : '') +
     (warn ? `<dt class="warn">Blocked</dt><dd class="warn">${warn}</dd>` : '') +
     (st.weakT ? `<dt class="gold">Boxed in</dt><dd class="gold">${st.weakT} turret${st.weakT>1?'s':''}</dd>` : '');
-  $('launch').textContent = G.outfit ? 'Start run' : 'Star map';
+  $('launch').textContent = G.outfit ? 'Save design' : 'Star map';
+  $('reset').hidden = G.outfit; $('base').hidden = G.mode!=='title';
   const m = G.mode, fight = m==='combat' || ((m==='clear' || m==='dead') && G.player);
   $('panel').hidden = $('inspect').hidden = m!=='build'; $('mapPanel').hidden = m!=='map';
   $('hudWave').hidden = !fight; $('coreWrap').hidden = !fight; $('pauseBtn').hidden = !fight; $('aimBtn').hidden = !fight; $('zoomIn').hidden = $('zoomOut').hidden = !fight; $('groups').hidden = !fight;
@@ -177,14 +178,12 @@ export function syncHud(){
 /** An overlay button: label, handler, and an optional class ('ghost' for the quiet style). */
 export type OverlayAction = [string, () => void, string?];
 export function showOverlay(title: string, html: string, actions: OverlayAction[], wide=false){
-  $('ovTitle').textContent = title; $('ovText').innerHTML = html; menuCard(false);
+  $('ovTitle').textContent = title; $('ovText').innerHTML = html;
   $('ovTitle').closest('.card')!.classList.toggle('wide', wide);
   const a = $('ovActions'); a.innerHTML = '';
   for (const [label, fn, cls] of actions){ const b = document.createElement('button'); b.type = 'button'; b.textContent = label; if (cls) b.className = cls; b.addEventListener('click', fn); a.append(b); }
   $('overlay').hidden = false; (a.firstChild as HTMLElement | null)?.focus();
 }
-/** The main menu stacks its buttons in a column. */
-export function menuCard(on: boolean){ $('ovTitle').closest('.card')!.classList.toggle('menu', on); }
 export function hideOverlay(){ $('overlay').hidden = true; }
 export let toastTimer = 0;
 export function toast(msg: string){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1600); }

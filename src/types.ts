@@ -41,7 +41,8 @@ export interface BlockDef {
   rail?: { cd: number; pool: number; en: number; range: number };
   tesla?: { cd: number; range: number; dmg: number; jumps: number; en: number };
   sh?: { hp: number; regen: number; delay: number; down: number; en: number };
-  pd?: { cd: number; range: number; en: number };
+  /** heavy: also shoots down cannon slugs */
+  pd?: { cd: number; range: number; en: number; heavy?: boolean };
   en?: { regen?: number; cap?: number };
 }
 export interface EnemyGunDef {
@@ -147,8 +148,10 @@ export interface MapNode {
 }
 export interface StarMap { nodes: MapNode[]; cur: number; done: boolean; seen: number[] }
 export interface RunStats { kills: number; nodes: number; elites: number; flags: number; sectors: number; bonus: number; won: boolean }
-/** The hangar: data to spend, upgrade levels, and the furthest sector any run has reached. */
-export interface Meta { data: number; lv: Record<string, number>; best?: number }
+/** A starting ship from Engineering: cells, facings, weapon groups. */
+export interface StartDesign { d: [Key, BlockType][]; o: [Key, Facing][]; g?: Record<Key, number> }
+/** What outlives every run: data to spend, research levels, the furthest sector reached, the starting ship, and records. */
+export interface Meta { data: number; lv: Record<string, number>; best?: number; start?: StartDesign; runs?: number; wins?: number; earned?: number; kills?: number }
 export interface Stick { id: number; x0: number; y0: number; x: number; y: number }
 export interface Banner { text: string; sub: string; t: number; red?: boolean }
 export type Mode = 'title' | 'map' | 'build' | 'combat' | 'clear' | 'dead';
