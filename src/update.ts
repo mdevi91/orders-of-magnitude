@@ -9,6 +9,7 @@ import { dirSpeed } from './physics';
 import { boomAt, broadside, damage, hitShip, impact, killShip, laneClear, rayHits, sparks, wpos } from './ships';
 import { G, turnOf } from './state';
 import type { Block, Ship } from './types';
+import { locked } from './targeting';
 import { H, W } from './view';
 
 // ---------- update ----------
@@ -180,9 +181,13 @@ export function update(dt: number){
   const tgtM = near(ax!,ay);
   // Auto weapons pick their own target: the nearest hostile inside their reach and arc, led on its motion.
   // Slow guns leave fighters alone while anything bigger is in reach.
+  // The lock (targeting mode) comes first whenever it is inside the weapon's reach and arc.
+  const lock = locked();
   const pick = (wx: number, wy: number, face: number, arc: number, reach: number, spd: number, fast: boolean, aa = false): [Ship, number, number] | null => {
     let best: Ship | null = null, bd = 1e18;
-    for (const e of enemies){
+    const fits = (e: Ship) => Math.hypot(e.x-wx, e.y-wy) - e.r <= reach && (arc >= Math.PI || Math.abs(angDiff(Math.atan2(e.y-wy, e.x-wx), face)) <= arc + .25);
+    if (lock && fits(lock)) best = lock;
+    else for (const e of enemies){
       if (!e.alive) continue;
       const d = Math.hypot(e.x-wx, e.y-wy) - e.r; if (d > reach) continue;
       if (arc < Math.PI && Math.abs(angDiff(Math.atan2(e.y-wy, e.x-wx), face)) > arc + .25) continue;
@@ -201,7 +206,8 @@ export function update(dt: number){
       if (!may(g) && !self) continue;
       if (g.cd > 0){ g.cd -= dt*RATE*(ms ? cockpit().mrl || 1 : 1); if (g.cd > 0) continue; }
       const gun = def(g.t)!.gun!, arc = cpArc(gun.arc || 0), [wx,wy] = wpos(p,g);
-      let tg = tgtM, tx = aimX(g), ty = aimY(g);
+      // missiles launched by hand home on the lock, if there is one
+      let tg = gun.homing && lock ? lock : tgtM, tx = aimX(g), ty = aimY(g);
       if (isAuto(g) || self){
         const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RM, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak', !!gun.aa);
         if (!P){ g.cd = .15; continue; }
@@ -367,6 +373,7 @@ export function update(dt: number){
     if (b.dead) continue;
     if (b.kind==='mine'){ const f = Math.pow(.35, dt); b.vx *= f; b.vy *= f; }
     if (b.homing){
+      if (lock && b.target !== lock) b.target = lock;
       if (!b.target || !b.target.alive){ let bd = 1e18; b.target = null; for (const e of enemies){ const d = (e.x-b.x)**2 + (e.y-b.y)**2; if (d < bd){ bd = d; b.target = e; } } }
       // guidance burns out after 4 s; after that the warhead flies straight until it burns out 3 s later
       if (b.target && b.life > 3){

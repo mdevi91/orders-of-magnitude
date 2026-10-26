@@ -181,6 +181,26 @@ button,.pal,label{touch-action:manipulation}
 .grow span{flex:1;min-width:0;color:var(--paper)}
 .gb{font:inherit;font-weight:600;font-size:14px;min-width:26px;padding:1px 6px;background:var(--ink);color:var(--muted);border:2px solid var(--dim);cursor:pointer}
 .gb[aria-pressed="true"]{color:var(--ink);background:var(--line);border-color:var(--line)}
+/* targeting mode: a hazard-striped banner under the HUD, and the locked target's readout card on the right */
+#tgtBanner{position:fixed;z-index:6;left:50%;top:132px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;padding:6px 16px 6px 0;background:#000;border:2px solid var(--line);font:600 14px/1 var(--cond);letter-spacing:.1em;text-transform:uppercase;color:var(--paper);white-space:nowrap;pointer-events:none;animation:tgtPulse 1s steps(2) infinite}
+#tgtBanner b{align-self:stretch;display:flex;align-items:center;margin:-6px 0;padding:0 14px;font:400 22px/1 var(--display);letter-spacing:.04em;color:#000;background:var(--line)}
+#tgtBanner span + span::before{content:'·';margin-right:14px;color:var(--line)}
+#tgtBanner kbd{font:700 12px var(--mono);border:1px solid var(--line);padding:0 4px;color:var(--line)}
+@keyframes tgtPulse{50%{border-color:var(--foe)}}
+#tgtCard{position:fixed;z-index:5;right:max(16px,env(safe-area-inset-right,0px));top:96px;width:236px;padding:0 14px 12px;background:rgba(0,0,0,.88);border:2px solid var(--foe);color:var(--paper);pointer-events:none}
+#tgtCard::before{content:'';display:block;height:8px;margin:0 -14px 10px;background:repeating-linear-gradient(-45deg,var(--foe) 0 8px,#000 8px 16px)}
+#tgtCard .tc-head{display:flex;justify-content:space-between;align-items:center}
+#tgtCard .tag{color:var(--foe);border-color:var(--foe)}
+#tgtCard .tc-id{font:700 13px var(--mono);color:var(--muted)}
+#tgtCard .tc-name{display:block;margin:6px 0 6px;font:400 30px/1 var(--display);text-transform:uppercase;color:var(--foe)}
+#tgtCard .tc-bar{height:8px;border:1px solid var(--foe);margin-bottom:8px}
+#tgtCard .tc-bar i{display:block;height:100%;background:var(--foe)}
+#tgtCard dl{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin:0;font:500 12px var(--mono)}
+#tgtCard dt{color:var(--muted);text-transform:uppercase}
+#tgtCard dd{margin:0;text-align:right;color:var(--paper)}
+#tgtCard dd.red{color:var(--foe);font-weight:700}
+#tgtCard .tc-arms{margin:8px 0 0;padding-top:6px;border-top:1px solid #4a1a14;font:500 11px/1.35 var(--mono);color:var(--line)}
+@media (max-width:700px){#tgtCard{top:auto;bottom:90px;width:200px}#tgtBanner span:not(:nth-child(2)){display:none}}
 #groups{position:fixed;z-index:5;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 84px);display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:calc(100% - 32px)}
 #groups .grpc{text-align:left;text-transform:uppercase;letter-spacing:.04em}
 #groups .grpc[aria-pressed="false"]{color:var(--paper);background:rgba(0,0,0,.8)}

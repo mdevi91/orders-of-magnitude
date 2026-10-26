@@ -12,6 +12,7 @@ import { canJump, curNode, jumpTo, mapAction, toDrydock, toMap } from './starmap
 import { G, buildR } from './state';
 import { select, syncMapPanel, syncUI, toast } from './ui';
 import { keys } from './update';
+import { targetClick, toggleTargeting } from './targeting';
 import type { BlockType, Facing, Key } from './types';
 import { $, PX, W, cv } from './view';
 
@@ -61,6 +62,8 @@ export function init(){
     const x = e.clientX/PX, y = e.clientY/PX, touch = e.pointerType==='touch';
     ptrs.set(e.pointerId, {x, y}); audio();
     if (!touch) G.mouse = {x, y, has:true};
+    // targeting mode: the click locks a hostile (or clears the lock) instead of firing
+    if (G.mode==='combat' && !touch && e.button===0 && G.tgtMode){ targetClick(x, y); return; }
     if (G.mode==='combat' && !touch && e.button===0) G.fireHeld = true;
     if (G.mode==='combat' && !touch && e.button===2) G.abReq = true; // the cockpit ability
     if (G.mode==='map' && $('overlay').hidden){
@@ -154,6 +157,7 @@ export function init(){
       if (e.code==='KeyP' || e.code==='Escape') togglePause();
       if (e.code==='KeyT') setAuto(!G.aimAuto);
       if (e.code==='KeyE') G.abReq = true;
+      if (e.code==='KeyQ') toggleTargeting();
       if (e.code==='Equal' || e.code==='NumpadAdd') camZoom(.85);
       if (e.code==='Minus' || e.code==='NumpadSubtract') camZoom(1.18);
       const gd = /^Digit([1-5])$/.exec(e.code); if (gd) toggleGroup(+gd[1]);

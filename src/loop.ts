@@ -3,6 +3,7 @@ import { renderBase } from './base';
 import { drawSpace, renderBuild, renderCombat } from './draw';
 import { renderMap } from './mapdraw';
 import { G } from './state';
+import { syncTargeting } from './targeting';
 import { syncHud } from './ui';
 import { update } from './update';
 import { H, W, ctx, hctx, hi } from './view';
@@ -24,6 +25,6 @@ export function frame(now: number){
     else if (G.mode==='title'){ clearHi(); renderBase(dt); }
     else if (!G.player){ clearHi(); drawSpace(G.time*14, 0, 1); }
     else renderCombat();
-    syncHud();
+    syncHud(); syncTargeting();
   } catch (err) { console.error(err); }
 }

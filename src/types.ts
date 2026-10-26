@@ -202,6 +202,8 @@ export interface GameState {
   paused: boolean; aimAuto: boolean; /** with Shift held, WASD moves in screen directions instead of along the ship */ shiftAbs: boolean; /** no screen shake and no impact frames */ calm: boolean; /** impact frame: seconds of inverted picture left */ impT: number;
   /** the cockpit ability: seconds of cooldown left, and a request from right-click or E waiting for the next update */
   abT: number; abReq: boolean;
+  /** targeting mode (Q): the next click locks a hostile; the lock, and when it was taken */
+  tgtMode: boolean; lock: Ship | null; lockT: number;
   /** Fire control runs until fireT; a Salvo lets missile launchers fire on their own until salvoT */
   fireT: number; salvoT: number;
   /** the Phantom's Cloak runs until cloakT: enemies hold fire at the player */

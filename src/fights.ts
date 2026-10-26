@@ -184,7 +184,7 @@ export function flyDesign(){
   return d;
 }
 export function startFight(kind: FightKind){
-  undoStack.length = 0; G.fight = kind; G.lost = new Set(); G.boss = null; G.abT = -1; G.abReq = false; G.fireT = G.salvoT = G.cloakT = 0;
+  undoStack.length = 0; G.fight = kind; G.lost = new Set(); G.boss = null; G.abT = -1; G.abReq = false; G.tgtMode = false; G.lock = null; G.fireT = G.salvoT = G.cloakT = 0;
   if (G.stats) G.stats.peak = Math.max(G.stats.peak || 0, blockCount());
   G.S = scaleOf(G.stage); G.SC = Math.pow(G.S,.8);
   const p = G.player = makeShip(flyDesign(),'p',0,0,1,G.dirs);

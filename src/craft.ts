@@ -6,6 +6,7 @@ import { BS, FA, K, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { boomAt, damage, laneClear, makeShip, rayHits, sparks, wpos } from './ships';
 import { G } from './state';
 import type { Block, BlockType, Bullet, Cell, CraftKind, Key, Ship } from './types';
+import { locked } from './targeting';
 import { REDUCE } from './view';
 
 // ---------- hangar craft ----------
@@ -66,7 +67,8 @@ export function updateCraft(A: Ship, dt: number, enemies: Ship[]){
     if (Math.hypot(tx-A.x, ty-A.y) < BS*1.5){ A.alive = false; bay.ally = null; bay.bt = C.rearm/(cockpit().build || 1); sfx('dock'); return; }
   } else {
     if (!A.tgt || !A.tgt.alive || (A.pick -= dt) <= 0){
-      A.pick = 1.5; A.tgt = null; let bd = 1e18;
+      // fighters and bombers go for the lock (targeting mode) first
+      A.pick = 1.5; A.tgt = locked(); let bd = A.tgt ? -1 : 1e18;
       for (const e of enemies){ const d = (e.x-A.x)**2 + (e.y-A.y)**2; if (e.alive && d < bd){ bd = d; A.tgt = e; } }
     }
     const o: Ship = A.tgt || p, R = A.tgt ? o.r*C.over + C.orbit*SC : p.r + 40*SC;

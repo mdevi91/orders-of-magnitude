@@ -4,6 +4,7 @@ import { BS, clamp, rand } from './grid';
 import { boomAt, damage, sparks, wpos } from './ships';
 import { G } from './state';
 import type { BlockType, Bullet, BulletKind, GunDef, Key, Ship } from './types';
+import { locked } from './targeting';
 import { REDUCE } from './view';
 
 // ---------- bullets ----------
@@ -38,7 +39,7 @@ export function missileBlast(b: Bullet, e: Ship, k: Key){
 // MIRV carrier: splits into homing warheads fanned out wide around its heading, spread over the nearest enemies.
 export function mirvSplit(b: Bullet, enemies: Ship[]){
   b.dead = true; boomAt(b.x, b.y, 8*G.SC, .15); sfx('missile', .8);
-  const ts = [...enemies].filter(e => e.alive).sort((p,q) => Math.hypot(p.x-b.x,p.y-b.y) - Math.hypot(q.x-b.x,q.y-b.y)).slice(0,3);
+  const L = locked(), ts = L ? [L] : [...enemies].filter(e => e.alive).sort((p,q) => Math.hypot(p.x-b.x,p.y-b.y) - Math.hypot(q.x-b.x,q.y-b.y)).slice(0,3);
   const head = Math.atan2(b.vy,b.vx), sub: GunDef = {spd:T.mirv.gun!.spd*1.4, r:2.2, dmg:0, homing:true, cd:0, spread:0};
   const n = b.mirv || 0;
   for (let q=0; q<n; q++){

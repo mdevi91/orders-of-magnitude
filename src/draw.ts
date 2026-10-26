@@ -8,6 +8,7 @@ import { wpos } from './ships';
 import { G, buildR, spanFor } from './state';
 import { JOY_R, RAIL_CHARGE, keys } from './update';
 import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship, Stick, Team } from './types';
+import { drawTargeting } from './targeting';
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 
 // ---------- drawing ----------
@@ -727,6 +728,7 @@ export function renderCombat(){
     hctx.fillText(on ? (G.shiftAbs ? 'NOSE ON MOUSE · WASD SCREEN' : 'NOSE ON MOUSE · A/D STRAFE') : 'SHIFT: NOSE FOLLOWS MOUSE', 8*PX, ly*PX); hctx.globalAlpha = 1;
   }
 
+  drawTargeting(sx, sy);
   // banner
   if (G.banner){
     const b = G.banner, a = Math.min(1, b.t/.4, (2.4-b.t+.2)/.3), y = Math.round(H*.3);
