@@ -206,13 +206,14 @@ export function sparks(x: number, y: number, ang: number, n: number, spd: number
   }
 }
 // Cannon shell hit: splash onto neighbouring blocks, knockback, fireball, flying sparks, smoke, screen shake.
-export function impact(b: {x: number; y: number; vx: number; vy: number; dmg: number}, e: Ship, k: Key){
+// The light KM-3 shell gets a smaller blast and a gentler shake than the Goliath shell or a torpedo.
+export function impact(b: {x: number; y: number; vx: number; vy: number; dmg: number}, e: Ship, k: Key, light=false){
   const SC = G.SC, ang = Math.atan2(b.vy,b.vx), x = b.x, y = b.y;
   if (e.alive) for (const d of NB) if (e.blocks.has(k+d)) damage(e, k+d, b.dmg*.4);
   const kick = 55*SC/Math.sqrt(e.blocks.size + 1);
   e.vx += Math.cos(ang)*kick; e.vy += Math.sin(ang)*kick;
-  boomAt(x, y, 10*SC, .22);
-  sparks(x, y, ang+Math.PI, 10, 300*SC, ['#ffffff','#ffd27a','#ff8a4a']);
-  for (let n=0; n<3; n++) G.fx.push({k:'smoke', x:x + rand(-4,4)*SC, y:y + rand(-4,4)*SC, vx:rand(-12,12)*SC + e.vx*.4, vy:rand(-12,12)*SC + e.vy*.4, r:rand(4,7.5)*SC, life:rand(.6,1.1), max:1.1});
-  if (!REDUCE) G.shake = Math.min(2.5, G.shake + .7);
+  boomAt(x, y, (light ? 10 : 13)*SC, light ? .22 : .24);
+  sparks(x, y, ang+Math.PI, light ? 10 : 12, 300*SC, ['#ffffff','#ffd27a','#ff8a4a']);
+  for (let n=0; n<3; n++) G.fx.push({k:'smoke', x:x + rand(-4,4)*SC, y:y + rand(-4,4)*SC, vx:rand(-12,12)*SC + e.vx*.4, vy:rand(-12,12)*SC + e.vy*.4, r:(light ? rand(4,7.5) : rand(5,9))*SC, life:rand(.6,1.1), max:1.1});
+  if (!REDUCE) G.shake = light ? Math.min(2.5, G.shake + .7) : Math.min(4, G.shake + 1.6);
 }

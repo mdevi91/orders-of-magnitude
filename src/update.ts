@@ -327,7 +327,7 @@ export function update(dt: number){
         const burst = b.kind==='flak' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse || 0 : b.r);
         if (k >= 0 && burst){ flakBurst(b); break; }
         if (k >= 0){
-          const hb = e.blocks.get(k)!; b.dmg *= fallOff(b); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k); if (b.homing) missileBlast(b,e,k);
+          const hb = e.blocks.get(k)!; b.dmg *= fallOff(b); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.homing) missileBlast(b,e,k);
           if (b.kind==='torp'){ missileBlast(b,e,k); impact(b,e,k); }
           if (b.ion){ ionJam(e, hb); sparks(b.x, b.y, 0, 8, 140*SC, ['#a070ff','#e8dcff','#ffffff']); } G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }

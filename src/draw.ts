@@ -503,8 +503,8 @@ export function renderCombat(){
           const len = Math.max(5, b.sp*z*.019)*PX, hx = sx(b.x)*PX, hy = sy(b.y)*PX;
           hctx.moveTo(hx - ca*len, hy - sa*len); hctx.lineTo(hx, hy);
         } else {
-          // cannon shells are drawn a little under their hit size
-          const q = s*.82;
+          // KM-3 shells are drawn a little under their hit size; Goliath shells at full size
+          const q = b.kind==='oval' && b.r < 3.5*G.SC ? s*.82 : s;
           ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, q*2.2, q*1.1, ang, 0, TAU); ctx.fill();
           ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(X + ca*q*.5, Y + sa*q*.5, q*1.1, q*.5, ang, 0, TAU); ctx.fill();
         }
