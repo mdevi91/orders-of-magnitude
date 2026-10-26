@@ -1,7 +1,7 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, cockpit, cpSpeed, cpTurn, cpUnlocked, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
-import { aimsOut, arcClear, designType, drawBlock } from './draw';
+import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
+import { PAINTS, aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
 import { undoStack } from './input';
@@ -41,12 +41,12 @@ export function buildPalette(){
 }
 export function drawIcons(){
   for (const t of PAL){
-    const ic = $<HTMLCanvasElement>('ic-'+t), g = ic.getContext('2d')!, o = T[t].rot ? G.rot : 0;
+    const ic = $<HTMLCanvasElement>('ic-'+t), g = ic.getContext('2d')!, o = faceFor(t, G.rot);
     g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,14,14);
     g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
     drawBlock(g, t, o, 'p', 0, 0, FA[o], false, 1, t==='engine');
   }
-  const t = G.sel, o = T[t].rot ? G.rot : 0, g = $<HTMLCanvasElement>('selIc').getContext('2d')!;
+  const t = G.sel, o = faceFor(t, G.rot), g = $<HTMLCanvasElement>('selIc').getContext('2d')!;
   g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,14,14);
   g.setTransform(14/12,0,0,14/12,7,7); g.lineWidth = 12/14;
   drawBlock(g, t, o, 'p', 0, 0, FA[o], false, 1, t==='engine');
@@ -68,7 +68,7 @@ function syncSelCard(S: number){
 }
 export function select(t: BlockType){
   if (!owned(t)) return; // blocks you have never found stay secret
-  G.sel = t; G.grpBrush = 0; if (PARTS[t]) G.rot &= ~1; syncUI();
+  G.sel = t; G.grpBrush = 0; if (PARTS[t]) G.rot &= ~1; if (WEDGE(t)) G.rot |= 1; syncUI();
 }
 export function designStats(){
   const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), o:G.dirs.get(k)||0}));
@@ -115,7 +115,10 @@ export function syncUI(){
   // Engineering picks the cockpit; in a run it is fixed
   const cps = $('cockpits'); cps.hidden = !G.outfit;
   if (G.outfit) cps.innerHTML = '<h3 class="palh">Cockpit</h3>' + (Object.keys(COCKPITS) as CockpitId[]).filter(id => !COCKPITS[id].off).map(id =>
-    `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"${cpUnlocked(id) ? '' : ' disabled'}><span><span class="nm">${COCKPITS[id].name}</span><span class="ct">${cpUnlocked(id) ? `${COCKPITS[id].desc} Right-click: ${COCKPITS[id].abName}.` : `Locked. Reach sector ${COCKPITS[id].unlock} to unlock it.`}</span></span></button>`).join('');
+    `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"${cpUnlocked(id) ? '' : ' disabled'}><span><span class="nm">${COCKPITS[id].name}</span><span class="ct">${cpUnlocked(id) ? `${COCKPITS[id].desc} Right-click: ${COCKPITS[id].abName}.` : `Locked. Reach sector ${COCKPITS[id].unlock} to unlock it.`}</span></span></button>`).join('') +
+    // paint: one swatch per scheme, hull colour over armour colour
+    '<h3 class="palh">Paint</h3><div class="paints">' + Object.entries(PAINTS).map(([id, p]) =>
+      `<button type="button" class="paint" data-paint="${id}" aria-pressed="${G.paint===id}" aria-label="${p.name} paint" title="${p.name}" style="--a:${p.hull[1]};--b:${p.armor[1]}"></button>`).join('') + '</div>';
   GROUPS.forEach((_, n) => { $('palh-'+n).hidden = !PAL.some(t => groupOf(t)===n && owned(t)); });
   const rb = $<HTMLButtonElement>('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
@@ -214,7 +217,10 @@ export function toast(msg: string){ const t = $('toast'); t.textContent = msg; t
 
 // wiring that runs once at start-up
 export function init(){
-  $('cockpits').addEventListener('click', e => { const b = (e.target as Element).closest<HTMLElement>('[data-cp]'); if (b){ G.cockpit = b.dataset.cp as CockpitId; syncUI(); } });
+  $('cockpits').addEventListener('click', e => {
+    const b = (e.target as Element).closest<HTMLElement>('[data-cp]'); if (b){ G.cockpit = b.dataset.cp as CockpitId; syncUI(); }
+    const pb = (e.target as Element).closest<HTMLElement>('[data-paint]'); if (pb){ G.paint = pb.dataset.paint!; syncUI(); }
+  });
   // number keys pick a card from a loot draft or a numbered choice from a signal
   addEventListener('keydown', e => {
     if ($('overlay').hidden || !/^[1-9]$/.test(e.key)) return;

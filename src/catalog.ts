@@ -1,13 +1,15 @@
 import { BS } from './grid';
 import { metaLv } from './runs';
 import { G, blockCount } from './state';
-import type { BlockDef, BlockType, Cell, CraftDef, CraftKind, EnemyCell, EnemyGun, EnemyGunDef, GunDef, Key, PartDef } from './types';
+import type { BlockDef, BlockType, Cell, CraftDef, CraftKind, EnemyCell, EnemyGun, EnemyGunDef, Facing, GunDef, Key, PartDef } from './types';
 
 // ---------- block catalogue ----------
 // BLOCKS keeps its literal keys (they become the BlockType union); T is the same table read as BlockDefs.
 export const BLOCKS = {
   core:   {name:'Core', cost:0, hp:80, mass:3, thrust:4, torque:12, gun:{range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true}, desc:'Your heart. Lose it, or all of the ship’s life, and the run is over. Gives a little thrust in every direction.'},
   hull:   {name:'Hull', key:'1', unlock:1, rar:0, cost:2, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
+  hullc:  {name:'Hull corner', key:'h', unlock:1, rar:0, cost:2, hp:16, mass:.7, rot:true, desc:'Hull with one corner cut away at 45°, for angled edges and noses. R turns it.'},
+  armorc: {name:'Armor corner', key:'j', unlock:1, rar:0, cost:8, hp:52, mass:2.2, rot:true, desc:'Armor with one corner cut away at 45°. Takes 30% less damage, like armor. R turns it.'},
   armor:  {name:'Armor', key:'2', unlock:1, rar:0, cost:10, hp:70, mass:3, desc:'Three times the toughness of hull, and takes 30% less damage. Heavy.'},
   cannon: {name:'KM-3 Cannon', make:'Kessler Arms', key:'3', unlock:1, rar:0, cost:33, hp:20, mass:1.5, rot:true, gun:{range:324, cd:.54, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 17 damage per second. Covers 50° either side of its facing.'},
   bigcannon:{name:'Goliath Cannon', make:'Teller Heavy Industries', key:'k', unlock:4, rar:2, cost:120, hp:30, mass:3, rot:true, gun:{range:480, cd:1.3, en:9, spd:400, dmg:32, spread:.015, r:4.2, arc:.7, fx:'oval'}, desc:'Inverted T: a 3-wide base with a 2-cell nose ahead of it. Turret firing huge slugs, about 25 damage per second, from the tip of its nose. Covers 40° either side of its facing.'},
@@ -90,7 +92,7 @@ export function pickWeapon(stage: number): EnemyGun {
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL: BlockType[] = ['hull','armor','cannon','bigcannon','gatling','hgatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
+export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
@@ -100,7 +102,11 @@ export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
 }; // hangar craft
 export const BCOL: Record<string, string> = {pellet:'#fff0a0', ion:'#a070ff', torp:'#ffd04a', mine:'#ff7a3a', shot:'#7fe8ff', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
 // Hull and armor are plating: bought with credits in drydock. Every other block comes out of cargo.
-export const PLATE = (t: Cell) => t==='hull' || t==='armor';
+export const PLATE = (t: Cell) => t==='hull' || t==='armor' || WEDGE(t);
+/** Corner plating: a half-cell triangle whose cut corner faces one of the four diagonals (an odd facing). */
+export const WEDGE = (t: Cell) => t==='hullc' || t==='armorc';
+/** The facing a block is placed with: 0 for blocks that don't turn, a diagonal for corner plating. */
+export const faceFor = (t: Cell, o: Facing): Facing => !T[t as BlockType]?.rot ? 0 : WEDGE(t) ? (o | 1) as Facing : o;
 export const onShip = (t: BlockType) => { for (const v of G.design.values()) if (v===t) return true; return false; };
 export const owned = (t: BlockType) => t==='sell' || PLATE(t) || (G.inv[t]||0) > 0 || onShip(t) || (G.outfit && unlocked(t));
 // Outfitting: before the first jump of a run, any unlocked block can be bought straight onto the ship with the starting budget.

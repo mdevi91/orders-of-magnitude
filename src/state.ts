@@ -5,7 +5,7 @@ import type { GameState } from './types';
 // ---------- state ----------
 export const G: GameState = {
   mode:'title', bz:1, bpx:0, bpy:0, mir:1, sel:'hull', rot:0, mirror:true, hover:null, drag:null, lastCell:null, grpBrush:0,
-  cockpit:'std', stage:1, credits:0, design:new Map(), dirs:new Map(), lv:{}, inv:{}, dmg:{}, grp:{}, auto:[false,false,false,true,false],
+  cockpit:'std', paint:'steel', stage:1, credits:0, design:new Map(), dirs:new Map(), lv:{}, inv:{}, dmg:{}, grp:{}, auto:[false,false,false,true,false],
   broken:new Set(), lost:new Set(), fresh:new Set(),
   map:null, node:null, pendingNode:null, shopNode:null, mapHover:null, stats:null, meta:{data:0, lv:{}}, bounty:0, outfit:false, pick:null,
   fight:'fight', ships:[], player:null, boss:null, pb:[], eb:[], fx:[], beams:[],

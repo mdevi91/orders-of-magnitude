@@ -160,7 +160,7 @@ export interface RunStats { kills: number; nodes: number; elites: number; flags:
    *  and the best sector before the run (to list what it unlocked). Optional: older saves lack them. */
   dealt?: number; taken?: number; lost?: number; secs?: number; peak?: number; best0?: number }
 /** A starting ship from Engineering: cells, facings, weapon groups. */
-export interface StartDesign { d: [Key, BlockType][]; o: [Key, Facing][]; g?: Record<Key, number>; c?: CockpitId }
+export interface StartDesign { d: [Key, BlockType][]; o: [Key, Facing][]; g?: Record<Key, number>; c?: CockpitId; /** paint scheme id */ p?: string }
 /** What outlives every run: data to spend, research levels, the furthest sector reached, the starting ship, and records. */
 export interface Meta { data: number; lv: Record<string, number>; best?: number; start?: StartDesign; runs?: number; wins?: number; earned?: number; kills?: number }
 export interface Stick { id: number; x0: number; y0: number; x: number; y: number }
@@ -175,6 +175,8 @@ export interface GameState {
   // the run
   /** the cockpit variant this run flies with */
   cockpit: CockpitId;
+  /** the player's paint scheme (an id in PAINTS) */
+  paint: string;
   stage: number; credits: number; design: Map<Key, BlockType>; dirs: Map<Key, Facing>; lv: Partial<Record<BlockType, number>>;
   inv: Partial<Record<BlockType, number>>; dmg: Partial<Record<BlockType, number>>; grp: Record<Key, number>; auto: boolean[];
   broken: Set<Key>; lost: Set<Key>; fresh: Set<BlockType>;

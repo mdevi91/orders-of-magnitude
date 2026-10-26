@@ -225,7 +225,7 @@ export function rayHits(ox: number, oy: number, dx: number, dy: number, len: num
 }
 export function damage(s: Ship, k: Key, dmg: number){
   const b = s.blocks.get(k); if (!b || !s.alive || (s.warp || 0) > 0 || (s.ghost || 0) > G.time) return;
-  if (b.t==='armor') dmg *= 1 - ARMOR_DR;
+  if (b.t==='armor' || b.t==='armorc') dmg *= 1 - ARMOR_DR;
   if (s.team==='p') dmg *= cpGuard(); // a small interceptor shrugs off hits
   const took = Math.min(Math.max(0, b.hp), dmg);
   s.life -= took; b.hp -= dmg; b.hit = G.time;

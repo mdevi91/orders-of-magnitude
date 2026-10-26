@@ -118,12 +118,12 @@ export function enterEngineering(){
   engRun = !!G.stats; save();
   const st = startDesign();
   G.stats = null; G.stage = 1; G.lv = {}; G.inv = {}; G.dmg = {}; G.broken = new Set(); G.fresh = new Set(); G.grp = {...(st.g || {})};
-  G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std';
+  G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std'; G.paint = st.p || 'steel';
   G.credits = budget() - designCost(G.design); G.outfit = true; undoStack.length = 0;
   toDrydock(); tut('eng');
 }
 export function leaveEngineering(){
-  G.meta.start = {d:[...G.design], o:[...G.dirs], g:{...G.grp}, c:G.cockpit}; saveMeta();
+  G.meta.start = {d:[...G.design], o:[...G.dirs], g:{...G.grp}, c:G.cockpit, p:G.paint}; saveMeta();
   G.outfit = false; undoStack.length = 0;
   if (!(engRun && load())) G.stats = null;
   toast('Starting ship saved'); showTitle();
@@ -131,7 +131,7 @@ export function leaveEngineering(){
 export function newRun(){
   const st = startDesign();
   G.stage = 1; G.pendingNode = null; G.bounty = 0; G.lv = {}; G.broken = new Set(); G.fresh = new Set(); G.spanT = G.span0 = 0; G.spanStage = null;
-  G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std';
+  G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std'; G.paint = st.p || 'steel';
   G.inv = {}; G.dmg = {}; G.grp = {...(st.g || {})}; G.auto = [false,false,false,true,false];
   const arms = (['cannon','scatter','gatling','missile','flak'] as BlockType[]).filter(unlocked);
   for (let q=0; q<metaLv('arms'); q++){ const t = arms[(Math.random()*arms.length)|0]; G.inv[t] = (G.inv[t]||0) + 1; }

@@ -1,4 +1,4 @@
-import { BCOL, BEAM, ESH, GCOL, MAXLV, T, cockpit, def, grpOf, isWeapon, lvOf, shRad } from './catalog';
+import { BCOL, BEAM, ESH, GCOL, MAXLV, T, WEDGE, cockpit, def, faceFor, grpOf, isWeapon, lvOf, shRad } from './catalog';
 import { rangeOf } from './bullets';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { WARP } from './fights';
@@ -20,6 +20,14 @@ type Pal3 = [string, string, string];
 export const MET: Record<'p'|'e', {hull: Pal3; armor: Pal3; dark: Pal3}> = {
   p:{hull:['#d4dbe6','#8590a1','#454c5a'], armor:['#b4bcc8','#5f6878','#2b3039'], dark:['#7d8796','#3d4350','#1c1f26']},
   e:{hull:['#e08a62','#9a4630','#4a1c12'], armor:['#b8705a','#6a3024','#30120c'], dark:['#8a4a3a','#4a2018','#200a06']},
+};
+// Paint schemes for the player's plating, picked in Engineering; systems keep the dark metal. Enemies always wear rust.
+export const PAINTS: Record<string, {name: string; hull: Pal3; armor: Pal3; dark: Pal3}> = {
+  steel: {name:'Steel', ...MET.p},
+  ivory: {name:'Ivory', hull:['#ffffff','#d6dae2','#868c9a'], armor:['#ece6da','#aaa598','#5a564d'], dark:MET.p.dark},
+  navy:  {name:'Navy', hull:['#a8c4f0','#3e5e9e','#1a2a52'], armor:['#8098c8','#2c3c6c','#121a34'], dark:MET.p.dark},
+  olive: {name:'Olive', hull:['#d0d8a6','#7c8652','#3a4020'], armor:['#a6ae7c','#565e36','#262a14'], dark:MET.p.dark},
+  violet:{name:'Violet', hull:['#dcc6f2','#7c5caa','#3a2858'], armor:['#b49ad2','#503c76','#22183a'], dark:MET.p.dark},
 };
 export function plate(X: Ctx, x: number, y: number, m: Pal3){
   X.fillStyle = '#0b0d12'; X.fillRect(x-5,y-5,10,10);
@@ -45,9 +53,23 @@ export function barrel(X: Ctx, x: number, y: number, ca: number, sa: number, len
   X.fillStyle = m[0]; X.beginPath(); X.moveTo(x+px*.3,y+py*.3); X.lineTo(x+px*.3+ca*len,y+py*.3+sa*len); X.lineTo(x-px*.4+ca*len,y-py*.4+sa*len); X.lineTo(x-px*.4,y-py*.4); X.closePath(); X.fill();
 }
 export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: number, aim: number, hit: boolean, ratio: number, firing?: boolean){
-  const M = MET[team==='e' ? 'e' : 'p'], bx = x, by = y;
+  const M = team==='e' ? MET.e : PAINTS[G.paint] || MET.p, bx = x, by = y;
   if (t==='sell'){
     X.fillStyle = '#ff3d2a'; X.save(); X.translate(x,y); X.rotate(Math.PI/4); X.fillRect(-5,-1.2,10,2.4); X.fillRect(-1.2,-5,2.4,10); X.restore(); return;
+  }
+  if (WEDGE(t)){
+    // corner plating: the solid half-cell is bottom-left in its own frame, the cut faces up-right; turned to its diagonal
+    const m = t==='armorc' ? M.armor : M.hull, tri = (pts: number[]) => { X.beginPath(); X.moveTo(pts[0], pts[1]); for (let n=2; n<pts.length; n+=2) X.lineTo(pts[n], pts[n+1]); X.closePath(); X.fill(); };
+    X.save(); X.translate(x,y); X.rotate((((o || 1) - 1)/2)*Math.PI/2);
+    X.fillStyle = '#0b0d12'; tri([-5,-5.6, -5,5, 5.6,5]);
+    X.fillStyle = m[1]; tri([-4.4,-3.2, -4.4,4.4, 3.2,4.4]);
+    X.fillStyle = m[2]; tri([-4.4,1.2, 0,1.2, 3.2,4.4, -4.4,4.4]);
+    X.fillStyle = m[0]; X.fillRect(-4.4,-3.2,1,4.4);
+    if (t==='armorc'){ X.fillStyle = m[2]; tri([-2.8,.2, -2.8,2.8, -.2,2.8]); }
+    else { X.fillStyle = m[0]; X.fillRect(-3.4,2.6,.8,.8); }
+    if (hit){ X.fillStyle = '#ffffff'; X.globalAlpha = .85; tri([-5,-5.6, -5,5, 5.6,5]); X.globalAlpha = 1; }
+    else if (ratio < .7){ X.fillStyle = '#000000'; X.globalAlpha = (1-ratio)*.45; tri([-5,-5.6, -5,5, 5.6,5]); X.globalAlpha = 1; }
+    X.restore(); return;
   }
   const base = t==='armor' ? M.armor : t==='hull' ? M.hull : M.dark;
   plate(X,x,y,base);
@@ -748,7 +770,7 @@ export function renderBuild(){
     const spots = placeSpots(h.i,h.j,G.rot,G.sel);
     for (const [i,j,o] of spots){
       if (G.sel==='sell'){ ctx.globalAlpha = .9; drawBlock(ctx,'sell',0,'p',i*BS,j*BS,0,false,1,false); continue; }
-      const ok = placeCheck(i,j,G.sel,o) === true, oo = T[G.sel].rot ? o : 0;
+      const ok = placeCheck(i,j,G.sel,o) === true, oo = faceFor(G.sel, o);
       for (const [ci,cj,ct] of cellsFor<BlockType>(i,j,G.sel,oo)){
         ctx.globalAlpha = .55; drawBlock(ctx,ct,oo,'p',ci*BS,cj*BS,FA[oo],false,1,false);
         if (ct===G.sel && (aimsOut(ct) || BEAM(ct))) drawArc(ci, cj, oo, ct, .75, aR, aLen);

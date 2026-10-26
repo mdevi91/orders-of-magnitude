@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { HEAD_OF, PARTS, PLATE, T, canBuyHere, def, isPart, outfitPrice, partOffsets, repCost } from './catalog';
+import { HEAD_OF, PARTS, PLATE, T, WEDGE, canBuyHere, def, faceFor, isPart, outfitPrice, partOffsets, repCost } from './catalog';
 import { layoutBuild } from './draw';
 import { CORE, FACE, K, NB, flipO, mirrorO } from './grid';
 import { assignAt } from './groups';
@@ -42,7 +42,7 @@ export function placeSpots(i: number, j: number, o: Facing, t: BlockType): Spot[
 }
 /** true if the block can go there, otherwise the reason it can't. */
 export function placeCheck(i: number, j: number, t: BlockType, o: Facing): true | string {
-  const R = buildR(), oo = T[t].rot ? o : 0, cells = cellsFor(i,j,t,oo);
+  const R = buildR(), oo = faceFor(t, o), cells = cellsFor(i,j,t,oo);
   for (const [a,b] of cells) if (Math.max(Math.abs(a),Math.abs(b)) > R) return 'Outside the build grid';
   const k = K(i,j), cur = G.design.get(k);
   if (cur==='core') return 'The core stays where it is';
@@ -64,7 +64,7 @@ export function placeCheck(i: number, j: number, t: BlockType, o: Facing): true 
 }
 export function tryPlace(i: number, j: number, t: BlockType, o: Facing): true | string {
   const why = placeCheck(i,j,t,o); if (why !== true) return why;
-  const k = K(i,j), oo = T[t].rot ? o : 0;
+  const k = K(i,j), oo = faceFor(t, o);
   if (G.design.has(k)) removeCell(k);
   if (!PLATE(t) && !((G.inv[t] || 0) > 0)){ G.credits -= outfitPrice(t); G.inv[t] = 1; } // outfitting: bought on the spot
   const hurt = PLATE(t) ? (G.credits -= T[t].cost, false) : takeCargo(t);
@@ -114,7 +114,7 @@ export function sellAt(i: number, j: number){
 export function spinAt(i: number, j: number){
   const k = K(i,j), t = G.design.get(k);
   if (!t || t!==G.sel || !def(t)!.rot || PARTS[t]) return false;
-  const o = ((G.dirs.get(k)||0) + 1) % 8; G.dirs.set(k,o); G.rot = o;
+  const o = faceFor(t, (((G.dirs.get(k)||0) + (WEDGE(t) ? 2 : 1)) % 8) as Facing); G.dirs.set(k,o); G.rot = o;
   for (const [a,b,mo] of mirrorSpots(i,j,o).slice(1)) if (G.design.get(K(a,b))===t) G.dirs.set(K(a,b), mo);
   return true;
 }
@@ -131,4 +131,4 @@ export function buildAction(i: number, j: number, mode: 'place' | 'sell', tap = 
   syncUI();
 }
 export function cellAt(x: number, y: number){ const {cx,cy,cs} = layoutBuild(); return {i:Math.round((x-cx)/cs), j:Math.round((y-cy)/cs)}; }
-export function rotate(){ G.rot = PARTS[G.sel] ? ((G.rot & ~1) + 2) % 8 : (G.rot+1) % 8; syncUI(); }
+export function rotate(){ G.rot = PARTS[G.sel] ? ((G.rot & ~1) + 2) % 8 : WEDGE(G.sel) ? ((G.rot | 1) + 2) % 8 : (G.rot+1) % 8; syncUI(); }

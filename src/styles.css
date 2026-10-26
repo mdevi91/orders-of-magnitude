@@ -104,6 +104,11 @@ kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line);padding:
 @keyframes palPop{0%{transform:scale(.2);opacity:0}70%{transform:scale(1.15);opacity:1}100%{transform:none}}
 @keyframes palGlow{0%{border-color:var(--foe)}100%{border-color:transparent}}
 @media (prefers-reduced-motion:reduce){.pal.fresh{animation:none;border-color:var(--foe)}}
+/* paint swatches in Engineering: hull colour over armour colour */
+.paints{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.paint{height:30px;padding:0;border:2px solid var(--dim);background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%);cursor:pointer}
+.paint:hover{border-color:var(--line)}
+.paint[aria-pressed="true"]{border-color:var(--line);box-shadow:0 0 0 2px var(--ink),0 0 0 4px var(--line)}
 /* selected block card */
 #selCard{display:flex;flex-direction:column;gap:6px;padding:10px;border:2px solid var(--line)}
 .selHead{display:flex;gap:10px;align-items:center}

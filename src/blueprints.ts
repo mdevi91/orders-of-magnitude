@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { HEAD_OF, PLATE, T, canBuyHere, outfitPrice } from './catalog';
+import { HEAD_OF, PLATE, T, canBuyHere, faceFor, outfitPrice } from './catalog';
 import { cellsFor, removeCell } from './editor';
 import { CORE, K, KI, KJ, NB } from './grid';
 import { snap, undoStack } from './input';
@@ -35,7 +35,7 @@ export function bpLoad(n: number){
   // nearest cells first, so whatever runs out is the outer edge of the design
   const heads = [...want].filter(([k,t]) => k!==CORE && !HEAD_OF[t]).sort(([a],[c]) => Math.hypot(KI(a),KJ(a)) - Math.hypot(KI(c),KJ(c)));
   for (const [k,t] of heads){
-    const o = dirs.get(k) || 0, cells = cellsFor(KI(k), KJ(k), t, T[t].rot ? o : 0);
+    const o = dirs.get(k) || 0, cells = cellsFor(KI(k), KJ(k), t, faceFor(t, o));
     if (cells.some(([a,c]) => G.design.has(K(a,c)))) continue;
     // in Engineering blocks not in cargo are bought on the spot
     const buy = !PLATE(t) && !((G.inv[t] || 0) > 0) && canBuyHere(t);
