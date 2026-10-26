@@ -7,6 +7,7 @@ import { togglePause } from './fights';
 import { clamp } from './grid';
 import { camZoom, setAuto, setBrush, toggleGroup } from './groups';
 import { mapNodeAt } from './mapdraw';
+import { closeOptions, openOptions, optionsOpen } from './options';
 import { canJump, curNode, jumpTo, mapAction, toDrydock, toMap } from './starmap';
 import { G, buildR } from './state';
 import { select, syncMapPanel, syncUI, toast } from './ui';
@@ -132,6 +133,9 @@ export function init(){
     if (e.target instanceof HTMLInputElement && e.code==='Space') return;
     keys[e.code] = true;
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+    // Esc: Options goes back where it came from; outside a fight (and not mid group-painting) Esc opens Options
+    if (e.code==='Escape' && optionsOpen()){ closeOptions(); return; }
+    if (e.code==='Escape' && G.mode!=='combat' && !(G.mode==='build' && G.grpBrush)){ openOptions(); return; }
     if (G.mode==='build' && G.grpBrush){
       const gd = /^Digit([1-5])$/.exec(e.code); if (gd) setBrush(+gd[1]);
       if (e.code==='Escape' || e.code==='Enter') setBrush(0);

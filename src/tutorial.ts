@@ -20,6 +20,8 @@ export const TUT: Record<string, [title: string, text: string]> = {
   data:['Data', 'Every run earns data, even a lost one. Spend it in the hangar on permanent upgrades, then try again.'],
 };
 export let tutSeen: Record<string, boolean> = {}, tutOff = false, tutQ: string[] = [];
+/** Options: tips on or off (turning them on again does not replay the ones already seen). */
+export function setTutOff(v: boolean){ tutOff = v; if (v){ tutQ = []; tutShow(); } tutSave(); }
 export const tutSave = () => { try { localStorage.setItem('oom-tut', JSON.stringify({seen:tutSeen, off:tutOff})); } catch {} };
 export function tut(id: string){
   if (tutOff || tutSeen[id] || tutQ.includes(id)) return;

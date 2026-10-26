@@ -6,6 +6,7 @@ import { init as init_catalog } from './catalog';
 import { init as init_controls } from './controls';
 import { init as init_groups } from './groups';
 import { init as init_input } from './input';
+import { init as init_options } from './options';
 import { frame } from './loop';
 import { showTitle, station } from './runs';
 import { init as init_save, load, loadMeta } from './save';
@@ -25,6 +26,7 @@ init_save();
 init_controls();
 init_groups();
 init_tutorial();
+init_options();
 initBase(station);
 
 const splash = $('splash');

@@ -182,7 +182,7 @@ export interface GameState {
   waves: WavePlan; waveIdx: number; waveGap: number; time: number; S: number; SC: number; AW: number; AH: number;
   camX: number; camY: number; camOX: number; camOY: number; zoom: number; camMul: number;
   span: number; spanT: number; span0: number; spanAt: number; spanStage: number | null; fit: number; swarmT: number;
-  paused: boolean; aimAuto: boolean; /** with Shift held, WASD moves in screen directions instead of along the ship */ shiftAbs: boolean; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
+  paused: boolean; aimAuto: boolean; /** with Shift held, WASD moves in screen directions instead of along the ship */ shiftAbs: boolean; /** no screen shake */ calm: boolean; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
   joy: Stick | null; aimJoy: Stick | null;
   banner: Banner | null; deadT: number; earned: number; shake: number; aim: { x: number; y: number };
 }

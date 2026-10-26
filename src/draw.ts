@@ -313,7 +313,7 @@ export function renderCombat(){
   cx = G.AW < 2*hw ? G.AW/2 : clamp(cx, hw, G.AW-hw);
   cy = G.AH < 2*hh ? G.AH/2 : clamp(cy, hh, G.AH-hh);
   G.camX = cx; G.camY = cy;
-  const ox = G.shake > .3 ? Math.round(rand(-G.shake,G.shake)) : 0, oy = G.shake > .3 ? Math.round(rand(-G.shake,G.shake)) : 0;
+  const ox = G.shake > .3 && !G.calm ? Math.round(rand(-G.shake,G.shake)) : 0, oy = G.shake > .3 && !G.calm ? Math.round(rand(-G.shake,G.shake)) : 0;
   const sx = (x: number) => (x-cx)*z + W/2 + ox, sy = (y: number) => (y-cy)*z + H/2 + oy;
   G.camOX = ox; G.camOY = oy;
 

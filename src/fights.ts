@@ -5,6 +5,7 @@ import { undoStack } from './input';
 import { chooseLoot, inc, lootText } from './loot';
 import { runOver } from './runs';
 import { save } from './save';
+import { showOptions } from './options';
 import { genDesign, gunDirs, makeShip } from './ships';
 import { NODE, goOn, nextSector, toMap } from './starmap';
 import { G, scaleOf, spanFor } from './state';
@@ -229,7 +230,9 @@ export function flee(){ keepDamage(); G.pendingNode = null; G.bounty = 0; toast(
 export function togglePause(){
   if (G.mode!=='combat') return;
   G.paused = !G.paused;
-  if (G.paused) showOverlay('Paused', `${NODE[G.fight].name}, wave ${G.waveIdx} of ${G.waves.length}. Fleeing keeps the damage you took and gives no reward.`,
-    [['Resume', togglePause], ['Flee', flee, 'ghost']], false, {eye:'Paused'});
-  else hideOverlay();
+  if (G.paused) pauseMenu(); else hideOverlay();
+}
+export function pauseMenu(){
+  showOverlay('Paused', `${NODE[G.fight].name}, wave ${G.waveIdx} of ${G.waves.length}. Fleeing keeps the damage you took and gives no reward.`,
+    [['Resume', togglePause], ['Options', () => showOptions(pauseMenu), 'ghost'], ['Flee', flee, 'ghost']], false, {eye:'Paused'});
 }

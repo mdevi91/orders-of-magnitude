@@ -1,9 +1,10 @@
 import { audio, muted, setMute, sfx } from './audio';
 import { layoutBuild } from './draw';
 import { rotate } from './editor';
-import { togglePause } from './fights';
+import { pauseMenu, togglePause } from './fights';
 import { undo, undoStack, zoomAt } from './input';
 import { repair } from './loot';
+import { openOptions, showOptions } from './options';
 import { leaveEngineering, runOver } from './runs';
 import { NODE, mapAction, nodeDef, toDrydock, toMap } from './starmap';
 import { G } from './state';
@@ -33,10 +34,8 @@ export function init(){
   $('pauseBtn').addEventListener('click', togglePause);
   $('muteBtn').addEventListener('click', () => { audio(); setMute(!muted); });
   setMute(muted);
-  // Shift steering: WASD relative to the ship, or to the screen
-  const setShift = (v: boolean) => { G.shiftAbs = v; $('shiftBtn').textContent = v ? '⇧ screen' : '⇧ ship'; };
-  try { setShift(localStorage.getItem('oom-shiftabs') === '1'); } catch { setShift(false); }
-  $('shiftBtn').addEventListener('click', () => { setShift(!G.shiftAbs); try { localStorage.setItem('oom-shiftabs', G.shiftAbs ? '1' : '0'); } catch {} });
+  // ⚙: in a fight it pauses and opens Options behind the pause menu
+  $('optBtn').addEventListener('click', () => { if (G.mode==='combat'){ if (!G.paused) togglePause(); showOptions(pauseMenu); } else openOptions(); });
   $('mirror').addEventListener('click', cycleMirror);
   $('rot').addEventListener('click', rotate);
   // in Engineering the button saves the starting ship and goes back to the base

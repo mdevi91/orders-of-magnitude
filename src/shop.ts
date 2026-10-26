@@ -1,6 +1,7 @@
 import { sfx } from './audio';
 import { MAXLV, PAL, RARITY, T, blurb, lvOf, lvStep, onShip, priceMul, rarOf, repCost, upCost } from './catalog';
 import { addBlock, cargoTypes, dmgOf, lootPool, repTotal, repair, rollBlock, takeCargo } from './loot';
+import { flipOption } from './options';
 import { META, metaCost, metaLv, showRnD } from './runs';
 import { saveMeta } from './save';
 import { toDrydock, toMap } from './starmap';
@@ -50,5 +51,6 @@ export const ACT: Record<string, (v: string) => boolean | void> = {
   rep: () => { if (repair(.5)) sfx('upgrade'); },
   sell: v => { const t = v as BlockType; if (!((G.inv[t] || 0) > 0)) return; G.credits += takeCargo(t, true) ? Math.round(sellPrice(t)/2) : sellPrice(t); sfx('place'); },
   pick: v => { if (G.pick) G.pick(v as BlockType); return true; },
+  opt: id => { flipOption(id); return true; },
   meta: id => { const m = META.find(x => x.id===id); if (!m || metaLv(id) >= m.max || metaCost(m) > G.meta.data) return; G.meta.data -= metaCost(m); G.meta.lv[id] = metaLv(id) + 1; saveMeta(); sfx('upgrade'); showRnD(); return true; },
 };
