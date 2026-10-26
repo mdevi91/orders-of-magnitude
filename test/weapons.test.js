@@ -70,3 +70,11 @@ G.player.rails[0].cd = 0; sim(.3);
 ok('the railgun is still charging after 0.3 s', hpLost(rt) === 0 && G.player.rails[0].chg > 0);
 sim(1);
 ok('then its slug reaches the target', hpLost(rt) > 0, `damage ${Math.round(hpLost(rt))}`);
+// reloads run while the trigger is up: a manual gun that just fired is ready again after its cooldown without firing in between
+{
+  fresh(); G.design = new Map([[CORE,'core'],[K(0,-1),'bigcannon']]); for (const [i,j,ct] of cellsFor(0,-1,'bigcannon',0)) G.design.set(K(i,j), ct);
+  G.dirs = new Map(); G.auto = [false,false,false,false,false]; startFight('fight'); G.waves = []; G.ships = [G.player];
+  const g = G.player.guns.find(b => b.t==='bigcannon'); g.cd = 1.5; G.fireHeld = false;
+  for (let n=0; n<60; n++) update(1/30);
+  ok('a manual gun reloads without firing', g.cd <= 0);
+}

@@ -250,8 +250,9 @@ export function update(dt: number){
     const RATE = G.fireT > G.time ? 1.5 : 1, salvo = G.salvoT > G.time;
     for (const g of p.guns){
       const ms = missileGun(g), self = salvo && ms;
-      if (!may(g) && !self) continue;
-      if (g.cd > 0){ g.cd -= dt*RATE*(ms ? cockpit().mrl || 1 : 1); if (g.cd > 0) continue; }
+      // reloads run all the time, firing or not
+      if (g.cd > 0) g.cd -= dt*RATE*(ms ? cockpit().mrl || 1 : 1);
+      if ((!may(g) && !self) || g.cd > 0) continue;
       const gun = def(g.t)!.gun!, arc = cpArc(gun.arc || 0), [wx,wy] = wpos(p,g);
       // missiles launched by hand home on the lock, if there is one
       let tg = gun.homing && lock ? lock : tgtM, tx = aimX(g), ty = aimY(g);
@@ -284,8 +285,8 @@ export function update(dt: number){
     for (const h of p.rails){
       // a charging railgun fires when its charge is full, along the aim it took
       if (h.chg){ if (G.time < h.chg) continue; h.chg = 0; const [wx,wy] = wpos(p,h); fireRail(p, wx, wy, p.a + FA[h.o] + clamp(h.off || 0, -SWING, SWING)); sfx('rail'); continue; }
-      if (!may(h)) continue;
-      if (h.cd > 0){ h.cd -= dt*RATE; if (h.cd > 0) continue; }
+      if (h.cd > 0) h.cd -= dt*RATE;
+      if (!may(h) || h.cd > 0) continue;
       if (!h.lane) continue;
       const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, RG.range*SC*RM, 0, true, false, wseed(h)) : null;
       if (isAuto(h) && !P) continue;
@@ -315,7 +316,8 @@ export function update(dt: number){
   }
   // tesla coils: lightning to the nearest enemy block in reach, then on to blocks close by; an enemy missile if no hull is in reach
   if (p.alive) for (const c of p.teslas){
-    if (!may(c) || (c.cd -= dt) > 0) continue;
+    if (c.cd > 0) c.cd -= dt;
+    if (!may(c) || c.cd > 0) continue;
     const Z = T.tesla.tesla!, [wx,wy] = wpos(p,c), R = Z.range*SC*RM;
     let hit: [Ship, number, number, number] | null = null, hd = R*R;
     for (const e of enemies){
