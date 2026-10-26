@@ -132,10 +132,11 @@ export interface Bullet {
 }
 
 export type Fx =
-  | { k: 'deb'; x: number; y: number; vx: number; vy: number; a: number; va: number; life: number; max: number; col: string }
+  | { k: 'deb'; x: number; y: number; vx: number; vy: number; a: number; va: number; life: number; max: number; col: string;
+      /** the block it was, drawn tumbling; whether it pops in a small blast before it fades */ t?: Cell; team?: Team; pop?: boolean }
   | { k: 'spk'; x: number; y: number; vx: number; vy: number; life: number; max: number; col: string }
   | { k: 'smoke'; x: number; y: number; vx: number; vy: number; r: number; life: number; max: number }
-  | { k: 'boom'; x: number; y: number; r: number; life: number; max: number }
+  | { k: 'boom'; x: number; y: number; r: number; life: number; max: number; /** seconds before it goes off */ d?: number }
   | { k: 'ring'; x: number; y: number; r: number; life: number; max: number; col: string }
   | { k: 'star'; x: number; y: number; a: number; r: number; life: number; max: number }
   | { k: 'txt'; x: number; y: number; vy: number; text: string; life: number; max: number };

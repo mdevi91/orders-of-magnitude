@@ -1,4 +1,4 @@
-import { BCOL, BEAM, ESH, GCOL, MAXLV, T, WEDGE, cockpit, def, faceFor, grpOf, isWeapon, lvOf, shRad } from './catalog';
+import { BCOL, BEAM, ESH, GCOL, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isWeapon, lvOf, shRad } from './catalog';
 import { rangeOf } from './bullets';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { WARP } from './fights';
@@ -77,7 +77,7 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
   const d = def(t), rot = o ? o*Math.PI/4 : 0;
   if (rot){ X.save(); X.translate(x,y); X.rotate(rot); x = 0; y = 0; }
   let ang = aim - rot;
-  const arc = d && d.gun ? d.gun.arc || 0 : 0;
+  const arc = d && d.gun ? (team==='p' ? cpArc(d.gun.arc || 0) : d.gun.arc || 0) : 0;
   if (arc) ang = -Math.PI/2 + clamp(angDiff(ang,-Math.PI/2), -arc, arc);
   const ca = Math.cos(ang), sa = Math.sin(ang), gun: Pal3 = team!=='e' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
   switch (t as string){
@@ -407,7 +407,11 @@ export function renderCombat(){
     const a = clamp(f.life/f.max, 0, 1);
     if (f.k==='deb'){
       const X = sx(f.x), Y = sy(f.y), h = Math.max(1, 4.5*z); if (X < -20 || Y < -20 || X > W+20 || Y > H+20) continue;
-      ctx.save(); ctx.translate(X,Y); ctx.rotate(f.a); ctx.globalAlpha = a; ctx.fillStyle = '#2a2e36'; ctx.fillRect(-h,-h,2*h,2*h); ctx.fillStyle = f.col; ctx.fillRect(-h,-h,2*h-1,2*h-1); ctx.restore();
+      // the last second fades it out
+      ctx.save(); ctx.translate(X,Y); ctx.rotate(f.a); ctx.globalAlpha = Math.min(1, f.life);
+      if (f.t && f.team){ ctx.scale(z*.9, z*.9); drawBlock(ctx, f.t, 0, f.team, 0, 0, -Math.PI/2, false, .3); }
+      else { ctx.fillStyle = '#2a2e36'; ctx.fillRect(-h,-h,2*h,2*h); ctx.fillStyle = f.col; ctx.fillRect(-h,-h,2*h-1,2*h-1); }
+      ctx.restore(); ctx.globalAlpha = 1;
     } else if (f.k==='smoke'){
       ctx.globalAlpha = a*.35; ctx.fillStyle = '#5a6488';
       ctx.beginPath(); ctx.arc(Math.round(sx(f.x)), Math.round(sy(f.y)), Math.max(1, f.r*z*(1.6-a*.6)), 0, TAU); ctx.fill();
@@ -423,7 +427,7 @@ export function renderCombat(){
     for (const b of [...p.guns, ...p.rails, ...p.lasers, ...p.teslas, ...p.pds]){
       const d = def(b.t)!, r = (d.pd ? d.pd.range*Math.sqrt(G.S) : rangeOf(b.t as BlockType)*G.SC)*cockpit().range; if (!r) continue;
       const col = b.t==='core' ? '#ffffff' : d.pd ? '#c9adff' : GCOL[grpOf(K(b.i,b.j), b.t)-1], rr = r*z;
-      const arc = d.gun ? d.gun.arc ?? Math.PI : d.rail || d.laser ? SWING : Math.PI;
+      const arc = d.gun ? cpArc(d.gun.arc ?? Math.PI) : d.rail || d.laser ? SWING : Math.PI;
       ctx.strokeStyle = ctx.fillStyle = col;
       if (arc >= Math.PI - .01){
         if (seen.has(b.t)) continue; seen.add(b.t);
@@ -492,6 +496,7 @@ export function renderCombat(){
   for (const f of G.fx){
     const a = clamp(f.life/f.max, 0, 1);
     if (f.k==='boom'){
+      if ((f.d || 0) > 0) continue; // not gone off yet
       // fireball: white core first, then orange, then a fading red rim
       const X = Math.round(sx(f.x)), Y = Math.round(sy(f.y)), r = Math.max(1, f.r*z*(1.25-a*.5));
       ctx.globalCompositeOperation = 'lighter';
@@ -675,7 +680,7 @@ export function rayOut(i: number, j: number, a: number, R: number){
   return Infinity;
 }
 /** The turret's arc swing, for a block that has a gun. */
-const arcOf = (t: Cell) => def(t)?.gun?.arc || 0;
+const arcOf = (t: Cell) => cpArc(def(t)?.gun?.arc || 0);
 export const ARC_N = 16, arcRays = (o: Facing, t: Cell) => Array.from({length:ARC_N}, (_,n) => FA[o] - arcOf(t) + 2*arcOf(t)*n/(ARC_N-1));
 export function arcClear(i: number, j: number, o: Facing, t: Cell){
   if (def(t)?.gun?.over) return 1;

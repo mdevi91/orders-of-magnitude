@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { PD_KINDS, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
-import { BCOL, CRAFT, ESH, HM, LV, T, cockpit, cpSpeed, cpTurn, def, grpOf, isCraft } from './catalog';
+import { BCOL, CRAFT, ESH, HM, LV, T, cockpit, cpArc, cpSpeed, cpTurn, def, grpOf, isCraft } from './catalog';
 import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx } from './craft';
 import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
@@ -174,7 +174,7 @@ export function update(dt: number){
     for (const g of p.guns){
       if (!may(g)) continue;
       if (g.cd > 0){ g.cd -= dt; if (g.cd > 0) continue; }
-      const gun = def(g.t)!.gun!, arc = gun.arc || 0, [wx,wy] = wpos(p,g);
+      const gun = def(g.t)!.gun!, arc = cpArc(gun.arc || 0), [wx,wy] = wpos(p,g);
       let tg = tgtM, tx = aimX(g), ty = aimY(g);
       if (isAuto(g)){
         const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RM, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak');

@@ -120,13 +120,13 @@ export const tierOf = (s: number) => Math.floor(s*1.5 + 1);
 type AbilityId = 'jump' | 'roll';
 const STD_GUN: GunDef = {range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true};
 export const COCKPITS: Record<'std' | 'fighter' | 'battle', {name: string; desc: string; turn: number; range: number; unlock: number; off: boolean;
-  gun: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean}> = {
+  gun: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean; arc: number}> = {
   std:    {name:'Standard cockpit', desc:'Balanced, no strings attached.', turn:1, range:1, unlock:1, off:false,
-    gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false},
-  fighter:{name:'Interceptor cockpit', desc:'Twin rapid guns. Small ships fly faster, turn quicker and take less damage; the edge fades by 40 blocks. Weaker core, less energy.', turn:1, range:1, unlock:2, off:false,
-    gun:{range:200, cd:.13, spd:720, dmg:1.3, spread:.05, r:1.6, arc:Math.PI, over:true, pellets:2, fan:.07}, ab:'roll', abName:'Evasive roll: a burst of speed, untouchable for half a second', abCd:6, en:.6, coreHp:.7, small:true},
+    gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1},
+  fighter:{name:'Interceptor cockpit', desc:'Twin rapid guns, turrets swing 25% wider. Small ships fly faster, turn quicker and take less damage; the edge fades by 40 blocks. Weaker core, less energy.', turn:1, range:1, unlock:2, off:false,
+    gun:{range:200, cd:.13, spd:720, dmg:1.3, spread:.05, r:1.6, arc:Math.PI, over:true, pellets:2, fan:.07}, ab:'roll', abName:'Evasive roll: a burst of speed, untouchable for half a second', abCd:6, en:.6, coreHp:.7, small:true, arc:1.25},
   battle: {name:'Command bridge', desc:'Fire control: every weapon reaches 10% further.', turn:1, range:1.1, unlock:5, off:true,
-    gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false},
+    gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1},
 };
 export type CockpitId = keyof typeof COCKPITS;
 export const cockpit = () => COCKPITS[G.cockpit] || COCKPITS.std;
@@ -134,6 +134,8 @@ export const cockpit = () => COCKPITS[G.cockpit] || COCKPITS.std;
 // off: switched off for now, hidden from Engineering and never flown.
 /** How much of a small-ship cockpit's edge applies: 1 at 15 blocks or fewer, fading to 0 at 40. */
 export const smallK = () => cockpit().small ? Math.min(1, Math.max(0, (40 - blockCount())/25)) : 0;
+/** A player turret's firing arc with the cockpit's widening (all-round guns stay all-round). */
+export const cpArc = (a: number) => a >= Math.PI - .01 ? a : Math.min(Math.PI, a*cockpit().arc);
 export const cpTurn = () => cockpit().turn*(1 + .6*smallK());
 export const cpSpeed = () => 1 + .6*smallK();
 export const cpGuard = () => 1 - .4*smallK();

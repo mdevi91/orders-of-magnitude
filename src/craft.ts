@@ -168,8 +168,15 @@ export function eBurst(b: Bullet){
 }
 export function updateFx(dt: number){
   for (const f of G.fx){
+    if (f.k==='boom' && (f.d || 0) > 0){ f.d! -= dt; if (f.d! <= 0) sfx('boom', .5); continue; } // a chained blast waiting its turn
     f.life -= dt;
-    if (f.k==='deb' || f.k==='spk' || f.k==='smoke'){ f.x += f.vx*dt; f.y += f.vy*dt; f.vx *= .985; f.vy *= .985; if (f.k==='deb') f.a += f.va*dt; }
+    if (f.k==='deb'){
+      // debris coasts with little drag, tumbling, trailing thin smoke; a few pop in a small blast as they burn out
+      const k = Math.pow(.75, dt); f.x += f.vx*dt; f.y += f.vy*dt; f.vx *= k; f.vy *= k; f.a += f.va*dt;
+      if (f.t && Math.random() < dt*5 && G.fx.length < 1600) G.fx.push({k:'smoke', x:f.x, y:f.y, vx:f.vx*.2, vy:f.vy*.2, r:rand(2,4)*G.SC, life:rand(.4,.8), max:.8});
+      if (f.pop && f.life <= .9){ f.pop = false; f.life = Math.min(f.life, .12); boomAt(f.x, f.y, 5*G.SC, .25); sparks(f.x, f.y, 0, 5, 140*G.SC, ['#ffffff','#ffd0a0','#ff8a5a']); }
+    }
+    else if (f.k==='spk' || f.k==='smoke'){ f.x += f.vx*dt; f.y += f.vy*dt; f.vx *= .985; f.vy *= .985; }
     else if (f.k==='txt') f.y += f.vy*dt;
   }
   G.fx = G.fx.filter(f => f.life > 0);

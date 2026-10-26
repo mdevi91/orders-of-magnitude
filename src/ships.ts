@@ -252,10 +252,11 @@ export function killShip(s: Ship){
   s.alive = false;
   for (const b of s.blocks.values()) debris(s,b,false,1.6);
   s.blocks.clear();
-  // the core goes up last: a white-hot blast at the heart of the ship, with secondary blasts across the hull
-  const SC = G.SC, big = s.team!=='a';
-  boomAt(s.x, s.y, (big ? 12 + s.r*.3 : 6)*SC, big ? .55 : .3);
-  if (big) for (let n=0; n<Math.min(6, 1 + s.r/BS/2); n++){ const a = rand(0, Math.PI*2), d = rand(.2, .8)*s.r; boomAt(s.x + Math.cos(a)*d, s.y + Math.sin(a)*d, rand(6, 11)*SC, rand(.25, .45)); }
+  // a chain of blasts runs across the hull for half a second, then the core goes up in a white-hot blast with a second shockwave
+  const SC = G.SC, big = s.team!=='a', chain = big ? Math.min(12, 3 + s.r/BS) : 0, end = big ? .3 + Math.min(.4, s.r/BS*.03) : 0;
+  for (let n=0; n<chain; n++){ const a = rand(0, Math.PI*2), d = rand(.15, .9)*s.r; boomAt(s.x + Math.cos(a)*d, s.y + Math.sin(a)*d, rand(6, 11)*SC, rand(.25, .45), n/chain*end); }
+  boomAt(s.x, s.y, (big ? 12 + s.r*.3 : 6)*SC, big ? .55 : .3, end);
+  if (big) boomAt(s.x, s.y, (18 + s.r*.45)*SC, .7, end + .08);
   sparks(s.x, s.y, 0, big ? 22 : 8, (big ? 380 : 200)*SC, s.team==='e' ? ['#ffffff','#ffd0a0','#ff8a5a'] : ['#ffffff','#a8ecff','#5fd8ff']);
   if (big && !REDUCE) G.shake = Math.min(6, G.shake + (s.team==='p' || s.boss ? 5 : 2.5));
   // an impact frame for every warship that goes down, longer for a capital ship
@@ -270,11 +271,14 @@ export function killShip(s: Ship){
 }
 export function debris(s: Ship, b: Block, burst: boolean, kick=1){
   if (G.fx.length > 1800) return;
-  const [x,y] = wpos(s,b), v = 70*G.SC*kick;
-  G.fx.push({k:'deb', x, y, vx:s.vx*.5 + rand(-v,v), vy:s.vy*.5 + rand(-v,v), a:s.a, va:rand(-4,4), life:rand(1,2.2), max:2.2, col:COL[s.team][b.t] || '#888888'});
+  // the block itself tumbles away from the ship's centre, trails smoke, drifts for a few seconds and fades; some pop first
+  const [x,y] = wpos(s,b), v = 70*G.SC*kick, dx = x - s.x, dy = y - s.y, dl = Math.hypot(dx, dy) || 1, out = rand(.5, 1.3)*v;
+  const life = rand(3, 5);
+  G.fx.push({k:'deb', x, y, vx:s.vx*.5 + dx/dl*out + rand(-v,v)*.4, vy:s.vy*.5 + dy/dl*out + rand(-v,v)*.4, a:s.a, va:rand(-3,3), life, max:life,
+    col:COL[s.team][b.t] || '#888888', t:b.t, team:s.team, pop:Math.random() < .3});
   if (burst) for (let n=0; n<4; n++) G.fx.push({k:'spk', x, y, vx:rand(-1,1)*160*G.SC, vy:rand(-1,1)*160*G.SC, life:rand(.15,.4), max:.4, col:'#ffffff'});
 }
-export function boomAt(x: number, y: number, r: number, life: number){ G.fx.push({k:'boom', x, y, r, life, max:life}); }
+export function boomAt(x: number, y: number, r: number, life: number, d = 0){ G.fx.push({k:'boom', x, y, r, life, max:life, d}); }
 export function sparks(x: number, y: number, ang: number, n: number, spd: number, cols: string[]){
   for (let q=0; q<n; q++){
     const a = ang + rand(-1.3,1.3), v = rand(.3,1)*spd;
