@@ -1,13 +1,15 @@
+import { sfx } from './audio';
 import { HEAD_OF, PAL, PLATE, RARITY, T, blurb, outfitPrice, rarName, rarOf, unlocked } from './catalog';
 import { K } from './grid';
 import { undoStack } from './input';
-import { clearRun, load, save, saveMeta } from './save';
+import { clearRun, load, resetAll, save, saveMeta } from './save';
 import { tile } from './shop';
 import { curNode, genMap, toDrydock, toMap } from './starmap';
 import { G } from './state';
 import { tut } from './tutorial';
 import type { BlockType, Key, StartDesign } from './types';
 import { hideOverlay, icon, pips, showOverlay, syncUI, toast } from './ui';
+import { $ } from './view';
 
 // ---------- runs and the space base ----------
 // Data is earned at the end of every run and buys permanent upgrades in Research & Development.
@@ -83,9 +85,12 @@ export function showCantina(){
   const rumor = next && Math.random() < .4 ? `Word is that the sector ${next} yards build ${unlocksAt(next).map(rarName).join(' and ')}. Get there and they’re yours.` : RUMORS[(Math.random()*RUMORS.length)|0];
   const ro = (v: string | number, k: string) => `<div class="readout"><b>${v}</b><span>${k}</span></div>`;
   const who = PILOTS[(Math.random()*PILOTS.length)|0];
+  // wiping every save takes three clicks; the button counts down
+  let wipe = 0;
+  const reset = () => { if (++wipe >= 3) return resetAll(); $('ovActions').lastElementChild!.textContent = wipe===1 ? 'Erase all progress? Click 2 more times' : 'Last chance: click once more'; sfx('hit'); };
   showOverlay('Cantina', `<div class="rows"><h3>Your record</h3></div><div class="readouts">${ro(m.runs || 0, 'Runs')}${ro(m.wins || 0, 'Won')}${ro(best, 'Best sector')}${ro(m.earned || 0, 'Data earned')}${ro(m.kills || 0, 'Kills')}</div>` +
     `<div class="rows"><h3>Overheard at the bar</h3></div><blockquote class="quote">“${rumor}”<cite>— ${who}</cite></blockquote>`,
-    [['Ship deck', showDeck], ['Back', showTitle, 'ghost']], true, {eye:'Station · Cantina', ac:STATION_AC.cantina});
+    [['Ship deck', showDeck], ['Back', showTitle, 'ghost'], ['Reset everything', reset, 'ghost reset']], true, {eye:'Station · Cantina', ac:STATION_AC.cantina});
 }
 // Ship deck: every block, what it does, how rare it is, and where it unlocks.
 export function showDeck(){

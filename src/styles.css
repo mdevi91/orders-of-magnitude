@@ -291,6 +291,7 @@ details li b{color:var(--paper);font-weight:400}
 .ov-actions button:hover{filter:brightness(1.15)}
 .ov-actions button.ghost{background:rgba(140,170,220,.1);color:var(--paper);border:0}
 .ov-actions button.ghost:hover{background:rgba(140,170,220,.2)}
+.ov-actions button.reset{color:var(--foe);margin-left:auto}
 .ov-actions button:active{transform:translate(1px,1px)}
 .ov-actions button:focus-visible{outline:2px solid var(--paper);outline-offset:2px}
 /* signals: numbered choices down the panel, FTL style */

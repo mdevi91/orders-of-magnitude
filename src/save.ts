@@ -35,6 +35,8 @@ export const saveData = (): SaveData => ({v:3, stage:G.stage, credits:G.credits,
   inv:G.inv, dmg:G.dmg, grp:G.grp, auto:G.auto, broken:[...G.broken], map:G.map!, stats:G.stats!, cockpit:G.cockpit});
 export function clearRun(){ G.stats = null; try { localStorage.removeItem(RUN); } catch {} }
 export function saveMeta(){ try { localStorage.setItem(METAK, JSON.stringify(G.meta)); } catch {} }
+// Wipes everything this game keeps in the browser (run, hangar, blueprints, tutorial, settings) and starts over.
+export function resetAll(){ try { for (const k of Object.keys(localStorage)) if (k.startsWith('oom-')) localStorage.removeItem(k); } catch {} location.reload(); }
 export function loadMeta(){ try { const m = JSON.parse(localStorage.getItem(METAK) || 'null'); if (m && typeof m.data==='number') G.meta = {...m, lv:m.lv || {}, best:m.best || 1}; } catch {} }
 
 // wiring that runs once at start-up
