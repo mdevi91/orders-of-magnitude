@@ -144,7 +144,9 @@ export function enemyFire(e: Ship, dt: number){
     if (!clear){ g.cd = .2; g.shots = 0; continue; }
     if (w.burst && (g.shots = (g.shots || 0) + 1) < w.burst) g.cd = w.gap!;
     else { g.shots = 0; g.cd = w.cd*rand(.85,1.15); }
-    const ang = leadAngle(wx,wy,sp,.95,tgt) + (Math.random()-.5)*2*(w.spread || 0);
+    // a fast target is harder to lead: extra scatter grows with its speed, up to ±7° at 700 units/s
+    const jit = .12*Math.min(1, Math.hypot(tgt.vx, tgt.vy)/(700*G.SC));
+    const ang = leadAngle(wx,wy,sp,.95,tgt) + (Math.random()-.5)*2*((w.spread || 0) + jit);
     const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC, w.kind, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.r*e.sc/G.SC);
     if (!b) continue;
     if (w.range && !w.fuse && w.kind!=='emiss'){ b.life = b.life0 = w.range/(w.spd*EB_SPD); b.fall = true; }
