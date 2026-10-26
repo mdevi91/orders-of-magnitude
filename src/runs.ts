@@ -100,8 +100,9 @@ export function showDeck(){
 }
 // ---------- Engineering: the starting ship ----------
 // The design every run starts with, kept in the hangar save. It is paid for out of a small budget; what is left becomes the run's first credits.
+// The default design costs 57, so a fresh hangar starts runs with 50 credits.
 const DEFAULT_START: StartDesign = {d:[[K(0,0),'core'],[K(0,-1),'cannon'],[K(-1,0),'hull'],[K(1,0),'hull'],[K(0,1),'engine']], o:[[K(0,-1),0],[K(0,1),0]]};
-export const budget = () => 90 + 30*metaLv('cash');
+export const budget = () => 107 + 30*metaLv('cash');
 /** What a design costs to build: plating at its price, every other block at the outfitting price (the core is free). */
 export const designCost = (d: Map<Key, BlockType>) => { let c = 0; for (const t of d.values()) if (t!=='core' && !HEAD_OF[t]) c += PLATE(t) ? T[t].cost : outfitPrice(t); return c; };
 // a saved design keeps only blocks that are still unlocked

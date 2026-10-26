@@ -19,7 +19,7 @@ export const bossSize = (s: number) => Math.round(32*Math.pow(s,1.45));
 export const fodderCap = () => Math.min(3, 1 + Math.floor(G.stage/3));
 // enemy fighters and bombers alive at once
 export const craftCap = () => Math.min(6, 3 + Math.floor(G.stage/3));
-export const shipSize = (s: number, col: number) => Math.round((20 + 11*Math.pow(s,1.3))*(1 + .07*col)*rand(.9,1.15));
+export const shipSize = (s: number, col: number) => Math.round((12 + 11*Math.pow(s,1.3))*(1 + .07*col)*rand(.9,1.15));
 // credits for winning: base plus a per-sector part
 const BOUNTY: Record<FightKind, [number, number]> = {fight:[10,4], ambush:[8,3], elite:[20,7], gate:[30,10], boss:[75,25], station:[80,28]};
 // every enemy shot hits a little harder each sector, so fewer guns still keep up
