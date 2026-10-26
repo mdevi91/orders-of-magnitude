@@ -417,9 +417,12 @@ export function renderCombat(){
     for (const h of p.lasers){
       if (!h.beam) continue;
       const [a1,b1,a2,b2] = h.beam;
-      ctx.globalAlpha = .35; ctx.strokeStyle = '#9dff8a'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(sx(a1),sy(b1)); ctx.lineTo(sx(a2),sy(b2)); ctx.stroke();
-      ctx.globalAlpha = .7 + .3*Math.random(); ctx.strokeStyle = '#eaffe4'; ctx.lineWidth = 1; ctx.stroke();
+      // the beam fades with distance, as its damage does
+      const X1 = sx(a1), Y1 = sy(b1), X2 = sx(a2), Y2 = sy(b2), fade = (rgb: string, a: number) => {
+        const gr = ctx.createLinearGradient(X1, Y1, X2, Y2); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},${a*.08})`); return gr; };
+      ctx.beginPath(); ctx.moveTo(X1, Y1); ctx.lineTo(X2, Y2);
+      ctx.strokeStyle = fade('157,255,138', .35); ctx.lineWidth = 3; ctx.stroke();
+      ctx.strokeStyle = fade('234,255,228', .7 + .3*Math.random()); ctx.lineWidth = 1; ctx.stroke();
     }
     for (const s of p.shields){
       const B = s.bub!; if (B.down > 0 || B.hp <= 0) continue;
@@ -500,8 +503,10 @@ export function renderCombat(){
           const len = Math.max(5, b.sp*z*.019)*PX, hx = sx(b.x)*PX, hy = sy(b.y)*PX;
           hctx.moveTo(hx - ca*len, hy - sa*len); hctx.lineTo(hx, hy);
         } else {
-          ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, s*2.2, s*1.1, ang, 0, TAU); ctx.fill();
-          ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(X + ca*s*.5, Y + sa*s*.5, s*1.1, s*.5, ang, 0, TAU); ctx.fill();
+          // cannon shells are drawn a little under their hit size
+          const q = s*.82;
+          ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, q*2.2, q*1.1, ang, 0, TAU); ctx.fill();
+          ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(X + ca*q*.5, Y + sa*q*.5, q*1.1, q*.5, ang, 0, TAU); ctx.fill();
         }
         continue;
       }

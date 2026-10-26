@@ -134,10 +134,13 @@ export function enemyFire(e: Ship, dt: number){
   for (const g of e.guns){
     if ((g.jam || 0) > G.time) continue;
     const w = ewOf(g.t)!, [wx,wy] = wpos(e,g), sp = w.spd*e.sc;
+    // blind behind: guns cover a cone off the nose, a little wider on capital ships; starbases cover all round
+    const inArc = e.station || Math.abs(angDiff(Math.atan2(tgt.y-wy, tgt.x-wx), e.a + FA[0])) <= w.arc*(e.boss ? 1.5 : 1);
     g.cd -= dt;
-    if (w.aim && g.cd < w.aim) (e.sights ||= []).push([wx, wy, leadAngle(wx,wy,sp,.6,tgt)]);
+    if (w.aim && g.cd < w.aim && inArc) (e.sights ||= []).push([wx, wy, leadAngle(wx,wy,sp,.6,tgt)]);
     if (g.cd > 0) continue;
     if (w.range && Math.hypot(tgt.x-wx, tgt.y-wy) - tgt.r > w.range*e.sc){ g.cd = .3; g.shots = 0; continue; }
+    if (!inArc){ g.cd = .2; g.shots = 0; continue; }
     if (w.burst && (g.shots = (g.shots || 0) + 1) < w.burst) g.cd = w.gap!;
     else { g.shots = 0; g.cd = w.cd*rand(.85,1.15); }
     const ang = leadAngle(wx,wy,sp,.95,tgt) + (Math.random()-.5)*2*(w.spread || 0);
