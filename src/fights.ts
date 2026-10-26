@@ -212,12 +212,14 @@ export function fightWon(){
   if (nb) chooseLoot(nb, kind==='elite' || cap ? 1.6 : 1, 'Victory', head, got => fightResult(kind, cap, head + lootText(got), dmg));
   else fightResult(kind, cap, head, dmg);
 }
+/** The run is won by the capital ship of this sector (the fourth: one every third sector). */
+export const LAST_SECTOR = 12;
 export function fightResult(kind: FightKind, cap: boolean, text: string, dmg: number){
   text += dmg ? ` <b>${dmg}</b> block${dmg>1?'s':''} damaged: repair in drydock or at a shop.` : '';
   if (kind==='gate' || cap){
-    if (cap && G.stage >= 9 && !G.stats!.won){
+    if (cap && G.stage >= LAST_SECTOR && !G.stats!.won){
       G.stats!.won = true; save();
-      showOverlay('Victory', text + ` The third ${kind==='station' ? 'starbase' : 'flagship'} is down: the run is won. Keep going for more data, or end the run here.`,
+      showOverlay('Victory', text + ` The fourth ${kind==='station' ? 'starbase' : 'flagship'} is down: the run is won. Keep going for more data, or end the run here.`,
         [['Keep going', nextSector], ['End run', () => runOver('won'), 'ghost']], false, {eye:'Combat report · run won', ac:'var(--line)'});
       return;
     }

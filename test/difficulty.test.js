@@ -60,7 +60,7 @@ function botFight(kind){
   return {won: G.mode==='clear', t, lost: 1 - left/hp0, ehp};
 }
 const rate = {};
-for (const s of [1,2,3,4,6,9]){
+for (const s of [1,2,3,4,6,9,12]){
   for (const kind of ['fight','elite','gate', ...(s%3===0 ? ['boss','station'] : [])]){
     const n = 8, res = [];
     for (let q=0; q<n; q++){ fresh(s); botShip(s); res.push(botFight(kind)); }
