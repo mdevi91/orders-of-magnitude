@@ -190,7 +190,18 @@ export type OverlayAction = [string, () => void, string?];
 /** screen: a full-screen layout (its content brings its own title and columns) instead of a window */
 export interface OverlayOpts { eye?: string; ac?: string; list?: boolean; screen?: string }
 /** A hexagon readout: a label over a big number; fill for the one that matters, red for trouble. */
-export const hexo = (label: string, v: string | number, cls = '') => `<div class="hexo ${cls}"><span>${label}</span><b>${v}</b></div>`;
+/** Big-number size for a hexagon: the shape stays put, a longer value gets smaller type. */
+const fitHex = (v: string | number, base: number) => { const n = String(v).length; return n <= 2 ? base : Math.round(base*Math.min(1, 2.6/n)); };
+export const hexo = (label: string, v: string | number, cls = '') =>
+  `<div class="hexo ${cls}"><svg viewBox="0 0 112 98" aria-hidden="true"><polygon points="29,2 83,2 110,49 83,96 29,96 2,49"/></svg><span>${label}</span><b style="font-size:${fitHex(v, 38)}px">${v}</b></div>`;
+/** A honeycomb of pointy-top hexagons, two staggered rows of three: [label, value, fill?]. */
+export function honeycomb(cells: [string, string | number, boolean?][]){
+  const at = (n: number): [number, number] => n < 3 ? [47 + n*92, 0] : [93 + (n-3)*92, 80];
+  return `<svg class="honey" viewBox="0 0 325 190" role="img" aria-label="${cells.map(c => `${c[0]} ${c[1]}`).join(', ')}">` + cells.map((c, n) => {
+    const [x, y] = at(n), pts = [[x,y+2],[x+45,y+28],[x+45,y+80],[x,y+106],[x-45,y+80],[x-45,y+28]].map(p => p.join(',')).join(' ');
+    return `<polygon class="${c[2] ? 'fill' : ''}" points="${pts}"/><text class="hl${c[2] ? ' ink' : ''}" x="${x}" y="${y + 40}">${c[0]}</text><text class="hv${c[2] ? ' ink' : ''}" x="${x}" y="${y + 86}" font-size="${fitHex(c[1], 40)}">${c[1]}</text>`;
+  }).join('') + '</svg>';
+}
 /** Two-digit display numbers, as the alert screens show them (04, 17). */
 export const pad2 = (v: number) => v < 10 && v >= 0 ? '0' + v : String(v);
 export function showOverlay(title: string, html: string, actions: OverlayAction[], wide=false, o: OverlayOpts = {}){

@@ -8,7 +8,7 @@ import { curNode, genMap, toDrydock, toMap } from './starmap';
 import { G, blockCount } from './state';
 import { tut } from './tutorial';
 import type { BlockType, Key, StartDesign } from './types';
-import { hexo, hideOverlay, icon, pad2, pips, showOverlay, syncUI, toast } from './ui';
+import { hideOverlay, honeycomb, icon, pad2, pips, showOverlay, syncUI, toast } from './ui';
 import { $ } from './view';
 
 // ---------- runs and the space base ----------
@@ -159,8 +159,7 @@ export function runOver(why: 'dead' | 'won' | 'abandoned'){
   const s = `<div class="rep-left"><div>${dead ? tag('Emergency', 'red fill') + tag('Core signal lost', 'red') : tag(won ? 'Mission complete' : 'Recalled', 'fill')}</div>` +
     `<span class="rep-lbl">After-action report</span><h2 class="rep-h${dead ? ' red' : ''}">${head[0]}<br>${head[1]}</h2>` +
     `<p class="log">${dead ? '&gt; BLACK BOX RECOVERED<br>' : ''}&gt; SENSOR LOG UPLINKED TO R&amp;D <b>+${data}</b>${dead ? '<br><span class="red">&gt; PILOT STATUS: UNKNOWN</span>' : ''}</p></div>` +
-    `<div class="rep-right"><div class="rep-top"><div class="hexgrid"><div>${hexo('Sector', pad2(G.stage))}${hexo('Jumps', pad2(st.nodes))}${hexo('Kills', pad2(st.kills))}</div>` +
-    `<div>${hexo('Elites', pad2(st.elites))}${hexo('Capitals', pad2(st.flags))}${hexo('Data', '+' + data, 'fill')}</div></div>` +
+    `<div class="rep-right"><div class="rep-top">${honeycomb([['Sector', pad2(G.stage)], ['Jumps', pad2(st.nodes)], ['Kills', pad2(st.kills)], ['Elites', pad2(st.elites)], ['Capitals', pad2(st.flags)], ['Data', '+' + data, true]])}` +
     `<div class="rep-status">${tag(dead ? 'Warning' : 'Status', dead ? 'red' : '')}<p class="log">HULL&nbsp;&nbsp;&nbsp;${dead ? '000.0%' : 'INTACT'}<br>CORE&nbsp;&nbsp;&nbsp;${dead ? 'OFFLINE' : 'ONLINE'}<br>SECTOR&nbsp;${pad2(G.stage)}<br><span class="${dead ? 'red' : ''}">STATUS ${dead ? 'LOST' : won ? 'VICTORIOUS' : 'RECALLED'}</span></p></div></div>` +
     `<h3>Combat log</h3><div class="rep-grid">${pairs.map(([k, v, c]) => `<span>${k}</span><b class="${c || ''}">${v}</b>`).join('')}</div>` +
     `<h3>New patterns registered <small>${pad2(newB.length + newC.length)}</small></h3>` +
