@@ -8,6 +8,7 @@ import { undoStack } from './input';
 import { dmgOf, repTotal } from './loot';
 import { dirSpeed, laneFwd, physics } from './physics';
 import { save } from './save';
+import { switchCockpit } from './runs';
 import { LIFE } from './ships';
 import { ACT, canRepair, openShop } from './shop';
 import { NODE, canJump, curNode, exitNode, nodeDef } from './starmap';
@@ -236,7 +237,7 @@ export function toast(msg: string){ const t = $('toast'); t.textContent = msg; t
 // wiring that runs once at start-up
 export function init(){
   $('cockpits').addEventListener('click', e => {
-    const b = (e.target as Element).closest<HTMLElement>('[data-cp]'); if (b){ G.cockpit = b.dataset.cp as CockpitId; syncUI(); }
+    const b = (e.target as Element).closest<HTMLElement>('[data-cp]'); if (b) switchCockpit(b.dataset.cp as CockpitId);
     const pb = (e.target as Element).closest<HTMLElement>('[data-paint]'); if (pb){ G.paint = pb.dataset.paint!; syncUI(); }
   });
   // number keys pick a card from a loot draft or a numbered choice from a signal

@@ -111,7 +111,8 @@ export const budget = () => 103 + 30*metaLv('cash');
 /** What a design costs to build: plating at its price, every other block at the outfitting price (the core is free). */
 export const designCost = (d: Map<Key, BlockType>) => { let c = 0; for (const t of d.values()) if (t!=='core' && !HEAD_OF[t]) c += PLATE(t) ? T[t].cost : outfitPrice(t); return c; };
 // a saved design keeps only blocks that are still unlocked
-export const startDesign = (): StartDesign => { const s = G.meta.start || DEFAULT_START; return {...s, d:s.d.filter(([, t]) => t==='core' || PLATE(t) || HEAD_OF[t] || unlocked(t)), c:s.c && cpUnlocked(s.c) ? s.c : 'std'}; };
+const keepUnlocked = (s: StartDesign): StartDesign => ({...s, d:s.d.filter(([, t]) => t==='core' || PLATE(t) || HEAD_OF[t] || unlocked(t))});
+export const startDesign = (): StartDesign => { const s = G.meta.start || DEFAULT_START; return {...keepUnlocked(s), c:s.c && cpUnlocked(s.c) ? s.c : 'std'}; };
 // Engineering borrows the drydock: the run in progress stays safe in storage and comes back on the way out.
 let engRun = false;
 export function enterEngineering(){
@@ -122,8 +123,19 @@ export function enterEngineering(){
   G.credits = budget() - designCost(G.design); G.outfit = true; undoStack.length = 0;
   toDrydock(); tut('eng');
 }
+const shipNow = (): StartDesign => ({d:[...G.design], o:[...G.dirs], g:{...G.grp}, c:G.cockpit, p:G.paint});
+/** Engineering: picking another cockpit files the current ship under the old one and brings back the ship built for the new one. */
+export function switchCockpit(id: CockpitId){
+  if (id === G.cockpit) return;
+  const m = G.meta, builds = m.builds ??= {};
+  builds[G.cockpit] = shipNow(); G.cockpit = id;
+  const b = builds[id];
+  if (b){ const f = keepUnlocked(b); G.design = new Map(f.d); G.dirs = new Map(f.o); G.grp = {...(f.g || {})}; }
+  G.credits = budget() - designCost(G.design); undoStack.length = 0; saveMeta();
+  toast(b ? `Your ${COCKPITS[id].name} ship` : `First ${COCKPITS[id].name} ship: starting from the last one`); syncUI();
+}
 export function leaveEngineering(){
-  G.meta.start = {d:[...G.design], o:[...G.dirs], g:{...G.grp}, c:G.cockpit, p:G.paint}; saveMeta();
+  G.meta.start = shipNow(); (G.meta.builds ??= {})[G.cockpit] = shipNow(); saveMeta();
   G.outfit = false; undoStack.length = 0;
   if (!(engRun && load())) G.stats = null;
   toast('Starting ship saved'); showTitle();

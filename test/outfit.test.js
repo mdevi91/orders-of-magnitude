@@ -34,3 +34,12 @@ $('launch').click(); newRun();
 ok('the cockpit is saved with the design, but a switched-off one flies as standard', G.meta.start.c === 'fighter' && G.cockpit === (COCKPITS.fighter.off ? 'std' : 'fighter'));
 G.cockpit = 'battle';
 ok('command bridge reaches 10% further', Math.abs(cockpit().range - 1.1) < 1e-9);
+// Engineering keeps one ship per cockpit: switching files the current ship and brings back the other
+G.meta.best = 12; enterEngineering();
+const shipA = G.design.size;
+switchCockpit('battle'); G.design.set(K(3,3), 'hull'); G.design.set(K(3,2), 'hull');
+const shipB = G.design.size;
+switchCockpit('std');
+ok('switching back brings the first ship back', G.design.size === shipA, `${G.design.size} vs ${shipA}`);
+switchCockpit('battle');
+ok('and the second cockpit keeps its own ship', G.design.size === shipB, `${G.design.size} vs ${shipB}`);

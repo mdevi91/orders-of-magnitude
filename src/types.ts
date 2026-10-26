@@ -165,7 +165,9 @@ export interface RunStats { kills: number; nodes: number; elites: number; flags:
 /** A starting ship from Engineering: cells, facings, weapon groups. */
 export interface StartDesign { d: [Key, BlockType][]; o: [Key, Facing][]; g?: Record<Key, number>; c?: CockpitId; /** paint scheme id */ p?: string }
 /** What outlives every run: data to spend, research levels, the furthest sector reached, the starting ship, and records. */
-export interface Meta { data: number; lv: Record<string, number>; best?: number; start?: StartDesign; runs?: number; wins?: number; earned?: number; kills?: number }
+export interface Meta { data: number; lv: Record<string, number>; best?: number; start?: StartDesign;
+  /** Engineering keeps one starting ship per cockpit */
+  builds?: Partial<Record<CockpitId, StartDesign>>; runs?: number; wins?: number; earned?: number; kills?: number }
 export interface Stick { id: number; x0: number; y0: number; x: number; y: number }
 export interface Banner { text: string; sub: string; t: number; red?: boolean }
 export type Mode = 'title' | 'map' | 'build' | 'combat' | 'clear' | 'dead';
