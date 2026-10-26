@@ -22,10 +22,10 @@ interface Face { p: V3[]; c: RGB; layer: number; glow?: boolean; n?: V3; blink?:
 /** sign: the short name lit on the sign over its doorway */
 export interface Station { id: string; name: string; sign: string; col: RGB }
 export const STATIONS: Station[] = [
-  {id:'cantina', name:'Cantina', sign:'CANTINA', col:[255,138,0]},
-  {id:'rnd', name:'Research & Development', sign:'R&D', col:[255,138,0]},
-  {id:'eng', name:'Engineering', sign:'ENGINEERING', col:[255,138,0]},
-  {id:'hangar', name:'Hangar', sign:'HANGAR', col:[255,59,47]},
+  {id:'cantina', name:'Cantina', sign:'CANTINA', col:[255,40,24]},
+  {id:'rnd', name:'Research & Development', sign:'R&D', col:[255,40,24]},
+  {id:'eng', name:'Engineering', sign:'ENGINEERING', col:[255,40,24]},
+  {id:'hangar', name:'Hangar', sign:'HANGAR', col:[255,210,0]},
 ];
 
 const R = 8, ZC = -1, WALL_H = 6, DOOR_W = 2.4, DOOR_H = 2.8, WIN_LO = 3.6, WIN_HI = 5.4, DEEP = 3.2, HOLO: V3 = [0, 0, 1.2];
@@ -223,7 +223,14 @@ function buildOutside(){
 
 const cam = {x:0, y:1.75, z:6.2, yaw:0, pitch:.06};
 let hover = -1;
-const FOG: RGB = [10,14,26];
+const FOG: RGB = [0,0,0];
+// The whole room is graded to three inks by brightness, with the contrast pushed hard: black, red, then yellow at the top.
+const RAMP: [number, RGB][] = [[0,[0,0,0]], [.3,[16,3,3]], [.48,[150,14,10]], [.66,[255,48,20]], [.82,[255,196,0]], [1,[255,246,170]]];
+function grade(c: RGB): RGB {
+  const L = Math.min(1, Math.max(0, ((c[0]*.3 + c[1]*.55 + c[2]*.15)/255 - .02)*2.2));
+  for (let i=1; i<RAMP.length; i++) if (L <= RAMP[i][0]){ const [a, ca] = RAMP[i-1], [b, cb] = RAMP[i], t = (L - a)/(b - a); return [0,1,2].map(n => ca[n] + (cb[n] - ca[n])*t) as RGB; }
+  return RAMP[RAMP.length-1][1];
+}
 let FL = 1;
 /** World point to camera space: right, up, depth. */
 function toCam(p: V3): V3 {
@@ -247,7 +254,7 @@ function shade(f: Face, depth: number, far: boolean): string {
   if (f.blink != null) c = scale(c, .55 + .45*Math.max(0, Math.sin(G.time*(2.2 + f.blink%1.7) + f.blink*2.1)));
   if (f.st != null && f.st === hover){ const k = .3 + .2*Math.sin(G.time*6); c = c.map(v => Math.min(255, v*(1 + k) + 24*k)) as RGB; }
   const fog = far ? clamp(depth/160, .15, .55) : clamp((depth - 6)/26, 0, .7);
-  return `rgb(${c.map((v, i) => Math.round(v*(1-fog) + FOG[i]*fog)).join(',')})`;
+  return `rgb(${grade(c.map((v, i) => v*(1-fog) + FOG[i]*fog) as RGB).map(Math.round).join(',')})`;
 }
 function drawFaces(fs: Face[], far = false){
   const list: {s: [number, number][]; d: number; f: Face}[] = [], eye: V3 = [cam.x, cam.y, cam.z];
@@ -260,6 +267,8 @@ function drawFaces(fs: Face[], far = false){
   for (const {s, d, f} of list){
     ctx.fillStyle = shade(f, d, far); ctx.beginPath(); ctx.moveTo(s[0][0], s[0][1]);
     for (let i=1; i<s.length; i++) ctx.lineTo(s[i][0], s[i][1]);
+    // inked edges on everything but the floor and ceiling tiles
+    if (f.layer > 1 && !far){ ctx.closePath(); ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.stroke(); }
     ctx.closePath(); ctx.fill();
   }
 }
@@ -321,19 +330,20 @@ export function renderBase(dt: number){
   cam.yaw = Math.sin(G.time*.3)*.003;
   // space through the window: stars, a ringed planet, then the station's exterior
   drawSpace(G.time*4, 0, 1);
+  ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(0, 0, W, H); // space through the window stays near black
   const pc = toCam([-30, 26, -140]);
   if (pc[2] > 1){
     const [px, py] = toScreen(pc), pr = 18/pc[2]*FL;
-    ctx.fillStyle = '#3a2a5a'; ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#6a4a8a'; ctx.beginPath(); ctx.arc(px - pr*.25, py - pr*.25, pr*.8, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = 'rgba(200,170,230,.6)'; ctx.lineWidth = Math.max(1, pr*.06);
+    ctx.fillStyle = '#300606'; ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#8a1208'; ctx.beginPath(); ctx.arc(px - pr*.25, py - pr*.25, pr*.8, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,196,0,.7)'; ctx.lineWidth = Math.max(1, pr*.06);
     ctx.beginPath(); ctx.ellipse(px, py, pr*1.8, pr*.45, -.25, 0, Math.PI*2); ctx.stroke();
   }
   drawFaces([...outside!, ...shuttle()], true);
   drawFaces([...room!, ...doorFaces(dt), ...holoShip()]);
   // the holotable's beam of light
   const [bx, by] = toScreen(toCam([HOLO[0], .95, HOLO[2]])), [tx, ty] = toScreen(toCam([HOLO[0], 2.2, HOLO[2]])), bw = 1.2/toCam([HOLO[0], 1.5, HOLO[2]])[2]*FL;
-  const g = ctx.createLinearGradient(0, by, 0, ty); g.addColorStop(0, 'rgba(95,216,255,.28)'); g.addColorStop(1, 'rgba(95,216,255,0)');
+  const g = ctx.createLinearGradient(0, by, 0, ty); g.addColorStop(0, 'rgba(255,196,0,.3)'); g.addColorStop(1, 'rgba(255,196,0,0)');
   ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(bx - bw*.55, by); ctx.lineTo(bx + bw*.55, by); ctx.lineTo(tx + bw, ty); ctx.lineTo(tx - bw, ty); ctx.closePath(); ctx.fill();
   signs();
   placeButtons();
