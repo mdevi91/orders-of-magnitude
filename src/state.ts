@@ -11,7 +11,7 @@ export const G: GameState = {
   fight:'fight', ships:[], player:null, boss:null, pb:[], eb:[], fx:[], beams:[],
   waves:[], waveIdx:0, waveGap:0, time:0, S:1, SC:1, AW:0, AH:0, camX:0, camY:0, camOX:0, camOY:0, zoom:1, camMul:1,
   span:0, spanT:0, span0:0, spanAt:0, spanStage:null, fit:0, swarmT:0,
-  paused:false, aimAuto:false, fireHeld:false, mouse:{x:0,y:0,has:false}, joy:null, aimJoy:null,
+  paused:false, aimAuto:false, shiftAbs:false, fireHeld:false, mouse:{x:0,y:0,has:false}, joy:null, aimJoy:null,
   banner:null, deadT:0, earned:0, shake:0, aim:{x:0,y:0},
 };
 // Build area: no fixed limit, it always reaches two cells past the furthest block. Frozen while dragging so cells don't slide under the pointer.

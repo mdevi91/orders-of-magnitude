@@ -33,6 +33,10 @@ export function init(){
   $('pauseBtn').addEventListener('click', togglePause);
   $('muteBtn').addEventListener('click', () => { audio(); setMute(!muted); });
   setMute(muted);
+  // Shift steering: WASD relative to the ship, or to the screen
+  const setShift = (v: boolean) => { G.shiftAbs = v; $('shiftBtn').textContent = v ? '⇧ screen' : '⇧ ship'; };
+  try { setShift(localStorage.getItem('oom-shiftabs') === '1'); } catch { setShift(false); }
+  $('shiftBtn').addEventListener('click', () => { setShift(!G.shiftAbs); try { localStorage.setItem('oom-shiftabs', G.shiftAbs ? '1' : '0'); } catch {} });
   $('mirror').addEventListener('click', cycleMirror);
   $('rot').addEventListener('click', rotate);
   // in Engineering the button saves the starting ship and goes back to the base

@@ -73,11 +73,12 @@ export function update(dt: number){
     const ph = p.ph;
     for (const e of ph.engines) e.c.firing = false;
     // movement: top speed depends on how much engine thrust points the way you want to go.
-    // Mouse and keyboard fly the ship: W/S thrust along the nose, A/D turn; holding Shift the nose follows the mouse and A/D strafe.
+    // Mouse and keyboard fly the ship: W/S thrust along the nose, A/D turn; holding Shift the nose follows the mouse and A/D strafe,
+    // or, with the screen setting, WASD moves straight up, left, down and right.
     // Touch (and mouse-less play) moves in screen directions with the nose on the aim point.
     let mx = 0, my = 0, turnIn = 0;
     const kb = G.mouse.has && !G.joy, shift = keys.ShiftLeft || keys.ShiftRight;
-    if (kb){
+    if (kb && !(shift && G.shiftAbs)){
       let f = 0, s = 0;
       if (keys.KeyW || keys.ArrowUp) f++; if (keys.KeyS || keys.ArrowDown) f--;
       if (keys.KeyA || keys.ArrowLeft){ if (shift) s--; else turnIn--; }

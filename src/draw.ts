@@ -562,7 +562,7 @@ export function renderCombat(){
     }
     // small print on the full-resolution layer, so it stays a quiet footnote
     hctx.font = FONT(8); hctx.textAlign = 'left'; hctx.fillStyle = on ? '#ffc46b' : '#e2ecff'; hctx.globalAlpha = on ? 1 : .45;
-    hctx.fillText(on ? 'NOSE ON MOUSE · A/D STRAFE' : 'SHIFT: NOSE FOLLOWS MOUSE', 8*PX, ly*PX); hctx.globalAlpha = 1;
+    hctx.fillText(on ? (G.shiftAbs ? 'NOSE ON MOUSE · WASD SCREEN' : 'NOSE ON MOUSE · A/D STRAFE') : 'SHIFT: NOSE FOLLOWS MOUSE', 8*PX, ly*PX); hctx.globalAlpha = 1;
   }
 
   // banner
