@@ -19,14 +19,15 @@ export const bossSize = (s: number) => Math.round(32*Math.pow(s,1.45));
 export const fodderCap = () => Math.min(3, 1 + Math.floor(G.stage/3));
 // enemy fighters and bombers alive at once
 export const craftCap = () => Math.min(6, 3 + Math.floor(G.stage/3));
-export const shipSize = (s: number, col: number) => Math.round((12 + 11*Math.pow(s,1.3))*(1 + .07*col)*rand(.9,1.15));
+// sectors 1 to 3 shrink ships hard (a quarter, half, three quarters) so a starting ship can win its first fights
+export const shipSize = (s: number, col: number) => Math.max(4, Math.round((12 + 11*Math.pow(s,1.3))*Math.min(1, s/4)*(1 + .07*col)*rand(.9,1.15)));
 // credits for winning: base plus a per-sector part
 const BOUNTY: Record<FightKind, [number, number]> = {fight:[10,4], ambush:[8,3], elite:[20,7], gate:[30,10], boss:[75,25], station:[80,28]};
 // every enemy shot hits a little harder each sector, so fewer guns still keep up
 export const eDmg = () => 1.25 + .3*(G.stage-1);
 // Waves for one fight: few ships, but big and tough ones. Gun caps keep it readable: a few heavy guns per ship instead of a wall of small ones.
 export function planFight(kind: FightKind, s: number, col: number): WavePlan {
-  const waves: WavePlan = [], g = 3 + Math.floor(s/2), ship = (m=1, x: Partial<ShipSpec> = {}): ShipSpec => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
+  const waves: WavePlan = [], g = Math.min(3 + Math.floor(s/2), 1 + s), ship = (m=1, x: Partial<ShipSpec> = {}): ShipSpec => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
   if (kind==='fight'){
     // a random encounter: a patrol, a lone cruiser, a carrier, or a pack of light raiders
     const r = Math.random();
