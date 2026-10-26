@@ -22,9 +22,9 @@ interface Face { p: V3[]; c: RGB; layer: number; glow?: boolean; n?: V3; blink?:
 /** sign: the short name lit on the sign over its doorway */
 export interface Station { id: string; name: string; sign: string; col: RGB }
 export const STATIONS: Station[] = [
-  {id:'cantina', name:'Cantina', sign:'CANTINA', col:[255,40,24]},
-  {id:'rnd', name:'Research & Development', sign:'R&D', col:[255,40,24]},
-  {id:'eng', name:'Engineering', sign:'ENGINEERING', col:[255,40,24]},
+  {id:'cantina', name:'Cantina', sign:'CANTINA', col:[255,210,0]},
+  {id:'rnd', name:'Research & Development', sign:'R&D', col:[255,210,0]},
+  {id:'eng', name:'Engineering', sign:'ENGINEERING', col:[255,210,0]},
   {id:'hangar', name:'Hangar', sign:'HANGAR', col:[255,210,0]},
 ];
 
