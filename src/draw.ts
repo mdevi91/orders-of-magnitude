@@ -387,6 +387,7 @@ export function drawShip(s: Ship){
     if (ghost) ctx.globalAlpha = .45 + .2*Math.sin(G.time*50);
     drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, b.firing);
   }
+  if (s === G.player) drawCockpit(ctx, G.cockpit, k => s.blocks.has(k)); // the cockpit sprite over its whole footprint
   ctx.globalAlpha = 1;
   // ion-jammed weapons flicker violet
   for (const b of s.blocks.values()) if ((b.jam || 0) > G.time){
@@ -843,6 +844,7 @@ export function renderBuild(){
     if (!bad && fc < .4 && fc > 0){ ctx.fillStyle = '#ffc46b'; ctx.fillRect(i*BS+1.5, j*BS-4.5, 3, 3); }
     if (bad || fc === 0){ ctx.strokeStyle = '#ff7a66'; ctx.beginPath(); ctx.moveTo(i*BS-4,j*BS-4); ctx.lineTo(i*BS+4,j*BS+4); ctx.moveTo(i*BS+4,j*BS-4); ctx.lineTo(i*BS-4,j*BS+4); ctx.stroke(); }
   }
+  drawCockpit(ctx, G.cockpit, k => G.design.has(k) && !G.broken.has(k));
   // group badges while assigning: the group number in its colour on every weapon
   if (G.grpBrush){
     ctx.font = FONT(4.2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
