@@ -187,9 +187,15 @@ export function syncHud(){
 /** An overlay button: label, handler, and an optional class ('ghost' for the quiet style). */
 export type OverlayAction = [string, () => void, string?];
 /** Panel extras: eye is the small line above the title naming where you are, ac the accent colour, list numbers the choices down the panel. */
-export interface OverlayOpts { eye?: string; ac?: string; list?: boolean }
+/** screen: a full-screen layout (its content brings its own title and columns) instead of a window */
+export interface OverlayOpts { eye?: string; ac?: string; list?: boolean; screen?: string }
+/** A hexagon readout: a label over a big number; fill for the one that matters, red for trouble. */
+export const hexo = (label: string, v: string | number, cls = '') => `<div class="hexo ${cls}"><span>${label}</span><b>${v}</b></div>`;
+/** Two-digit display numbers, as the alert screens show them (04, 17). */
+export const pad2 = (v: number) => v < 10 && v >= 0 ? '0' + v : String(v);
 export function showOverlay(title: string, html: string, actions: OverlayAction[], wide=false, o: OverlayOpts = {}){
   $('ovTitle').textContent = title; $('ovText').innerHTML = html; $('ovEye').textContent = o.eye || '';
+  $('ovTitle').closest<HTMLElement>('.card')!.dataset.screen = o.screen || '';
   const card = $('ovTitle').closest<HTMLElement>('.card')!;
   card.classList.toggle('wide', wide); card.style.setProperty('--ac', o.ac || 'var(--line)');
   const a = $('ovActions'); a.innerHTML = ''; a.classList.toggle('list', !!o.list);

@@ -15,4 +15,4 @@ reachSector(2);
 runOver('abandoned');
 const txt = $('ovText').textContent;
 ok('the report shows the combat log', txt.includes('Damage dealt') && txt.includes('Blocks lost') && txt.includes('Time in combat'));
-ok('the report lists what the run unlocked', txt.includes('Unlocked this run') && txt.includes(T.gatling.name) && txt.includes('Corvette'), txt.slice(txt.indexOf('Unlocked'), txt.indexOf('Unlocked') + 160));
+ok('the report lists what the run unlocked', txt.includes('New patterns registered') && txt.includes(T.gatling.name) && txt.includes('Corvette'), txt.slice(txt.indexOf('New patterns'), txt.indexOf('New patterns') + 160));

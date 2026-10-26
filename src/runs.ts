@@ -8,7 +8,7 @@ import { curNode, genMap, toDrydock, toMap } from './starmap';
 import { G, blockCount } from './state';
 import { tut } from './tutorial';
 import type { BlockType, Key, StartDesign } from './types';
-import { hideOverlay, icon, pips, showOverlay, syncUI, toast } from './ui';
+import { hexo, hideOverlay, icon, pad2, pips, showOverlay, syncUI, toast } from './ui';
 import { $ } from './view';
 
 // ---------- runs and the space base ----------
@@ -145,21 +145,25 @@ export function runOver(why: 'dead' | 'won' | 'abandoned'){
   const data = st.sectors*6 + st.elites*2 + st.flags*15 + Math.floor(st.nodes/2) + Math.floor(st.kills/8) + (st.bonus||0) + (st.won ? 25 : 0);
   const m = G.meta; m.data += data; m.earned = (m.earned || 0) + data; m.runs = (m.runs || 0) + 1; m.kills = (m.kills || 0) + st.kills; if (st.won) m.wins = (m.wins || 0) + 1;
   saveMeta(); clearRun(); tut('data');
-  const ro = (v: string | number, k: string, c = '') => `<div class="readout"><b${c}>${v}</b><span>${k}</span></div>`, n = (v?: number) => Math.round(v || 0).toLocaleString('en');
+  const n = (v?: number) => Math.round(v || 0).toLocaleString('en');
   const secs = Math.round(st.secs || 0), time = `${Math.floor(secs/60)}:${String(secs % 60).padStart(2, '0')}`;
   // what reaching new sectors opened up for good: blocks and cockpits
   const b0 = st.best0 ?? (m.best || 1), b1 = m.best || 1, newB = PAL.filter(t => t!=='sell' && !PLATE(t) && (T[t].unlock || 1) > b0 && (T[t].unlock || 1) <= b1);
   const newC = (Object.keys(COCKPITS) as CockpitId[]).filter(id => !COCKPITS[id].off && COCKPITS[id].unlock > b0 && COCKPITS[id].unlock <= b1);
   const next = PAL.map(t => T[t].unlock || 1).filter(u => u > b1).sort((a,b) => a-b)[0];
-  const unl = newB.length || newC.length
-    ? '<div class="unl">' + newB.map(t => `<span style="--rc:${RARITY[rarOf(t)].col}">${icon(t)}${T[t].name}</span>`).join('') +
-      newC.map(id => `<span style="--rc:var(--gold)">${COCKPITS[id].name}</span>`).join('') + '</div>'
-    : `<p>Nothing new this time.${next ? ` Reach sector ${next} to unlock ${unlocksAt(next).map(t => T[t].name).join(', ')}.` : ''}</p>`;
-  showOverlay(why==='dead' ? 'Ship lost' : why==='won' ? 'Run complete' : 'Run abandoned',
-    `<div class="readouts">${ro(G.stage, 'Sector')}${ro(st.nodes, 'Jumps')}${ro(st.kills, 'Kills')}${ro(st.elites, 'Elites')}${ro(st.flags, 'Capital ships')}${ro('+'+data, 'Data', ' class="gold"')}</div>` +
-    `<div class="rows"><h3>Combat log</h3></div><div class="readouts">${ro(n(st.dealt), 'Damage dealt')}${ro(n(st.taken), 'Damage taken')}${ro(n(st.lost), 'Blocks lost')}${ro(time, 'Time in combat')}${ro(n(st.peak), 'Biggest ship')}</div>` +
-    `<div class="rows"><h3>Unlocked this run</h3></div>${unl}` +
-    // a terse system log instead of prose
-    `<div class="log">${why==='dead' ? '&gt; BLACK BOX RECOVERED<br>' : ''}&gt; SENSOR LOG UPLINKED TO R&amp;D <b>+${data}</b>${why==='dead' ? '<br><span class="red">&gt; PILOT STATUS: UNKNOWN</span>' : ''}</div>`,
-    [['Back to base', showTitle]], true, {eye:'After-action report', ac:why==='dead' ? 'var(--foe)' : 'var(--line)'});
+  // full screen: the verdict huge on the left with a terse system log; hexagon stats, status, combat log and unlocks on the right
+  const dead = why==='dead', won = why==='won', tag = (t: string, cls = '') => `<span class="stag ${cls}">${t}</span>`;
+  const head = dead ? ['Ship', 'lost'] : won ? ['Run', 'won'] : ['Run', 'ended'];
+  const pairs: [string, string, string?][] = [['Damage dealt', n(st.dealt)], ['Damage taken', n(st.taken), 'red'], ['Blocks lost', n(st.lost), 'red'], ['Time in combat', time], ['Biggest ship', `${n(st.peak)} blk`]];
+  const tags = newB.map(t => `<span class="ptag">${T[t].name}</span>`).join('') + newC.map(id => `<span class="ptag fill">Cockpit: ${COCKPITS[id].name.replace(/ (cockpit|bridge|deck)$/, '')}</span>`).join('');
+  const s = `<div class="rep-left"><div>${dead ? tag('Emergency', 'red fill') + tag('Core signal lost', 'red') : tag(won ? 'Mission complete' : 'Recalled', 'fill')}</div>` +
+    `<span class="rep-lbl">After-action report</span><h2 class="rep-h${dead ? ' red' : ''}">${head[0]}<br>${head[1]}</h2>` +
+    `<p class="log">${dead ? '&gt; BLACK BOX RECOVERED<br>' : ''}&gt; SENSOR LOG UPLINKED TO R&amp;D <b>+${data}</b>${dead ? '<br><span class="red">&gt; PILOT STATUS: UNKNOWN</span>' : ''}</p></div>` +
+    `<div class="rep-right"><div class="rep-top"><div class="hexgrid"><div>${hexo('Sector', pad2(G.stage))}${hexo('Jumps', pad2(st.nodes))}${hexo('Kills', pad2(st.kills))}</div>` +
+    `<div>${hexo('Elites', pad2(st.elites))}${hexo('Capitals', pad2(st.flags))}${hexo('Data', '+' + data, 'fill')}</div></div>` +
+    `<div class="rep-status">${tag(dead ? 'Warning' : 'Status', dead ? 'red' : '')}<p class="log">HULL&nbsp;&nbsp;&nbsp;${dead ? '000.0%' : 'INTACT'}<br>CORE&nbsp;&nbsp;&nbsp;${dead ? 'OFFLINE' : 'ONLINE'}<br>SECTOR&nbsp;${pad2(G.stage)}<br><span class="${dead ? 'red' : ''}">STATUS ${dead ? 'LOST' : won ? 'VICTORIOUS' : 'RECALLED'}</span></p></div></div>` +
+    `<h3>Combat log</h3><div class="rep-grid">${pairs.map(([k, v, c]) => `<span>${k}</span><b class="${c || ''}">${v}</b>`).join('')}</div>` +
+    `<h3>New patterns registered <small>${pad2(newB.length + newC.length)}</small></h3>` +
+    (tags ? `<div class="ptags">${tags}</div>` : `<p class="log">&gt; NOTHING NEW${next ? ` · REACH SECTOR ${pad2(next)} FOR ${unlocksAt(next).map(t => T[t].name.toUpperCase()).join(', ')}` : ''}</p>`) + '</div>';
+  showOverlay(dead ? 'Ship lost' : won ? 'Run complete' : 'Run abandoned', s, [['Return to base', showTitle]], true, {screen:'report', ac:dead ? 'var(--foe)' : 'var(--line)'});
 }
