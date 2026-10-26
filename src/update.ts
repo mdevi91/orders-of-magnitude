@@ -121,7 +121,7 @@ export function update(dt: number){
     p.x += p.vx*dt; p.y += p.vy*dt;
     p.x = clamp(p.x, 0, G.AW); p.y = clamp(p.y, 0, G.AH);
     // the cockpit ability, on right-click or E
-    if (G.abT > 0) G.abT -= dt;
+    if (G.abT > -1) G.abT -= dt; // runs a little below zero so the ready flash can play
     if (G.abReq){ G.abReq = false; if (G.abT <= 0 && !((p.warp || 0) > 0)) useAbility(p, ax!, ay, ux, uy); }
     // engines pushing the way we go light up; off-centre ones twist the hull
     let drift = 0;

@@ -123,8 +123,8 @@ export const COCKPITS: Record<'std' | 'fighter' | 'battle', {name: string; desc:
   gun: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean; arc: number}> = {
   std:    {name:'Standard cockpit', desc:'Balanced, no strings attached.', turn:1, range:1, unlock:1, off:false,
     gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1},
-  fighter:{name:'Interceptor cockpit', desc:'Twin rapid guns, turrets swing 25% wider. Small ships fly faster, turn quicker and take less damage; the edge fades by 40 blocks. Weaker core, less energy.', turn:1, range:1, unlock:2, off:false,
-    gun:{range:200, cd:.13, spd:720, dmg:1.3, spread:.05, r:1.6, arc:Math.PI, over:true, pellets:2, fan:.07}, ab:'roll', abName:'Evasive roll: a burst of speed, untouchable for half a second', abCd:6, en:.6, coreHp:.7, small:true, arc:1.25},
+  fighter:{name:'Interceptor cockpit', desc:'Twin rapid guns, turrets swing 25% wider. Small ships fly faster, turn quicker and take less damage; the edge fades by 40 blocks. Weaker core.', turn:1, range:1, unlock:2, off:false,
+    gun:{range:200, cd:.13, spd:720, dmg:1.3, spread:.05, r:1.6, arc:Math.PI, over:true, pellets:2, fan:.07}, ab:'roll', abName:'Evasive roll: a burst of speed, untouchable for half a second', abCd:6, en:1, coreHp:.7, small:true, arc:1.25},
   battle: {name:'Command bridge', desc:'Fire control: every weapon reaches 10% further.', turn:1, range:1.1, unlock:5, off:true,
     gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1},
 };

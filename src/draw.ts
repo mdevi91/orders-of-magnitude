@@ -444,6 +444,16 @@ export function renderCombat(){
 
   for (const s of G.ships) if (s.alive) drawShip(s);
 
+  // the cockpit ability's cooldown: a ring round the ship fills up as it recharges, then flashes once when ready
+  if (p && p.alive && !(p.warp || 0)){
+    const C = cockpit(), k = 1 - Math.max(0, G.abT)/C.abCd, X = sx(p.x), Y = sy(p.y), r = p.r*z + 6;
+    if (k < 1){
+      ctx.lineWidth = 1; ctx.globalAlpha = .25; ctx.strokeStyle = '#ffffff'; ctx.beginPath(); ctx.arc(X, Y, r, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = .9; ctx.strokeStyle = '#ff8a00'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X, Y, r, -Math.PI/2, -Math.PI/2 + k*TAU); ctx.stroke();
+    } else if (G.abT > -.35){ ctx.globalAlpha = 1 + G.abT/.35; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X, Y, r + 4*(-G.abT/.35), 0, TAU); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+
   // life bars over damaged enemy ships (the capital ship's sits in the HUD)
   for (const e of G.ships){
     if (!e.alive || e.team!=='e' || e === G.boss || e.life >= e.lifeMax) continue;
