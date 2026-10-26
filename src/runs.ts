@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { HEAD_OF, PAL, PLATE, RARITY, T, blurb, outfitPrice, rarName, rarOf, unlocked } from './catalog';
+import { HEAD_OF, PAL, PLATE, RARITY, T, blurb, cpUnlocked, outfitPrice, rarName, rarOf, unlocked } from './catalog';
 import { K } from './grid';
 import { undoStack } from './input';
 import { clearRun, load, resetAll, save, saveMeta } from './save';
@@ -111,7 +111,7 @@ export const budget = () => 107 + 30*metaLv('cash');
 /** What a design costs to build: plating at its price, every other block at the outfitting price (the core is free). */
 export const designCost = (d: Map<Key, BlockType>) => { let c = 0; for (const t of d.values()) if (t!=='core' && !HEAD_OF[t]) c += PLATE(t) ? T[t].cost : outfitPrice(t); return c; };
 // a saved design keeps only blocks that are still unlocked
-export const startDesign = (): StartDesign => { const s = G.meta.start || DEFAULT_START; return {...s, d:s.d.filter(([, t]) => t==='core' || PLATE(t) || HEAD_OF[t] || unlocked(t))}; };
+export const startDesign = (): StartDesign => { const s = G.meta.start || DEFAULT_START; return {...s, d:s.d.filter(([, t]) => t==='core' || PLATE(t) || HEAD_OF[t] || unlocked(t)), c:s.c && cpUnlocked(s.c) ? s.c : 'std'}; };
 // Engineering borrows the drydock: the run in progress stays safe in storage and comes back on the way out.
 let engRun = false;
 export function enterEngineering(){

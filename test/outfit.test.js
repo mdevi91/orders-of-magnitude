@@ -21,6 +21,10 @@ ok('design is kept', G.meta.start && G.meta.start.d.length === blocks);
 newRun();
 ok('a new run starts in the saved design with the budget left over', G.design.size === blocks && G.design.get(K(2,0))==='battery' && G.credits === Math.max(0, budget() - designCost(G.design)) && G.mode==='map');
 ok('nothing for sale in a run', placeCheck(3,0,'battery',0) !== true);
+// cockpits: only the standard one at first, the rest unlock with the best sector
+G.meta.best = 1; G.meta.start = {...G.meta.start, c:'fighter'};
+ok('a locked cockpit falls back to the standard one', startDesign().c === 'std' && !cpUnlocked('fighter') && !cpUnlocked('battle'));
+G.meta.best = 9; G.meta.start = {...G.meta.start, c:'std'};
 // cockpits: picked in Engineering, kept with the design, and their abilities apply in the run
 enterEngineering();
 const turn0 = designStats().turn;
