@@ -108,6 +108,8 @@ export interface Ship {
   sc: number;
   fireMul: number; ft: number; phase: number; spin: number; orb: number; orbSpd: number; pref: number; vmax: number; turn: number; value: number;
   tgt: Ship | null; armed?: boolean; sights: [number, number, number][] | null; wob?: number;
+  /** player: untouchable until this time (the interceptor's roll) */
+  ghost?: number;
   /** enemy: the local bearing (0 = +x, -PI/2 = nose) it turns toward its target, and when it next re-checks */
   bside?: number; bsT?: number; flT?: number; rbT?: number;
   // hangar craft (either side)
@@ -182,7 +184,9 @@ export interface GameState {
   waves: WavePlan; waveIdx: number; waveGap: number; time: number; S: number; SC: number; AW: number; AH: number;
   camX: number; camY: number; camOX: number; camOY: number; zoom: number; camMul: number;
   span: number; spanT: number; span0: number; spanAt: number; spanStage: number | null; fit: number; swarmT: number;
-  paused: boolean; aimAuto: boolean; /** with Shift held, WASD moves in screen directions instead of along the ship */ shiftAbs: boolean; /** no screen shake */ calm: boolean; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
+  paused: boolean; aimAuto: boolean; /** with Shift held, WASD moves in screen directions instead of along the ship */ shiftAbs: boolean; /** no screen shake */ calm: boolean;
+  /** the cockpit ability: seconds of cooldown left, and a request from right-click or E waiting for the next update */
+  abT: number; abReq: boolean; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
   joy: Stick | null; aimJoy: Stick | null;
   banner: Banner | null; deadT: number; earned: number; shake: number; aim: { x: number; y: number };
 }

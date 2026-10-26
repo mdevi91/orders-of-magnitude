@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { PD_KINDS, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
-import { BCOL, CRAFT, ESH, HM, LV, T, cockpit, def, grpOf, isCraft } from './catalog';
+import { BCOL, CRAFT, ESH, HM, LV, T, cockpit, cpSpeed, cpTurn, def, grpOf, isCraft } from './catalog';
 import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx } from './craft';
 import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
@@ -24,6 +24,22 @@ export function wobble(e: Ship, d: number): [number, number] {
 export const ION_R = 2.5, ION_T = 1.5;
 export function ionJam(e: Ship, hit: Block){
   for (const g of [...e.guns, ...e.epd, ...e.bays]) if (Math.hypot(g.i-hit.i, g.j-hit.j) <= ION_R) g.jam = G.time + ION_T;
+}
+/** Fires the cockpit's right-click ability toward the aim point (ax, ay); (ux, uy) is the way the player is steering, if any. */
+export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: number){
+  const C = cockpit(), SC = G.SC;
+  G.abT = C.abCd;
+  if (C.ab==='jump'){
+    // a short warp jump toward the mouse, drawn like an enemy jumping in: out with a flash, back in along a streak
+    const dx = ax - p.x, dy = ay - p.y, d = Math.hypot(dx, dy) || 1, L = clamp(d, 120*SC, 280*SC);
+    const tx = clamp(p.x + dx/d*L, 0, G.AW), ty = clamp(p.y + dy/d*L, 0, G.AH);
+    boomAt(p.x, p.y, p.r*.7 + 6*SC, .15); sparks(p.x, p.y, Math.atan2(dy, dx), 10, 380*SC, ['#ffffff','#a8ecff','#c8b0ff']);
+    p.warpA = Math.atan2(p.y - ty, p.x - tx); p.x = tx; p.y = ty; p.warp = .3; sfx('launch', .8);
+  } else {
+    // evasive roll: a hard shove the way the ship is steering (or toward the mouse), and half a second untouchable
+    let vx = ux, vy = uy; if (!vx && !vy){ const d = Math.hypot(ax - p.x, ay - p.y) || 1; vx = (ax - p.x)/d; vy = (ay - p.y)/d; }
+    p.vx += vx*520*SC; p.vy += vy*520*SC; p.ghost = G.time + .5; sfx('launch', .5);
+  }
 }
 export function update(dt: number){
   const RM = cockpit().range; // the command bridge stretches every weapon's reach
@@ -97,11 +113,14 @@ export function update(dt: number){
     }
     const ml = Math.hypot(mx,my), ux = ml ? mx/ml : 0, uy = ml ? my/ml : 0;
     const lx = ux*p.c + uy*p.sn, ly = -ux*p.sn + uy*p.c;
-    const spd = ml ? dirSpeed(ph,lx,ly)*SC*analog : 0;
+    const spd = ml ? dirSpeed(ph,lx,ly)*SC*analog*cpSpeed() : 0;
     p.vx += (ux*spd - p.vx)*Math.min(1,dt*(ml ? 5 : 3));
     p.vy += (uy*spd - p.vy)*Math.min(1,dt*(ml ? 5 : 3));
     p.x += p.vx*dt; p.y += p.vy*dt;
     p.x = clamp(p.x, 0, G.AW); p.y = clamp(p.y, 0, G.AH);
+    // the cockpit ability, on right-click or E
+    if (G.abT > 0) G.abT -= dt;
+    if (G.abReq){ G.abReq = false; if (G.abT <= 0 && !((p.warp || 0) > 0)) useAbility(p, ax!, ay, ux, uy); }
     // engines pushing the way we go light up; off-centre ones twist the hull
     let drift = 0;
     if (ml) for (const e of ph.engines){
@@ -111,7 +130,7 @@ export function update(dt: number){
     p.a += drift/ph.inertia*dt;
     // nose swings toward the aim point (or turns on A/D); engines whose push helps the turn act as jets
     const aimTurn = !kb || shift, want = Math.atan2(ax!-p.x, -(ay-p.y)), da = aimTurn ? angDiff(want,p.a) : turnIn, cw = da > 0;
-    const rate = turnOf(ph.torque + (cw ? ph.jetCW : ph.jetCCW), ph.inertia, ph.mass)*cockpit().turn;
+    const rate = turnOf(ph.torque + (cw ? ph.jetCW : ph.jetCCW), ph.inertia, ph.mass)*cpTurn();
     // angular momentum: heavy hulls take time to start and stop a turn
     const wWant = aimTurn ? clamp(da*4, -rate, rate) : turnIn*rate, acc = rate*2.5;
     p.w = (p.w||0) + clamp(wWant - (p.w||0), -acc*dt, acc*dt);

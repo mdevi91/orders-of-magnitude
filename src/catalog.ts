@@ -1,7 +1,7 @@
 import { BS } from './grid';
 import { metaLv } from './runs';
-import { G } from './state';
-import type { BlockDef, BlockType, Cell, CraftDef, CraftKind, EnemyCell, EnemyGun, EnemyGunDef, Key, PartDef } from './types';
+import { G, blockCount } from './state';
+import type { BlockDef, BlockType, Cell, CraftDef, CraftKind, EnemyCell, EnemyGun, EnemyGunDef, GunDef, Key, PartDef } from './types';
 
 // ---------- block catalogue ----------
 // BLOCKS keeps its literal keys (they become the BlockType union); T is the same table read as BlockDefs.
@@ -108,16 +108,29 @@ export const outfitPrice = (t: BlockType) => Math.round(T[t].cost*priceMul());
 export const canBuyHere = (t: BlockType) => G.outfit && !PLATE(t) && unlocked(t);
 // sectors map onto the old stage tiers: which blocks drop and which weapons enemies carry
 export const tierOf = (s: number) => Math.floor(s*1.5 + 1);
-// Cockpits: the core comes in variants picked in Engineering, each with its own ability for the whole run.
-export const COCKPITS = {
-  std:    {name:'Standard cockpit', desc:'Balanced. No special ability.', turn:1, range:1, unlock:1, off:false},
-  fighter:{name:'Interceptor cockpit', desc:'Light and agile: the ship turns 40% faster.', turn:1.4, range:1, unlock:3, off:true},
-  battle: {name:'Command bridge', desc:'Fire control: every weapon reaches 10% further.', turn:1, range:1.1, unlock:5, off:true},
+// Cockpits: the core comes in variants picked in Engineering. Each brings its own core gun, a right-click ability with a
+// cooldown (s), and bonuses: turn and range multiply, en scales the core's energy, coreHp its hit points, and small ships
+// (small:true) get faster, quicker to turn and tougher the fewer blocks they have (see smallK).
+type AbilityId = 'jump' | 'roll';
+const STD_GUN: GunDef = {range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true};
+export const COCKPITS: Record<'std' | 'fighter' | 'battle', {name: string; desc: string; turn: number; range: number; unlock: number; off: boolean;
+  gun: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean}> = {
+  std:    {name:'Standard cockpit', desc:'Balanced, no strings attached.', turn:1, range:1, unlock:1, off:false,
+    gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false},
+  fighter:{name:'Interceptor cockpit', desc:'Twin rapid guns. Small ships fly faster, turn quicker and take less damage; the edge fades by 40 blocks. Weaker core, less energy.', turn:1, range:1, unlock:2, off:false,
+    gun:{range:200, cd:.13, spd:720, dmg:1.3, spread:.05, r:1.6, arc:Math.PI, over:true, pellets:2, fan:.07}, ab:'roll', abName:'Evasive roll: a burst of speed, untouchable for half a second', abCd:6, en:.6, coreHp:.7, small:true},
+  battle: {name:'Command bridge', desc:'Fire control: every weapon reaches 10% further.', turn:1, range:1.1, unlock:5, off:true,
+    gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false},
 };
 export type CockpitId = keyof typeof COCKPITS;
 export const cockpit = () => COCKPITS[G.cockpit] || COCKPITS.std;
 // the standard cockpit is there from the start; the others unlock with the best sector reached, like blocks.
 // off: switched off for now, hidden from Engineering and never flown.
+/** How much of a small-ship cockpit's edge applies: 1 at 15 blocks or fewer, fading to 0 at 40. */
+export const smallK = () => cockpit().small ? Math.min(1, Math.max(0, (40 - blockCount())/25)) : 0;
+export const cpTurn = () => cockpit().turn*(1 + .6*smallK());
+export const cpSpeed = () => 1 + .6*smallK();
+export const cpGuard = () => 1 - .4*smallK();
 export const cpUnlocked = (id: CockpitId) => !COCKPITS[id].off && COCKPITS[id].unlock <= (G.meta.best || 1);
 // block levels: bought per type at shops, +35% to the block's main stat per level up to Lv5, then +20% per level up to Lv10
 export const MAXLV = 10;
@@ -170,4 +183,6 @@ export const shRad = () => (1 + Math.min(4, lvOf('shield')) + .5)*BS;
 // wiring that runs once at start-up
 export function init(){
   COL.a = COL.p; // hangar craft wear the player's colours
+  // the core's own gun is the cockpit's
+  Object.defineProperty(T.core, 'gun', {get: () => cockpit().gun, configurable:true});
 }

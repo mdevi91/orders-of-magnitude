@@ -62,6 +62,7 @@ export function init(){
     ptrs.set(e.pointerId, {x, y}); audio();
     if (!touch) G.mouse = {x, y, has:true};
     if (G.mode==='combat' && !touch && e.button===0) G.fireHeld = true;
+    if (G.mode==='combat' && !touch && e.button===2) G.abReq = true; // the cockpit ability
     if (G.mode==='map' && $('overlay').hidden){
       // touch picks a beacon first and jumps on a second tap; a mouse click jumps straight away
       const n = mapNodeAt(x,y);
@@ -152,6 +153,7 @@ export function init(){
     } else if (G.mode==='combat'){
       if (e.code==='KeyP' || e.code==='Escape') togglePause();
       if (e.code==='KeyT') setAuto(!G.aimAuto);
+      if (e.code==='KeyE') G.abReq = true;
       if (e.code==='Equal' || e.code==='NumpadAdd') camZoom(.85);
       if (e.code==='Minus' || e.code==='NumpadSubtract') camZoom(1.18);
       const gd = /^Digit([1-5])$/.exec(e.code); if (gd) toggleGroup(+gd[1]);

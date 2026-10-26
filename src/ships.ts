@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { COL, ESH, ET, HM, LV, PARTS, T, def, ewOf, isCraft, pickWeapon } from './catalog';
+import { COL, ESH, ET, HM, LV, PARTS, T, cockpit, cpGuard, def, ewOf, isCraft, pickWeapon } from './catalog';
 import { BS, CORE, FA, K, KI, KJ, NB, SWING, angDiff, rand } from './grid';
 import { laneFwd, partComplete, physics } from './physics';
 import { metaLv } from './runs';
@@ -21,7 +21,7 @@ export function makeShip(design: Map<Key, Cell>, team: Team, x: number, y: numbe
     fireMul:1, ft:0, phase:0, spin:1, orb:0, orbSpd:0, pref:0, vmax:0, turn:0, value:0, tgt:null, sights:null,
     kind:null, bay:null, sortie:0, aimA:0, cd:0, pick:0, life:0, lifeMax:0};
   for (const [k,t] of design){
-    const hp = (team==='e' ? ET[t as EnemyCell].hp : def(t)!.hp!*LV(t)*HM.hp()*(team==='p' && t==='core' ? 1 + .25*metaLv('core') : 1)) * hpMul;
+    const hp = (team==='e' ? ET[t as EnemyCell].hp : def(t)!.hp!*LV(t)*HM.hp()*(team==='p' && t==='core' ? (1 + .25*metaLv('core'))*cockpit().coreHp : 1)) * hpMul;
     s.lifeMax += hp*LIFE;
     const b: Block = {t, i:KI(k), j:KJ(k), o:dirs ? dirs.get(k)||0 : 0, hp, max:hp, cd:Math.random()*.4, hit:-1};
     s.blocks.set(k, b);
@@ -59,7 +59,7 @@ export function recalc(s: Ship){
     }
   }
   // energy: the core gives a little; generators add recharge, batteries add storage
-  let cap = 40, regen = 6;
+  let cap = 40*cockpit().en, regen = 6*cockpit().en;
   for (const b of s.blocks.values()){ if (b.t==='gen') regen += T.gen.en!.regen!*LV('gen'); if (b.t==='battery') cap += T.battery.en!.cap!*LV('battery'); }
   // a fresh ship starts with full batteries; losing a battery later only trims what is stored
   const fresh = s.enMax === 0;
@@ -224,8 +224,9 @@ export function rayHits(ox: number, oy: number, dx: number, dy: number, len: num
   return first ? out.slice(0,1) : out;
 }
 export function damage(s: Ship, k: Key, dmg: number){
-  const b = s.blocks.get(k); if (!b || !s.alive || (s.warp || 0) > 0) return;
+  const b = s.blocks.get(k); if (!b || !s.alive || (s.warp || 0) > 0 || (s.ghost || 0) > G.time) return;
   if (b.t==='armor') dmg *= 1 - ARMOR_DR;
+  if (s.team==='p') dmg *= cpGuard(); // a small interceptor shrugs off hits
   s.life -= Math.min(Math.max(0, b.hp), dmg); b.hp -= dmg; b.hit = G.time;
   if (b.hp <= 0) destroyBlock(s,k,b);
   if (s.alive && s.life <= 0) killShip(s);

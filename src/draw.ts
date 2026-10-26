@@ -278,8 +278,13 @@ export function drawShip(s: Ship){
     ctx.fillStyle = s.boss || s.elite ? '#ffd04a' : '#ff5a3a';
     for (const b of s.blocks.values()) ctx.fillRect(b.i*BS-5-m, b.j*BS-5-m, 10+2*m, 10+2*m);
   }
-  for (const b of s.blocks.values())
+  // mid-roll the ship flickers half see-through
+  const ghost = (s.ghost || 0) > G.time;
+  for (const b of s.blocks.values()){
+    if (ghost) ctx.globalAlpha = .45 + .2*Math.sin(G.time*50);
     drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, b.firing);
+  }
+  ctx.globalAlpha = 1;
   // ion-jammed weapons flicker violet
   for (const b of s.blocks.values()) if ((b.jam || 0) > G.time){
     ctx.globalAlpha = .35 + .3*Math.sin(G.time*40 + b.i*3); ctx.fillStyle = '#a070ff'; ctx.fillRect(b.i*BS-5, b.j*BS-5, 10, 10); ctx.globalAlpha = 1;
@@ -562,6 +567,11 @@ export function renderCombat(){
     }
     // small print on the full-resolution layer, so it stays a quiet footnote
     hctx.font = FONT(8); hctx.textAlign = 'left'; hctx.fillStyle = on ? '#ffc46b' : '#e2ecff'; hctx.globalAlpha = on ? 1 : .45;
+    // the cockpit ability and its cooldown, just above
+    const C = cockpit(), rdy = G.abT <= 0;
+    hctx.fillStyle = rdy ? '#7fe8ff' : '#8497c4'; hctx.globalAlpha = rdy ? 1 : .7;
+    hctx.fillText(`RIGHT-CLICK / E: ${C.abName.split(':')[0].toUpperCase()}${rdy ? '' : ' · ' + Math.ceil(G.abT) + 's'}`, 8*PX, ly*PX - 13);
+    hctx.fillStyle = on ? '#ffc46b' : '#e2ecff'; hctx.globalAlpha = on ? 1 : .45;
     hctx.fillText(on ? (G.shiftAbs ? 'NOSE ON MOUSE · WASD SCREEN' : 'NOSE ON MOUSE · A/D STRAFE') : 'SHIFT: NOSE FOLLOWS MOUSE', 8*PX, ly*PX); hctx.globalAlpha = 1;
   }
 

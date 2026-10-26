@@ -1,6 +1,6 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, cockpit, cpUnlocked, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
+import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, cockpit, cpSpeed, cpTurn, cpUnlocked, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
 import { aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
@@ -73,7 +73,7 @@ export function select(t: BlockType){
 export function designStats(){
   const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), o:G.dirs.get(k)||0}));
   const ph = physics(cells, designType);
-  let dps = 0, hp = 0, pd = 0, sh = 0, fb = 0, bb = 0, badW = 0, badT = 0, weakT = 0, eGen = 6, eCap = 40, eUse = 0;
+  let dps = 0, hp = 0, pd = 0, sh = 0, fb = 0, bb = 0, badW = 0, badT = 0, weakT = 0, eGen = 6*cockpit().en, eCap = 40*cockpit().en, eUse = 0;
   for (const c of cells){
     const d = T[c.t], m = LV(c.t); hp += (d.hp || 0)*m;
     if (aimsOut(c.t)){ const fc = arcClear(c.i, c.j, c.o, c.t); if (fc === 0) badT++; else if (fc < .4) weakT++; }
@@ -92,8 +92,8 @@ export function designStats(){
   }
   // hangar upgrades apply on top of block levels
   return {n:cells.length, hp:hp*HM.hp(), dps:dps*HM.dmg(), pd, sh, fb, bb, badW, badT, weakT, eGen:eGen*HM.en(), eCap:eCap*HM.en(), eUse, badE:ph.engines.filter(e => !e.active).length,
-    fore:dirSpeed(ph,0,-1), side:Math.max(dirSpeed(ph,1,0), dirSpeed(ph,-1,0)), aft:dirSpeed(ph,0,1),
-    turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia, ph.mass)*cockpit().turn};
+    fore:dirSpeed(ph,0,-1)*cpSpeed(), side:Math.max(dirSpeed(ph,1,0), dirSpeed(ph,-1,0))*cpSpeed(), aft:dirSpeed(ph,0,1)*cpSpeed(),
+    turn:turnOf(ph.torque + (ph.jetCW+ph.jetCCW)/2, ph.inertia, ph.mass)*cpTurn()};
 }
 export function syncUI(){
   const s = G.stage, R = buildR(), S = scaleOf(s);
@@ -115,7 +115,7 @@ export function syncUI(){
   // Engineering picks the cockpit; in a run it is fixed
   const cps = $('cockpits'); cps.hidden = !G.outfit;
   if (G.outfit) cps.innerHTML = '<h3 class="palh">Cockpit</h3>' + (Object.keys(COCKPITS) as CockpitId[]).filter(id => !COCKPITS[id].off).map(id =>
-    `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"${cpUnlocked(id) ? '' : ' disabled'}><span><span class="nm">${COCKPITS[id].name}</span><span class="ct">${cpUnlocked(id) ? COCKPITS[id].desc : `Locked. Reach sector ${COCKPITS[id].unlock} to unlock it.`}</span></span></button>`).join('');
+    `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"${cpUnlocked(id) ? '' : ' disabled'}><span><span class="nm">${COCKPITS[id].name}</span><span class="ct">${cpUnlocked(id) ? `${COCKPITS[id].desc} Right-click: ${COCKPITS[id].abName}.` : `Locked. Reach sector ${COCKPITS[id].unlock} to unlock it.`}</span></span></button>`).join('');
   GROUPS.forEach((_, n) => { $('palh-'+n).hidden = !PAL.some(t => groupOf(t)===n && owned(t)); });
   const rb = $<HTMLButtonElement>('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
@@ -125,7 +125,9 @@ export function syncUI(){
   const st = designStats(), ms = (v: number) => (v/BS).toFixed(1);
   const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
   $('stats').innerHTML =
-    `<dt>Cockpit</dt><dd>${cockpit().name.replace(' cockpit', '')}</dd><dt>Blocks</dt><dd>${blockCount()}</dd><dt>Structure</dt><dd>${Math.round(st.hp)} hp</dd><dt>Life</dt><dd>${Math.round(st.hp*LIFE)}</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
+    `<dt>Cockpit</dt><dd>${cockpit().name.replace(' cockpit', '')}</dd>` +
+    (cockpit().small ? `<dt>Small-ship edge</dt><dd class="${smallK() < 1 ? 'gold' : ''}">${Math.round(smallK()*100)}%${smallK() < 1 ? ' · fades by 40 blocks' : ''}</dd>` : '') +
+    `<dt>Blocks</dt><dd>${blockCount()}</dd><dt>Structure</dt><dd>${Math.round(st.hp)} hp</dd><dt>Life</dt><dd>${Math.round(st.hp*LIFE)}</dd><dt>Firepower</dt><dd>${Math.round(st.dps)} dmg/s</dd>` +
     `<dt>Speed fore</dt><dd>${ms(st.fore)} m/s</dd><dt>Speed side / aft</dt><dd>${ms(st.side)} / ${ms(st.aft)}</dd>` +
     `<dt>Energy</dt><dd class="${st.eUse > st.eGen ? 'gold' : ''}">+${Math.round(st.eGen)}/s · uses ${Math.round(st.eUse)}/s · ${Math.round(st.eCap)}</dd>` +
     `<dt>Turn rate</dt><dd>${Math.round(st.turn*180/Math.PI)}°/s</dd><dt>Shields / PD</dt><dd>${st.sh} / ${st.pd}</dd>` +
