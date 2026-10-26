@@ -193,7 +193,9 @@ export interface GameState {
   span: number; spanT: number; span0: number; spanAt: number; spanStage: number | null; fit: number; swarmT: number;
   paused: boolean; aimAuto: boolean; /** with Shift held, WASD moves in screen directions instead of along the ship */ shiftAbs: boolean; /** no screen shake and no impact frames */ calm: boolean; /** impact frame: seconds of inverted picture left */ impT: number;
   /** the cockpit ability: seconds of cooldown left, and a request from right-click or E waiting for the next update */
-  abT: number; abReq: boolean; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
+  abT: number; abReq: boolean;
+  /** Fire control runs until fireT; a Salvo lets missile launchers fire on their own until salvoT */
+  fireT: number; salvoT: number; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
   joy: Stick | null; aimJoy: Stick | null;
   banner: Banner | null; deadT: number; earned: number; shake: number; aim: { x: number; y: number };
 }

@@ -117,16 +117,21 @@ export const tierOf = (s: number) => Math.floor(s*1.5 + 1);
 // Cockpits: the core comes in variants picked in Engineering. Each brings its own core gun, a right-click ability with a
 // cooldown (s), and bonuses: turn and range multiply, en scales the core's energy, coreHp its hit points, and small ships
 // (small:true) get faster, quicker to turn and tougher the fewer blocks they have (see smallK).
-type AbilityId = 'jump' | 'roll';
+type AbilityId = 'jump' | 'roll' | 'fire' | 'salvo' | 'scramble';
 const STD_GUN: GunDef = {range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true};
-export const COCKPITS: Record<'std' | 'fighter' | 'battle', {name: string; desc: string; turn: number; range: number; unlock: number; off: boolean;
-  gun: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean; arc: number}> = {
+// craftHp and build scale hangar craft health and bay rebuild speed; mrl scales how fast missile and torpedo launchers reload.
+export const COCKPITS: Record<'std' | 'fighter' | 'cruiser' | 'carrier' | 'battle', {name: string; desc: string; turn: number; range: number; unlock: number; off: boolean;
+  gun: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean; arc: number; craftHp?: number; build?: number; mrl?: number}> = {
   std:    {name:'Standard cockpit', desc:'Balanced, no strings attached.', turn:1, range:1, unlock:1, off:false,
     gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1},
   fighter:{name:'Interceptor cockpit', desc:'Twin rapid guns, turrets swing 25% wider. Small ships fly faster, turn quicker and take less damage; the edge fades by 40 blocks. Weaker core.', turn:1, range:1, unlock:2, off:false,
     gun:{range:200, cd:.13, spd:720, dmg:1.3, spread:.05, r:1.6, arc:Math.PI, over:true, pellets:2, fan:.07}, ab:'roll', abName:'Evasive roll: a burst of speed, untouchable for half a second', abCd:6, en:1, coreHp:.7, small:true, arc:1.25},
-  battle: {name:'Command bridge', desc:'Fire control: every weapon reaches 10% further.', turn:1, range:1.1, unlock:5, off:true,
-    gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1},
+  cruiser:{name:'Cruiser bridge', desc:'Fires small homing missiles. Missile and torpedo launchers reload 25% faster. Turns 15% slower.', turn:.85, range:1, unlock:4, off:false,
+    gun:{range:700, cd:1.4, spd:220, dmg:6, spread:.3, r:2, arc:Math.PI, over:true, homing:true}, ab:'salvo', abName:'Salvo: every missile and torpedo launcher fires at once', abCd:15, en:1, coreHp:1, small:false, arc:1, mrl:1.25},
+  carrier:{name:'Carrier deck', desc:'A light rapid gun. Fighters and bombers have 25% more health and bays rebuild them 50% faster.', turn:1, range:1, unlock:5, off:false,
+    gun:{range:200, cd:.22, spd:650, dmg:2, spread:.06, r:1.6, arc:Math.PI, over:true}, ab:'scramble', abName:'Scramble: every bay launches or refits its craft at once', abCd:25, en:1, coreHp:1, small:false, arc:1, craftHp:1.25, build:1.5},
+  battle: {name:'Command bridge', desc:'A heavy long-range cannon. Twice the core health, every weapon reaches 10% further. Turns 30% slower.', turn:.7, range:1.1, unlock:7, off:false,
+    gun:{range:300, cd:.9, spd:520, dmg:14, spread:.015, r:3, arc:Math.PI, over:true, fx:'oval'}, ab:'fire', abName:'Fire control: every weapon fires 50% faster for 4 s', abCd:20, en:1, coreHp:2, small:false, arc:1},
 };
 export type CockpitId = keyof typeof COCKPITS;
 export const cockpit = () => COCKPITS[G.cockpit] || COCKPITS.std;

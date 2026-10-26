@@ -26,6 +26,8 @@ export function ionJam(e: Ship, hit: Block){
   for (const g of [...e.guns, ...e.epd, ...e.bays]) if (Math.hypot(g.i-hit.i, g.j-hit.j) <= ION_R) g.jam = G.time + ION_T;
 }
 /** Fires the cockpit's right-click ability toward the aim point (ax, ay); (ux, uy) is the way the player is steering, if any. */
+/** Missile, MIRV and torpedo launchers: the guns a Salvo fires and a Cruiser reloads faster. */
+const missileGun = (g: Block) => { const gun = def(g.t)?.gun; return !!gun && (!!gun.homing || !!gun.mirv || gun.fx==='torp') && g.t!=='core'; };
 export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: number){
   const C = cockpit(), SC = G.SC;
   G.abT = C.abCd;
@@ -35,10 +37,25 @@ export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: numb
     const tx = clamp(p.x + dx/d*L, 0, G.AW), ty = clamp(p.y + dy/d*L, 0, G.AH);
     boomAt(p.x, p.y, p.r*.7 + 6*SC, .15); sparks(p.x, p.y, Math.atan2(dy, dx), 10, 380*SC, ['#ffffff','#a8ecff','#c8b0ff']);
     p.warpA = Math.atan2(p.y - ty, p.x - tx); p.x = tx; p.y = ty; p.warp = .3; sfx('launch', .8);
-  } else {
+  } else if (C.ab==='roll'){
     // evasive roll: a hard shove the way the ship is steering (or toward the mouse), and half a second untouchable
     let vx = ux, vy = uy; if (!vx && !vy){ const d = Math.hypot(ax - p.x, ay - p.y) || 1; vx = (ax - p.x)/d; vy = (ay - p.y)/d; }
     p.vx += vx*520*SC; p.vy += vy*520*SC; p.ghost = G.time + .5; sfx('launch', .5);
+  } else if (C.ab==='fire'){
+    // fire control: every weapon cycles 50% faster for a few seconds
+    G.fireT = G.time + 4; sfx('upgrade');
+    G.fx.push({k:'ring', x:p.x, y:p.y, r:p.r*1.6 + 20*SC, life:.5, max:.5, col:'#ff8a00'});
+  } else if (C.ab==='salvo'){
+    // salvo: every missile and torpedo launcher is reloaded and fires on its own at the nearest target
+    for (const g of p.guns) if (missileGun(g)) g.cd = 0;
+    G.salvoT = G.time + .3; sfx('missile');
+  } else {
+    // scramble: empty bays launch now, craft already out are patched up and sent back to fight
+    for (const b of p.bays){
+      if (!b.ally) b.bt = 0;
+      else { const A = b.ally; for (const x of A.blocks.values()) x.hp = x.max; A.life = A.lifeMax; A.sortie = CRAFT[b.t as keyof typeof CRAFT].sortie; }
+    }
+    sfx('launch');
   }
 }
 export function update(dt: number){
@@ -171,12 +188,15 @@ export function update(dt: number){
   };
   if (p.alive && enemies.length){
     // turrets: inside their arc and with a clear line out of the hull
+    // Fire control speeds every weapon's cycle; a Cruiser reloads its launchers faster; a Salvo fires them on its own
+    const RATE = G.fireT > G.time ? 1.5 : 1, salvo = G.salvoT > G.time;
     for (const g of p.guns){
-      if (!may(g)) continue;
-      if (g.cd > 0){ g.cd -= dt; if (g.cd > 0) continue; }
+      const ms = missileGun(g), self = salvo && ms;
+      if (!may(g) && !self) continue;
+      if (g.cd > 0){ g.cd -= dt*RATE*(ms ? cockpit().mrl || 1 : 1); if (g.cd > 0) continue; }
       const gun = def(g.t)!.gun!, arc = cpArc(gun.arc || 0), [wx,wy] = wpos(p,g);
       let tg = tgtM, tx = aimX(g), ty = aimY(g);
-      if (isAuto(g)){
+      if (isAuto(g) || self){
         const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RM, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak');
         if (!P){ g.cd = .15; continue; }
         [tg, tx, ty] = P;
@@ -197,7 +217,7 @@ export function update(dt: number){
     const RG = T.rail.rail!;
     for (const h of p.rails){
       if (!may(h)) continue;
-      if (h.cd > 0){ h.cd -= dt; if (h.cd > 0) continue; }
+      if (h.cd > 0){ h.cd -= dt*RATE; if (h.cd > 0) continue; }
       if (!h.lane) continue;
       const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, RG.range*SC*RM, 0, true) : null;
       if (isAuto(h) && !P) continue;
@@ -267,7 +287,7 @@ export function update(dt: number){
   // hangar bays: launch a craft, take it back after its sortie, send it out again; a lost craft takes longer to replace
   if (p.alive) for (const b of p.bays){
     if (!isCraft(b.t)) continue;
-    if (b.ally && !b.ally.alive){ b.ally = null; b.bt = CRAFT[b.t].rebuild; }
+    if (b.ally && !b.ally.alive){ b.ally = null; b.bt = CRAFT[b.t].rebuild/(cockpit().build || 1); }
     if (!b.ally && (b.bt = (b.bt || 0) - dt) <= 0) launchCraft(p,b);
   }
   for (const A of allies) if (A.alive) updateCraft(A, dt, enemies);

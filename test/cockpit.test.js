@@ -28,3 +28,16 @@ ok('mid-roll nothing gets through', core.hp === hp1);
 const big = new Map([[CORE,'core']]); for (let i=-3; i<=3; i++) for (let j=1; j<=6; j++) big.set(K(i,j),'hull');
 G.design = big;
 ok('a 43-block interceptor has lost its edge', smallK() === 0, blockCount());
+// cruiser, carrier and command bridge
+fight('cruiser');
+ok('the cruiser core fires homing missiles', !!T.core.gun.homing);
+G.design = new Map([[CORE,'core'],[K(0,-1),'missile']]); G.dirs = new Map(); startFight('fight'); G.waves = []; G.ships = [G.player];
+const ml = G.player.guns.find(g => g.t==='missile'); ml.cd = 2;
+G.fireHeld = false; G.mouse.has = true; G.aimAuto = false; G.auto = [false,false,false,false,false]; dummy(300); G.abReq = true; sim(.2);
+ok('Salvo reloads and fires the missile launchers on their own', ml.cd > 1 && G.pb.some(b => b.homing), `cd ${ml.cd.toFixed(2)}`);
+fight('battle');
+ok('the command bridge doubles core health', G.player.blocks.get(CORE).max >= 2*T.core.hp*.99);
+G.abReq = true; sim(.1);
+ok('Fire control speeds every weapon for a while', G.fireT > G.time + 3);
+G.cockpit = 'carrier';
+ok('the carrier rebuilds craft faster', cockpit().build > 1 && cockpit().craftHp > 1);

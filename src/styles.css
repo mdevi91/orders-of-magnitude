@@ -236,6 +236,9 @@ button,.pal,label{touch-action:manipulation}
 .row .rar{font-style:normal;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
 .row .rot{flex:none;font-family:var(--display);font-weight:400;font-size:18px;letter-spacing:.04em;padding:2px 12px;font-variant-numeric:tabular-nums}
 .row.locked{opacity:.5}
+/* test mode: one button per starting sector */
+.tsec{display:flex;gap:3px;flex:none!important}
+.tsec .rot{padding:2px 8px;font-family:var(--display);font-weight:400;font-size:16px}
 .bi{width:28px;height:28px;flex:none;image-rendering:pixelated}
 /* segmented level bar */
 .pips{display:inline-flex;gap:2px;vertical-align:middle}

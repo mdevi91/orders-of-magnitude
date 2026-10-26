@@ -46,7 +46,7 @@ export function updateECraft(A: Ship, dt: number, allies: Ship[]){
 export function launchCraft(p: Ship, b: Block){
   if (!isCraft(b.t)) return;
   const C = CRAFT[b.t], [wx,wy] = wpos(p,b), dir = p.a + FA[b.o], v = C.spd*G.SC*.6;
-  const A = makeShip(craftDesign(b.t), 'a', wx, wy, C.hp*LV(b.t));
+  const A = makeShip(craftDesign(b.t), 'a', wx, wy, C.hp*LV(b.t)*(cockpit().craftHp || 1));
   A.a = dir + Math.PI/2; A.c = Math.cos(A.a); A.sn = Math.sin(A.a); A.aimA = dir;
   A.vx = p.vx + Math.cos(dir)*v; A.vy = p.vy + Math.sin(dir)*v;
   A.kind = b.t; A.bay = b; A.sortie = C.sortie; A.cd = .5; A.pick = 0; A.orb = rand(0,TAU);
@@ -63,7 +63,7 @@ export function updateCraft(A: Ship, dt: number, enemies: Ship[]){
   const home = A.sortie <= 0;
   if (home){
     [tx,ty] = wpos(p,bay);
-    if (Math.hypot(tx-A.x, ty-A.y) < BS*1.5){ A.alive = false; bay.ally = null; bay.bt = C.rearm; sfx('dock'); return; }
+    if (Math.hypot(tx-A.x, ty-A.y) < BS*1.5){ A.alive = false; bay.ally = null; bay.bt = C.rearm/(cockpit().build || 1); sfx('dock'); return; }
   } else {
     if (!A.tgt || !A.tgt.alive || (A.pick -= dt) <= 0){
       A.pick = 1.5; A.tgt = null; let bd = 1e18;
