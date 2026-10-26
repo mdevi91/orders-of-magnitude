@@ -6,7 +6,7 @@ import { BS, FA, FACE, K, KI, KJ, SWING, TAU, angDiff, clamp, rand } from './gri
 import { laneFwd } from './physics';
 import { wpos } from './ships';
 import { G, buildR, spanFor } from './state';
-import { JOY_R } from './update';
+import { JOY_R, keys } from './update';
 import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship, Stick, Team } from './types';
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 
@@ -539,6 +539,18 @@ export function renderCombat(){
   }
 
   if (G.aimAuto){ ctx.fillStyle = '#e2ecff'; ctx.font = FONT(8); ctx.textAlign = 'left'; ctx.fillText('AUTO-AIM', 8, H - 10); }
+  // Shift aiming: a faint reminder while it is off; held, a gold line ties the nose to the mouse
+  if (G.mouse.has && !G.joy && p.alive){
+    const on = keys.ShiftLeft || keys.ShiftRight, ly = H - (G.aimAuto ? 22 : 10);
+    if (on){
+      const px = sx(p.x), py = sy(p.y), mx = G.mouse.x, my = G.mouse.y;
+      ctx.strokeStyle = '#ffc46b'; ctx.lineWidth = 1; ctx.globalAlpha = .55; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(mx, my); ctx.stroke(); ctx.setLineDash([]);
+      ctx.globalAlpha = .9; ctx.beginPath(); ctx.arc(mx, my, 5, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    ctx.font = FONT(8); ctx.textAlign = 'left'; ctx.fillStyle = on ? '#ffc46b' : '#e2ecff'; ctx.globalAlpha = on ? 1 : .4;
+    ctx.fillText(on ? 'NOSE ON MOUSE · A/D STRAFE' : 'HOLD SHIFT: NOSE FOLLOWS MOUSE', 8, ly); ctx.globalAlpha = 1;
+  }
 
   // banner
   if (G.banner){
