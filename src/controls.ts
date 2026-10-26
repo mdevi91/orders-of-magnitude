@@ -11,7 +11,7 @@ import { G } from './state';
 import { syncUI, toast } from './ui';
 import { $ } from './view';
 
-export const abandon = () => { if (confirm('Abandon this run? You keep the data it has earned so far.')) runOver('abandoned'); };
+export const abandon = () => { if (confirm('Abandon this run? You keep the data it has earned so far.')){ G.paused = false; runOver('abandoned'); } };
 export const zoomBtn = (f: number) => { const L = layoutBuild(); zoomAt(L.cx, L.cy, f); };
 export function cycleMirror(){ G.mir = (G.mir + 1) % 4; syncUI(); }
 

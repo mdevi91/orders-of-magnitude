@@ -1,8 +1,9 @@
 import { audio, muted, setMute } from './audio';
+import { abandon } from './controls';
 import { row } from './shop';
 import { G } from './state';
 import { setTutOff, tutOff } from './tutorial';
-import { hideOverlay, showOverlay, toast } from './ui';
+import { hideOverlay, showOverlay, toast, type OverlayAction } from './ui';
 import { $ } from './view';
 
 // ---------- options ----------
@@ -22,7 +23,7 @@ export const optionsOpen = () => !$('overlay').hidden && $('ovTitle').textConten
 export function showOptions(from: () => void = back){
   back = from;
   showOverlay('Options', '<div class="rows">' + OPTS.map(o => row(o.name, o.sub, o.val(), `opt:${o.id}`)).join('') + '</div>',
-    [['Back', () => back()]], false, {eye:'Options · saved in this browser'});
+    [['Back', () => back()], ...(G.stats ? [['Abandon run', abandon, 'ghost reset'] as OverlayAction] : [])], false, {eye:'Options · saved in this browser'});
 }
 export const closeOptions = () => back();
 export function flipOption(id: string){ OPTS.find(o => o.id===id)?.flip(); showOptions(); }

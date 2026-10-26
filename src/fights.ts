@@ -1,6 +1,7 @@
 import { sfx } from './audio';
 import { ewOf, pickWeapon, tierOf } from './catalog';
 import { CORE, K, KI, KJ, NB, TAU, clamp, rand } from './grid';
+import { abandon } from './controls';
 import { undoStack } from './input';
 import { chooseLoot, inc, lootText } from './loot';
 import { runOver } from './runs';
@@ -234,5 +235,5 @@ export function togglePause(){
 }
 export function pauseMenu(){
   showOverlay('Paused', `${NODE[G.fight].name}, wave ${G.waveIdx} of ${G.waves.length}. Fleeing keeps the damage you took and gives no reward.`,
-    [['Resume', togglePause], ['Options', () => showOptions(pauseMenu), 'ghost'], ['Flee', flee, 'ghost']], false, {eye:'Paused'});
+    [['Resume', togglePause], ['Options', () => showOptions(pauseMenu), 'ghost'], ['Flee', flee, 'ghost'], ['Abandon run', abandon, 'ghost reset']], false, {eye:'Paused'});
 }
