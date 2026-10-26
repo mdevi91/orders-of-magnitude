@@ -46,7 +46,7 @@ export function placeCheck(i: number, j: number, t: BlockType, o: Facing): true 
   for (const [a,b] of cells) if (Math.max(Math.abs(a),Math.abs(b)) > R) return 'Outside the build grid';
   const k = K(i,j), cur = G.design.get(k);
   if (cur==='core' || cur==='cockpit') return 'The cockpit stays where it is';
-  if (cur && isPart(cur)) return `Sell that ${T[cur].name.toLowerCase()} first`;
+  if (cur && isPart(cur)) return `Remove that ${T[cur].name.toLowerCase()} first`;
   if (PARTS[t]) for (const [a,b] of cells) if (G.design.has(K(a,b))) return `${T[t].name} needs ${cells.length} empty cells`;
   if (cur===t && (!T[t].rot || (G.dirs.get(k)||0)===oo)) return 'Already placed';
   if (PLATE(t)){

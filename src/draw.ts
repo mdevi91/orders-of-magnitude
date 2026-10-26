@@ -723,7 +723,7 @@ export function renderCombat(){
     // the cockpit ability and its cooldown, just above
     const C = cockpit(), rdy = G.abT <= 0;
     hctx.fillStyle = rdy ? '#7fe8ff' : '#8497c4'; hctx.globalAlpha = rdy ? 1 : .7;
-    hctx.fillText(`RIGHT-CLICK / E: ${C.abName.split(':')[0].toUpperCase()}${rdy ? '' : ' · ' + Math.ceil(G.abT) + 's'}`, 8*PX, ly*PX - 13);
+    hctx.fillText(`RIGHT-CLICK / E: ${C.abName.split(':')[0].toUpperCase()}${rdy ? '' : ' · ' + Math.ceil(G.abT) + 's'} · Q: TARGET`, 8*PX, ly*PX - 13);
     hctx.fillStyle = on ? '#ffc46b' : '#e2ecff'; hctx.globalAlpha = on ? 1 : .45;
     hctx.fillText(on ? (G.shiftAbs ? 'NOSE ON MOUSE · WASD SCREEN' : 'NOSE ON MOUSE · A/D STRAFE') : 'SHIFT: NOSE FOLLOWS MOUSE', 8*PX, ly*PX); hctx.globalAlpha = 1;
   }

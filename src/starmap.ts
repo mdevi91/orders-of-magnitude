@@ -19,7 +19,7 @@ interface NodeDef { name: string; col?: string; g?: string; desc?: string }
 export const NODE = {
   start:  {name:'Jump point', col:'#9aa8d0', g:'o', desc:'Where you entered the sector.'},
   fight:  {name:'Hostiles', col:'#ff7a66', g:'!', desc:'A fight. Salvage, and maybe a block.'},
-  elite:  {name:'Elite', col:'#ff9a3a', g:'!', desc:'One tough warship and an escort. Better loot.'},
+  elite:  {name:'Elite', col:'#ff9a3a', g:'!', desc:'One tough warship. Better loot.'},
   shop:   {name:'Shop', col:'#ffc46b', g:'$', desc:'Buy, sell, upgrade and repair.'},
   event:  {name:'Signal', col:'#5fd8ff', g:'?', desc:'An unknown signal. Could be anything.'},
   salvage:{name:'Wreckage', col:'#7fe07a', g:'*', desc:'Free salvage, unless someone is guarding it.'},

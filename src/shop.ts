@@ -30,7 +30,7 @@ export function openShop(n: MapNode){
   const ups = PAL.filter(t => t!=='sell' && (onShip(t) || (G.inv[t] || 0) > 0)), rep = repTotal(.5), stock = offers.reduce((a, o) => a + o.n, 0), cargo = cargoTypes();
   // full screen: title and hexagon readouts across the top, stock on the left, repair, upgrades and selling on the right
   const tag = (t: string, cls = '') => `<span class="stag ${cls}">${t}</span>`, low = (t: BlockType) => T[t].name.toLowerCase();
-  let s = `<div class="scr-head"><div class="scr-title">${tag('Trade post', 'fill')}${tag(`Sector ${pad2(G.stage)}`)}<h2>Shop</h2></div>` +
+  let s = `<div class="scr-head"><div class="scr-title">${tag('Trading post', 'fill')}${tag(`Sector ${pad2(G.stage)}`)}<h2>Shop</h2></div>` +
     `<div class="hexes">${hexo('Credits', Math.round(G.credits), 'fill')}${hexo('In stock', pad2(stock))}${hexo('Damaged', pad2(G.broken.size), G.broken.size ? 'red' : '')}</div></div>` +
     `<div class="scr-cols"><div class="scr-main"><h3>Stock <small>Prices in cr</small></h3>` +
     offers.map((o, i) => `<div class="sitem">${icon(o.t)}<div class="si-name"><b>${T[o.t].name}</b>${T[o.t].make ? `<i>${T[o.t].make}</i>` : ''}<em style="--rc:${RARITY[rarOf(o.t)].col}">${RARITY[rarOf(o.t)].name}</em><small>${blurb(o.t)}</small></div>` +

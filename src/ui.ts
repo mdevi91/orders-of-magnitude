@@ -155,7 +155,7 @@ export function syncMapPanel(){
   $('mapTitle').textContent = `Sector ${G.stage}`;
   const lead = h ? `<b>${nodeDef(h.type).name}.</b> ${nodeDef(h.type).desc}${canJump(h) ? ' Click to jump.' : ''}`
     : exitNode(cur) ? (G.map.done ? 'The gate is open.' : `The ${nodeDef(cur.type).name.toLowerCase()} blocks the way out.`)
-    : `Pick a lit beacon to jump to. ${G.stage%3===0 ? 'A flagship guards this sector.' : `Flagship in sector ${Math.ceil(G.stage/3)*3}.`}`;
+    : `Pick a lit beacon to jump to. ${G.stage%3===0 ? 'A flagship or starbase guards this sector.' : `Flagship in sector ${Math.ceil(G.stage/3)*3}.`}`;
   $('mapInfo').innerHTML = lead + `<br>Cargo <b>${cargo}</b> block${cargo===1 ? '' : 's'}` + (nb ? `, <b style="color:var(--foe)">${nb} damaged</b>` : '') + '.';
   let lbl = '';
   if (exitNode(cur)) lbl = G.map.done ? `Jump to sector ${G.stage+1}` : `Engage ${nodeDef(cur.type).name.toLowerCase()}`;

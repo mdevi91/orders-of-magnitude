@@ -131,8 +131,8 @@ export function update(dt: number){
   // the auto-aim point: auto-aim, touch without an aim stick, and weapon groups on auto all use it
   let px: number, py: number;
   {
-    let best: Ship | null = null, bd = 1e18;
-    for (const e of enemies){ const d = (e.x-p.x)**2 + (e.y-p.y)**2; if (d < bd){ bd = d; best = e; } }
+    let best: Ship | null = locked(), bd = best ? (best.x-p.x)**2 + (best.y-p.y)**2 : 1e18;
+    if (!best) for (const e of enemies){ const d = (e.x-p.x)**2 + (e.y-p.y)**2; if (d < bd){ bd = d; best = e; } }
     // a loose lead on the target's movement plus a wide wobble, so auto fire is rough and misses a lot
     if (best){
       const d = Math.sqrt(bd), [ox,oy] = wobble(best, d);
