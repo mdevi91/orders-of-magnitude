@@ -189,7 +189,8 @@ export function startFight(kind: FightKind){
   // every sector opens on last sector's view and slowly pulls back to a wider one, even if the hull didn't grow
   if (G.spanStage !== G.stage){ G.span0 = G.spanT ? G.spanT : spanFor(p.r, G.S)*.6; G.spanStage = G.stage; }
   G.spanT = Math.max(spanFor(p.r, G.S), G.span0*1.15); G.span = G.span0; G.fit = 0; G.spanAt = 0; G.swarmT = 4;
-  G.AW = Math.max(1300*G.S, G.spanT*3); G.AH = Math.max(900*G.S, G.spanT*2.2);
+  // a wide-open arena, ten times the old one each way
+  G.AW = 10*Math.max(1300*G.S, G.spanT*3); G.AH = 10*Math.max(900*G.S, G.spanT*2.2);
   // a starbase needs room above the player
   if (kind==='station'){ G.AW *= 1.4; G.AH *= 2; }
   p.x = G.AW/2; p.y = G.AH*(kind==='station' ? .85 : .72);

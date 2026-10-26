@@ -102,7 +102,8 @@ export function update(dt: number){
   if (ax === undefined){ ax = px; ay = py; }
   G.aim = {x:ax, y:ay};
   // desktop fires on click or Space; auto-aim, touch and mouse-less play fire on their own
-  const fire = G.aimAuto || G.fireHeld || keys.Space || !G.mouse.has;
+  // a held trigger always fires, target or not; auto-aim and touch only fire while there is something to shoot at
+  const held = G.fireHeld || keys.Space, fire = held || ((G.aimAuto || !G.mouse.has) && enemies.length > 0);
   // per weapon type: may it fire now, and where does it aim
   const isAuto = (b: Block) => !!G.auto[grpOf(K(b.i,b.j), b.t)-1];
   const may = (b: Block) => fire || isAuto(b), aimX = (b: Block) => isAuto(b) ? px : ax!, aimY = (b: Block) => isAuto(b) ? py : ay;
@@ -191,7 +192,7 @@ export function update(dt: number){
     const b: Ship = best, d = Math.hypot(b.x-wx, b.y-wy), t = spd ? d/spd*rand(.2,1.3) : 0, [ox,oy] = wobble(b, d);
     return [b, b.x + b.vx*t + ox, b.y + b.vy*t + oy];
   };
-  if (p.alive && enemies.length){
+  if (p.alive){
     // turrets: inside their arc and with a clear line out of the hull
     // Fire control speeds every weapon's cycle; a Cruiser reloads its launchers faster; a Salvo fires them on its own
     const RATE = G.fireT > G.time ? 1.5 : 1, salvo = G.salvoT > G.time;
@@ -208,7 +209,8 @@ export function update(dt: number){
       }
       const ang = Math.atan2(ty-wy, tx-wx);
       // out of range: hold fire rather than waste the shot
-      if (gun.range && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > gun.range*SC*RM)){ g.cd = .1; continue; }
+      // out of range: auto fire holds rather than waste the shot; a held trigger fires anyway
+      if (gun.range && (isAuto(g) || self || !held) && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > gun.range*SC*RM)){ g.cd = .1; continue; }
       if (Math.abs(angDiff(ang, p.a + FA[g.o])) > arc) continue;
       if (!gun.homing && !gun.lob && !gun.over && !laneClear(p,g,ang)) continue;
       if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
@@ -229,7 +231,7 @@ export function update(dt: number){
       const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, RG.range*SC*RM, 0, true) : null;
       if (isAuto(h) && !P) continue;
       const tg = P ? P[0] : tgtM, off = angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), face);
-      if (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > RG.range*SC*RM) continue;
+      if ((isAuto(h) || !held) && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > RG.range*SC*RM)) continue;
       if (Math.abs(off) > SWING + .02) continue;
       if (!spend(RG.en)) continue;
       h.cd = RG.cd; h.chg = G.time + RAIL_CHARGE; h.off = off; sfx('pd', .6);
@@ -238,7 +240,7 @@ export function update(dt: number){
   updateSlugs(dt);
   // lasers: continuous beam on whatever is first along their line within range
   if (p.alive) for (const h of p.lasers){
-    h.beam = null; if (!h.lane || !enemies.length || !may(h)) continue;
+    h.beam = null; if (!h.lane || !may(h)) continue;
     const L = T.laser.laser!, [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
     const P = isAuto(h) ? pick(wx, wy, base, SWING, L.range*SC*RM, 0, true) : null;
     if (isAuto(h) && !P) continue;
@@ -250,7 +252,7 @@ export function update(dt: number){
       damage(hit.e, hit.k, L.dps*LV('laser')*HM.dmg()*(1 - .75*hit.t/range)*dt);
       h.beam = [ox, oy, ox + dx*hit.t, oy + dy*hit.t];
       if (Math.random() < .35) sparks(ox + dx*hit.t, oy + dy*hit.t, face+Math.PI, 1, 140*SC, ['#9dff8a','#ffffff']);
-    }
+    } else if (!hit && held && spend(L.en*dt)){ sfx('laser'); h.beam = [ox, oy, ox + dx*range, oy + dy*range]; }
   }
   // tesla coils: lightning to the nearest enemy block in reach, then on to blocks close by; an enemy missile if no hull is in reach
   if (p.alive) for (const c of p.teslas){

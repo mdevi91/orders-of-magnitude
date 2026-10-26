@@ -17,10 +17,17 @@ for (const t of W){
   const near = dummy(t==='mine' ? 70 : R*.6 + 25);
   sim(8);
   ok(`${t} hits inside range`, hpLost(near) > 0, `range ${Math.round(R)}, damage ${Math.round(hpLost(near))}`);
+  // a held trigger fires whether or not anything is in range
   fresh(); armed(t);
+  dummy(R*1.4 + 70);
+  let shots = 0;
+  for (let i=0; i<60; i++){ sim(1/30); shots += G.pb.length + G.slugs.length + G.player.lasers.filter(h => h.beam).length + G.player.rails.filter(h => h.chg).length; }
+  if (t !== 'tesla') ok(`${t} fires on a held trigger beyond range`, shots > 0, `shots seen ${shots}`);
+  // auto fire holds rather than waste shots
+  fresh(); armed(t); G.fireHeld = false; G.auto = [true,true,true,true,true];
   const far = dummy(R*1.4 + 70);
   sim(8);
-  ok(`${t} holds fire beyond range`, hpLost(far) === 0 && !G.pb.length, `damage ${Math.round(hpLost(far))}, shots in flight ${G.pb.length}`);
+  ok(`${t} auto fire holds beyond range`, hpLost(far) === 0 && !G.pb.length, `damage ${Math.round(hpLost(far))}, shots in flight ${G.pb.length}`);
 }
 // falloff: full damage over the first half of the flight, half at the very end
 const b = {fall:true, life0:1};
