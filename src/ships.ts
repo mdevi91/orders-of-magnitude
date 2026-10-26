@@ -258,6 +258,8 @@ export function killShip(s: Ship){
   if (big) for (let n=0; n<Math.min(6, 1 + s.r/BS/2); n++){ const a = rand(0, Math.PI*2), d = rand(.2, .8)*s.r; boomAt(s.x + Math.cos(a)*d, s.y + Math.sin(a)*d, rand(6, 11)*SC, rand(.25, .45)); }
   sparks(s.x, s.y, 0, big ? 22 : 8, (big ? 380 : 200)*SC, s.team==='e' ? ['#ffffff','#ffd0a0','#ff8a5a'] : ['#ffffff','#a8ecff','#5fd8ff']);
   if (big && !REDUCE) G.shake = Math.min(6, G.shake + (s.team==='p' || s.boss ? 5 : 2.5));
+  // an impact frame for every warship that goes down, longer for a capital ship
+  if (s.team==='e' && !s.fodder && !s.craft && !REDUCE && !G.calm) G.impT = Math.max(G.impT, s.boss ? .14 : .06);
   G.fx.push({k:'ring', x:s.x, y:s.y, r:s.r*1.8 + 20*G.SC, life:.7, max:.7, col:s.team==='p' ? '#ffffff' : '#ff9a7a'});
   if (s.team==='e'){
     sfx(s.boss ? 'big' : 'boom', Math.min(1.5, .4 + s.r/60));

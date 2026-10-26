@@ -14,7 +14,7 @@ const OPTS: {id: string; name: string; sub: string; val: () => string; flip: () 
   {id:'shift', name:'Shift steering', sub:'While Shift is held the nose follows the mouse. WASD then moves along the ship (W forward, A/D slide sideways) or straight up, left, down and right on screen.',
     val:() => G.shiftAbs ? 'Screen' : 'Ship', flip:() => { G.shiftAbs = !G.shiftAbs; store('oom-shiftabs', G.shiftAbs); }},
   {id:'sound', name:'Sound', sub:'All sound effects.', val:() => muted ? 'Off' : 'On', flip:() => { audio(); setMute(!muted); }},
-  {id:'shake', name:'Screen shake', sub:'The camera kick from hits and explosions.', val:() => G.calm ? 'Off' : 'On', flip:() => { G.calm = !G.calm; store('oom-calm', G.calm); }},
+  {id:'shake', name:'Screen shake', sub:'The camera kick and the flash frames from hits and kills.', val:() => G.calm ? 'Off' : 'On', flip:() => { G.calm = !G.calm; store('oom-calm', G.calm); }},
   {id:'tips', name:'Tutorial tips', sub:'Hints the first time you meet each part of the game.', val:() => tutOff ? 'Off' : 'On', flip:() => setTutOff(!tutOff)},
 ];
 let back: () => void = hideOverlay;

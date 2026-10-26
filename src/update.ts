@@ -44,6 +44,7 @@ export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: numb
 export function update(dt: number){
   const RM = cockpit().range; // the command bridge stretches every weapon's reach
   G.time += dt;
+  if (G.impT > 0) G.impT -= dt;
   if (G.stats) G.stats.secs = (G.stats.secs || 0) + dt;
   const p = G.player!, SC = G.SC;
   for (const s of G.ships){ s.c = Math.cos(s.a); s.sn = Math.sin(s.a); }
@@ -190,7 +191,7 @@ export function update(dt: number){
       const n = gun.pellets || 1;
       for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t)*HM.dmg());
       sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
-      if (gun.fx==='oval') boomAt(wx + Math.cos(ang)*6, wy + Math.sin(ang)*6, 5*SC, .07);
+      if (gun.fx==='oval'){ boomAt(wx + Math.cos(ang)*6, wy + Math.sin(ang)*6, 5*SC, .07); G.fx.push({k:'star', x:wx + Math.cos(ang)*8, y:wy + Math.sin(ang)*8, a:ang, r:(gun.r*2 + 4)*SC, life:.07, max:.07}); }
     }
     // railguns: fire when the aim point sits on their line
     const RG = T.rail.rail!;

@@ -59,7 +59,7 @@ export interface CraftDef {
 }
 
 /** A shield bubble: one per shield block. */
-export interface Bubble { hp: number; max: number; down: number; last: number; flash: number }
+export interface Bubble { hp: number; max: number; down: number; last: number; flash: number; /** bearing of the last hit, for the hexagon flash */ ha?: number }
 
 /** A block on a live ship. */
 export interface Block {
@@ -137,6 +137,7 @@ export type Fx =
   | { k: 'smoke'; x: number; y: number; vx: number; vy: number; r: number; life: number; max: number }
   | { k: 'boom'; x: number; y: number; r: number; life: number; max: number }
   | { k: 'ring'; x: number; y: number; r: number; life: number; max: number; col: string }
+  | { k: 'star'; x: number; y: number; a: number; r: number; life: number; max: number }
   | { k: 'txt'; x: number; y: number; vy: number; text: string; life: number; max: number };
 
 export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; max: number; kind?: 'rail' | 'tesla' | 'epd' }
@@ -187,7 +188,7 @@ export interface GameState {
   waves: WavePlan; waveIdx: number; waveGap: number; time: number; S: number; SC: number; AW: number; AH: number;
   camX: number; camY: number; camOX: number; camOY: number; zoom: number; camMul: number;
   span: number; spanT: number; span0: number; spanAt: number; spanStage: number | null; fit: number; swarmT: number;
-  paused: boolean; aimAuto: boolean; /** with Shift held, WASD moves in screen directions instead of along the ship */ shiftAbs: boolean; /** no screen shake */ calm: boolean;
+  paused: boolean; aimAuto: boolean; /** with Shift held, WASD moves in screen directions instead of along the ship */ shiftAbs: boolean; /** no screen shake and no impact frames */ calm: boolean; /** impact frame: seconds of inverted picture left */ impT: number;
   /** the cockpit ability: seconds of cooldown left, and a request from right-click or E waiting for the next update */
   abT: number; abReq: boolean; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
   joy: Stick | null; aimJoy: Stick | null;

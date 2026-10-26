@@ -78,7 +78,7 @@ export function shieldBlock(p: Ship, b: Bullet){
     const B = s.bub!; if (B.down > 0 || B.hp <= 0) continue;
     const [cx,cy] = wpos(p,s), dx = b.x-cx, dy = b.y-cy;
     if (dx*dx + dy*dy > (rad + b.r)**2 || dx*b.vx + dy*b.vy > 0) continue;
-    B.hp -= b.dmg*(b.ion ? 5 : 1); B.last = B.flash = G.time; sfx('shield', p.team==='p' ? 1 : .5);
+    B.hp -= b.dmg*(b.ion ? 5 : 1); B.last = B.flash = G.time; B.ha = Math.atan2(dy, dx); sfx('shield', p.team==='p' ? 1 : .5);
     sparks(b.x, b.y, Math.atan2(dy,dx), 4, 120*G.SC, ['#5fd3ff','#ffffff']);
     if (B.hp <= 0){ sfx('pop'); B.hp = 0; B.down = SH.down; G.fx.push({k:'ring', x:cx, y:cy, r:rad*1.1, life:.5, max:.5, col:p.team==='p' ? '#5fd3ff' : '#ff9a5a'}); }
     return true;

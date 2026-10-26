@@ -11,7 +11,8 @@ import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship,
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 
 // ---------- drawing ----------
-// VGA-style metal sprites: each block is a bevelled plate (light top-left, shadow bottom-right) with its part drawn on top.
+// Cel-shaded metal sprites, 90s mecha anime style: each block is an inked plate with a flat face, a hard shadow band and a
+// sharp highlight edge, with its part drawn on top.
 // Palettes are [highlight, base, shadow].
 type Ctx = CanvasRenderingContext2D;
 /** [highlight, base, shadow] */
@@ -21,9 +22,21 @@ export const MET: Record<'p'|'e', {hull: Pal3; armor: Pal3; dark: Pal3}> = {
   e:{hull:['#e08a62','#9a4630','#4a1c12'], armor:['#b8705a','#6a3024','#30120c'], dark:['#8a4a3a','#4a2018','#200a06']},
 };
 export function plate(X: Ctx, x: number, y: number, m: Pal3){
-  X.fillStyle = m[1]; X.fillRect(x-5,y-5,10,10);
-  X.fillStyle = m[0]; X.fillRect(x-5,y-5,10,1.3); X.fillRect(x-5,y-5,1.3,10);
-  X.fillStyle = m[2]; X.fillRect(x-5,y+3.7,10,1.3); X.fillRect(x+3.7,y-5,1.3,10);
+  X.fillStyle = '#0b0d12'; X.fillRect(x-5,y-5,10,10);
+  X.fillStyle = m[1]; X.fillRect(x-4.4,y-4.4,8.8,8.8);
+  X.fillStyle = m[2]; X.fillRect(x-4.4,y+1.2,8.8,3.2);
+  X.fillStyle = m[0]; X.fillRect(x-4.4,y-4.4,8.8,1); X.fillRect(x-4.4,y-4.4,1,5);
+}
+// a burst of hexagons on a shield where it was just hit
+function hexFlash(X: Ctx, cx: number, cy: number, r: number, ha: number, col: string){
+  const hs = Math.max(2, r*.16), px = cx + Math.cos(ha)*r*.82, py = cy + Math.sin(ha)*r*.82;
+  X.save(); X.beginPath(); X.arc(cx, cy, r, 0, TAU); X.clip();
+  X.strokeStyle = col; X.lineWidth = 1;
+  for (const [q, w] of [[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1]]){
+    const hx = px + hs*1.5*q, hy = py + hs*Math.sqrt(3)*(w + q/2);
+    X.beginPath(); for (let n=0; n<6; n++){ const a = n*Math.PI/3; X.lineTo(hx + Math.cos(a)*hs*.92, hy + Math.sin(a)*hs*.92); } X.closePath(); X.stroke();
+  }
+  X.restore();
 }
 export function orb(X: Ctx, x: number, y: number, r: number, cols: string[]){ for (let n=0; n<cols.length; n++){ X.fillStyle = cols[n]; X.beginPath(); X.arc(x - n*r*.12, y - n*r*.12, r*(1 - n/cols.length), 0, TAU); X.fill(); } }
 export function barrel(X: Ctx, x: number, y: number, ca: number, sa: number, len: number, w: number, m: Pal3){
@@ -47,7 +60,9 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
   const ca = Math.cos(ang), sa = Math.sin(ang), gun: Pal3 = team!=='e' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
   switch (t as string){
     case 'hull':
-      X.fillStyle = base[2]; X.fillRect(x-.5,y-3,1,6); break;
+      // a panel seam and four rivets
+      X.fillStyle = base[2]; X.fillRect(x-.5,y-3,1,6);
+      X.fillStyle = base[0]; for (const [a,b] of [[-3.2,-3.2],[2.4,-3.2],[-3.2,2.4],[2.4,2.4]]) X.fillRect(x+a,y+b,.8,.8); break;
     case 'armor':
       X.fillStyle = base[2]; X.fillRect(x-3,y-3,6,6); X.fillStyle = base[0]; X.fillRect(x-3,y-3,5,1); X.fillRect(x-3,y-3,1,5);
       X.fillStyle = base[0]; for (const [a,b] of [[-3.4,-3.4],[2.6,-3.4],[-3.4,2.6],[2.6,2.6]]) X.fillRect(x+a,y+b,.9,.9); break;
@@ -62,9 +77,10 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.globalAlpha = .55 + .35*Math.sin(G.time*4); X.strokeStyle = team!=='p' ? '#ffb08a' : cp==='fighter' ? '#7fffd0' : cp==='battle' ? '#ffd27a' : '#7fe8ff'; X.lineWidth = .9;
       X.beginPath(); X.arc(x,y,5.6 + .5*Math.sin(G.time*4),0,TAU); X.stroke(); X.globalAlpha = 1; break; }
     case 'cannon': case 'gun':
-      barrel(X,x,y,ca,sa,7,2.4,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
+      // a long slim barrel through a cooling shroud
+      barrel(X,x,y,ca,sa,9,1.8,gun); barrel(X,x,y,ca,sa,5,3.2,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
     case 'bigcannon':
-      barrel(X,x,y,ca,sa,9,3.6,gun); orb(X,x,y,4, [gun[2],gun[1],gun[0]]);
+      barrel(X,x,y,ca,sa,11.5,2.6,gun); barrel(X,x,y,ca,sa,6,4.6,gun); orb(X,x,y,4, [gun[2],gun[1],gun[0]]);
       X.fillStyle = gun[2]; X.fillRect(x-.8,y-.8,1.6,1.6); break;
     case 'bigcannon_b':
       X.fillStyle = '#20242c'; X.fillRect(x-4,y-4,8,8); X.fillStyle = '#5a6270'; X.fillRect(x-4,y-4,8,1.2); X.fillRect(x-4,y+2.8,8,1.2);
@@ -185,8 +201,13 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       orb(X,x,y,1.6, ['#2a1a4a','#9a6af0','#e8dcff']); break;
   }
   if (rot) X.restore();
-  // battle damage: scorch the plate as it loses hit points
-  if (ratio < .7){ X.globalAlpha = (1-ratio)*.6; X.fillStyle = '#000000'; X.fillRect(bx-5,by-5,10,10); X.globalAlpha = 1; }
+  // battle damage: scorched, cracked plating with the hot internals glowing through
+  if (ratio < .7){
+    X.globalAlpha = (1-ratio)*.4; X.fillStyle = '#000000'; X.fillRect(bx-5,by-5,10,10); X.globalAlpha = 1;
+    const f = .55 + .45*Math.sin(G.time*14 + bx*.7 + by*.3), crack = () => { X.beginPath(); X.moveTo(bx-4,by-3); X.lineTo(bx-1,by-.5); X.lineTo(bx+1,by-2); X.lineTo(bx+4,by+2.5); X.stroke(); };
+    X.strokeStyle = '#120806'; X.lineWidth = 1.3; crack();
+    X.strokeStyle = `rgba(255,${(120 + 90*f)|0},40,${.4 + .6*f})`; X.lineWidth = .55; crack();
+  }
   // level pips: one gold chevron per level above 1, plus a gold trim at max level
   if (team==='p' && d){
     const L = lvOf(t);
@@ -413,6 +434,7 @@ export function renderCombat(){
       const [wx,wy] = wpos(e,sb), fl = G.time - B.flash < .08;
       ctx.globalAlpha = fl ? 1 : .2 + .5*B.hp/B.max; ctx.strokeStyle = fl ? '#ffffff' : '#ff9a5a'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(sx(wx), sy(wy), ESH.rad*z, 0, TAU); ctx.stroke();
+      if (fl && B.ha != null) hexFlash(ctx, sx(wx), sy(wy), ESH.rad*z, B.ha, '#ffd0b0');
     }
   }
   ctx.globalAlpha = 1;
@@ -438,6 +460,7 @@ export function renderCombat(){
       ctx.globalAlpha = fl ? 1 : .25 + .55*k; ctx.strokeStyle = fl ? '#ffffff' : '#5fd3ff'; ctx.lineWidth = fl ? 2 : 1;
       ctx.setLineDash([4,3]); ctx.lineDashOffset = -G.time*12;
       ctx.beginPath(); ctx.arc(X, Y, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      if (fl && B.ha != null) hexFlash(ctx, X, Y, r, B.ha, '#e8fbff');
     }
     ctx.globalAlpha = 1;
     ctx.globalAlpha = 1;
@@ -458,6 +481,15 @@ export function renderCombat(){
     } else if (f.k==='ring'){
       ctx.globalAlpha = a; ctx.strokeStyle = f.col; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(sx(f.x), sy(f.y), Math.max(1, f.r*z*(1.15-a)), 0, TAU); ctx.stroke();
+    } else if (f.k==='star'){
+      // muzzle starburst: sharp spikes, the longest along the shot
+      const X = sx(f.x), Y = sy(f.y), r = Math.max(2, f.r*z*(.6 + .4*a));
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.fillStyle = '#fff2b0';
+      for (let q=0; q<6; q++){
+        const an = f.a + q*TAU/6, L = q===0 ? r*1.8 : r*(q%2 ? .65 : 1);
+        ctx.beginPath(); ctx.moveTo(X + Math.cos(an)*L, Y + Math.sin(an)*L); ctx.lineTo(X + Math.cos(an+1.4)*r*.2, Y + Math.sin(an+1.4)*r*.2); ctx.lineTo(X + Math.cos(an-1.4)*r*.2, Y + Math.sin(an-1.4)*r*.2); ctx.closePath(); ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
     } else if (f.k==='txt'){
       ctx.globalAlpha = a; ctx.fillStyle = '#ffc46b'; ctx.font = FONT(8); ctx.textAlign = 'center';
       ctx.fillText(f.text, Math.round(sx(f.x)), Math.round(sy(f.y)));
@@ -508,8 +540,11 @@ export function renderCombat(){
           const len = Math.max(5, b.sp*z*.019)*PX, hx = sx(b.x)*PX, hy = sy(b.y)*PX;
           hctx.moveTo(hx - ca*len, hy - sa*len); hctx.lineTo(hx, hy);
         } else {
-          // KM-3 shells are drawn a little under their hit size; Goliath shells at full size
+          // cannon shells are drawn a little under their hit size; Goliath shells at full size; two speed lines trail each
           const q = b.kind==='oval' && b.r < 3.5*G.SC ? s*.82 : s;
+          ctx.strokeStyle = BCOL[b.kind]; ctx.globalAlpha = .55; ctx.lineWidth = .6;
+          for (const side of [-1, 1]){ const ox = -sa*side*q*.7, oy = ca*side*q*.7; ctx.beginPath(); ctx.moveTo(X - ca*q*2.2 + ox, Y - sa*q*2.2 + oy); ctx.lineTo(X - ca*q*7 + ox, Y - sa*q*7 + oy); ctx.stroke(); }
+          ctx.globalAlpha = 1;
           ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, q*2.2, q*1.1, ang, 0, TAU); ctx.fill();
           ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(X + ca*q*.5, Y + sa*q*.5, q*1.1, q*.5, ang, 0, TAU); ctx.fill();
         }
@@ -531,6 +566,9 @@ export function renderCombat(){
   hctx.lineWidth = 1.6;
   hctx.strokeStyle = BCOL.line; hctx.beginPath(); drawB(G.pb); hctx.stroke();
   hctx.strokeStyle = BCOL.egat; hctx.beginPath(); drawB(G.eb); hctx.stroke();
+
+  // impact frame: a warship going down flips the picture to its negative for a few frames
+  if (G.impT > 0){ ctx.globalCompositeOperation = 'difference'; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
 
   // off-screen hostiles
   ctx.fillStyle = '#ff7a66';
