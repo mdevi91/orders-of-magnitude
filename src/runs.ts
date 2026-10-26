@@ -133,7 +133,8 @@ export function newRun(){
   G.stage = 1; G.pendingNode = null; G.bounty = 0; G.lv = {}; G.broken = new Set(); G.fresh = new Set(); G.spanT = G.span0 = 0; G.spanStage = null;
   G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std';
   G.inv = {}; G.dmg = {}; G.grp = {...(st.g || {})}; G.auto = [false,false,false,true,false];
-  for (let q=0; q<metaLv('arms'); q++){ const t = (['cannon','gatling','missile','flak'] as BlockType[])[(Math.random()*4)|0]; G.inv[t] = (G.inv[t]||0) + 1; }
+  const arms = (['cannon','scatter','gatling','missile','flak'] as BlockType[]).filter(unlocked);
+  for (let q=0; q<metaLv('arms'); q++){ const t = arms[(Math.random()*arms.length)|0]; G.inv[t] = (G.inv[t]||0) + 1; }
   G.credits = Math.max(0, budget() - designCost(G.design)); G.outfit = false;
   G.stats = {kills:0, nodes:0, elites:0, flags:0, sectors:0, bonus:0, won:false};
   G.map = genMap(1); G.node = curNode(); undoStack.length = 0;
