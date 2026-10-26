@@ -24,6 +24,13 @@ body{
   -webkit-user-select:none;user-select:none;
 }
 button{font-family:var(--cond)}
+/* scrollbars in the alert look: a thin orange bar on black, no arrows, instead of the browser default */
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:var(--line) #000}}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:#000}
+::-webkit-scrollbar-thumb{background:var(--line);border:2px solid #000}
+::-webkit-scrollbar-button{display:none}
+::-webkit-scrollbar-corner{background:#000}
 #c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair;image-rendering:pixelated;image-rendering:crisp-edges}
 /* full-resolution layer for details finer than one game pixel (gatling tracers) */
 #hi{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
