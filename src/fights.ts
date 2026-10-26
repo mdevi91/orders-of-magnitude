@@ -29,6 +29,8 @@ export const shipSize = (s: number, col: number) => Math.max(4, Math.round((4 + 
 // credits for winning: base plus a per-sector part
 const BOUNTY: Record<FightKind, [number, number]> = {fight:[10,4], ambush:[8,3], elite:[20,7], gate:[30,10], boss:[75,25], station:[80,28]};
 // every enemy shot hits a little harder each sector, so fewer guns still keep up
+/** Enemy guns reach further and shoot faster each sector: 1x in sector 1, 2.5x by the last (bullet sizes stay put). */
+export const eReach = () => 1 + 1.5*(Math.min(G.stage, LAST_SECTOR) - 1)/(LAST_SECTOR - 1);
 export const eDmg = () => 1.25 + .3*(G.stage-1);
 // Waves for one fight: few ships, but big and tough ones. Gun caps keep it readable. Turrets face outward and only some bear
 // on any one target, so a ship carries more guns than it can fire at once.
@@ -116,7 +118,7 @@ export function spawnWave(list: Wave){
     // railgun ships hang back
     e.pref = (spec.boss ? 360 : e.guns.some(g => g.t==='rail') ? rand(420,520) : rand(220,380))*G.SC + e.r;
     // close in until the shortest-ranged gun can reach
-    if (e.guns.length) e.pref = Math.min(e.pref, Math.min(...e.guns.map(g => ewOf(g.t)!.range))*.75*G.SC + e.r*.5);
+    if (e.guns.length) e.pref = Math.min(e.pref, Math.min(...e.guns.map(g => ewOf(g.t)!.range))*.75*G.SC*eReach() + e.r*.5);
     e.vmax = 200/Math.sqrt(1 + d.size/30); e.turn = 1.6/Math.sqrt(1 + d.size/20);
     // salvage grows with the square root of size, so big late-game hulls don't flood the run with credits
     e.value = inc((4 + Math.sqrt(d.size)*2.2)*(spec.flag ? 5 : spec.boss ? 3 : spec.elite ? 2 : 1));

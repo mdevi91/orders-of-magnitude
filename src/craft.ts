@@ -1,7 +1,7 @@
 import { sfx } from './audio';
 import { EB_SPD, eBullet, leadAngle, pBullet } from './bullets';
 import { CRAFT, HM, LV, T, bayKind, cockpit, ewOf, isCraft } from './catalog';
-import { craftCap, eDmg } from './fights';
+import { craftCap, eDmg, eReach } from './fights';
 import { BS, FA, K, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { boomAt, damage, laneClear, makeShip, rayHits, sparks, wpos } from './ships';
 import { G } from './state';
@@ -145,21 +145,21 @@ export function enemyFire(e: Ship, dt: number){
   if (tgt === p && G.cloakT > G.time) return; // the Phantom is cloaked: nothing to aim at
   for (const g of e.guns){
     if ((g.jam || 0) > G.time) continue;
-    const w = ewOf(g.t)!, [wx,wy] = wpos(e,g), sp = w.spd*e.sc;
+    const w = ewOf(g.t)!, [wx,wy] = wpos(e,g), R = eReach(), sp = w.spd*e.sc*R;
     // turrets follow the player's rules: they fire within their arc around their facing, and not through their own hull
     const pg = T[g.t as BlockType].gun, arc = pg ? pg.arc ?? Math.PI : SWING, la = leadAngle(wx,wy,sp,.95,tgt);
     const clear = Math.abs(angDiff(la, e.a + FA[g.o])) <= arc && (!!pg?.over || !!pg?.homing || laneClear(e, g, la));
     g.cd -= dt;
     if (w.aim && g.cd < w.aim && clear) (e.sights ||= []).push([wx, wy, leadAngle(wx,wy,sp,.6,tgt)]);
     if (g.cd > 0) continue;
-    if (w.range && Math.hypot(tgt.x-wx, tgt.y-wy) - tgt.r > w.range*e.sc){ g.cd = .3; g.shots = 0; continue; }
+    if (w.range && Math.hypot(tgt.x-wx, tgt.y-wy) - tgt.r > w.range*e.sc*R){ g.cd = .3; g.shots = 0; continue; }
     if (!clear){ g.cd = .2; g.shots = 0; continue; }
     if (w.burst && (g.shots = (g.shots || 0) + 1) < w.burst) g.cd = w.gap!;
     else { g.shots = 0; g.cd = w.cd*rand(.85,1.15); }
     // a fast target is harder to lead: extra scatter grows with its speed, up to ±7° at 700 units/s
     const jit = tgt.craft ? 0 : .12*Math.min(1, Math.hypot(tgt.vx, tgt.vy)/(700*G.SC));
     const ang = leadAngle(wx,wy,sp,.95,tgt) + (Math.random()-.5)*2*((w.spread || 0) + jit);
-    const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC, w.kind, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.r*e.sc/G.SC);
+    const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC*R, w.kind, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.r*e.sc/G.SC);
     if (!b) continue;
     if (w.range && !w.fuse && w.kind!=='emiss'){ b.life = b.life0 = w.range/(w.spd*EB_SPD); b.fall = true; }
     if (w.kind==='emiss'){ b.tgt = tgt; b.tr = []; b.life = 9; }
