@@ -7,7 +7,7 @@ import type { BlockDef, BlockType, Cell, CraftDef, CraftKind, EnemyCell, EnemyGu
 // BLOCKS keeps its literal keys (they become the BlockType union); T is the same table read as BlockDefs.
 export const BLOCKS = {
   core:   {name:'Core', cost:0, hp:80, mass:3, thrust:4, torque:12, gun:{range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true}, desc:'Your heart. Lose it, or all of the ship’s life, and the run is over. Gives a little thrust in every direction.'},
-  hull:   {name:'Hull', key:'1', unlock:1, rar:0, cost:4, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
+  hull:   {name:'Hull', key:'1', unlock:1, rar:0, cost:2, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
   armor:  {name:'Armor', key:'2', unlock:1, rar:0, cost:10, hp:70, mass:3, desc:'Three times the toughness of hull, and takes 30% less damage. Heavy.'},
   cannon: {name:'KM-3 Cannon', make:'Kessler Arms', key:'3', unlock:1, rar:0, cost:33, hp:20, mass:1.5, rot:true, gun:{range:324, cd:.54, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 17 damage per second. Covers 50° either side of its facing.'},
   bigcannon:{name:'Goliath Cannon', make:'Teller Heavy Industries', key:'k', unlock:4, rar:2, cost:120, hp:30, mass:3, rot:true, gun:{range:480, cd:1.3, en:9, spd:400, dmg:32, spread:.015, r:4.2, arc:.7, fx:'oval'}, desc:'Inverted T: a 3-wide base with a 2-cell nose ahead of it. Turret firing huge slugs, about 25 damage per second, from the tip of its nose. Covers 40° either side of its facing.'},
