@@ -127,20 +127,20 @@ export const tierOf = (s: number) => Math.floor(s*1.5 + 1);
 type AbilityId = 'jump' | 'roll' | 'fire' | 'salvo' | 'scramble' | 'cloak';
 const STD_GUN: GunDef = {range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true};
 // craftHp and build scale hangar craft health and bay rebuild speed; mrl scales how fast missile and torpedo launchers reload.
-export const COCKPITS: Record<'std' | 'fighter' | 'cruiser' | 'carrier' | 'battle' | 'phantom', {name: string; desc: string; turn: number; range: number; unlock: number; off: boolean;
+export const COCKPITS: Record<'std' | 'fighter' | 'cruiser' | 'carrier' | 'battle' | 'phantom', {name: string; turn: number; range: number; unlock: number; off: boolean;
   gun?: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean; arc: number; craftHp?: number; build?: number; mrl?: number;
   /** the cockpit's other cells round the core, [right, back] (front is -back) */ cells: [number, number][]; /** launches its own fighter */ deck?: boolean}> = {
-  std:    {name:'Standard cockpit', desc:'Balanced, no strings attached.', turn:1, range:1, unlock:1, off:false,
+  std:    {name:'Standard cockpit', turn:1, range:1, unlock:1, off:false,
     gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1, cells:[]},
-  fighter:{name:'Corvette cockpit', desc:'Twin rapid guns, turrets swing 25% wider. Small ships fly faster, turn quicker and take less damage; the edge fades by 40 blocks. Weaker core.', turn:1, range:1, unlock:2, off:false,
+  fighter:{name:'Corvette cockpit', turn:1, range:1, unlock:2, off:false,
     gun:{range:200, cd:.13, spd:720, dmg:1.3, spread:.05, r:1.6, arc:Math.PI, over:true, pellets:2, fan:.07}, ab:'roll', abName:'Evasive roll: a burst of speed, untouchable for half a second', abCd:6, en:1, coreHp:.7, small:true, arc:1.25, cells:[[0,1]]},
-  cruiser:{name:'Cruiser bridge', desc:'Fires small homing missiles. Missile and torpedo launchers reload 25% faster. Turns 15% slower.', turn:.85, range:1, unlock:4, off:false,
+  cruiser:{name:'Cruiser bridge', turn:.85, range:1, unlock:4, off:false,
     gun:{range:700, cd:1.4, spd:220, dmg:6, spread:.3, r:2, arc:Math.PI, over:true, homing:true}, ab:'salvo', abName:'Salvo: every missile and torpedo launcher fires at once', abCd:15, en:1, coreHp:1, small:false, arc:1, mrl:1.25, cells:[[1,0],[0,1],[1,1]]},
-  carrier:{name:'Carrier deck', desc:'No core gun: the deck launches its own fighter. Fighters and bombers have 25% more health and bays rebuild them 50% faster.', turn:1, range:1, unlock:5, off:false,
+  carrier:{name:'Carrier deck', turn:1, range:1, unlock:5, off:false,
     deck:true, ab:'scramble', abName:'Scramble: every bay launches or refits its craft at once', abCd:25, en:1, coreHp:1, small:false, arc:1, craftHp:1.25, build:1.5, cells:[[0,-1],[0,1],[0,2]]},
-  battle: {name:'Command bridge', desc:'A heavy long-range cannon. Twice the core health, every weapon reaches 10% further. Turns 30% slower.', turn:.7, range:1.1, unlock:7, off:false,
+  battle: {name:'Command bridge', turn:.7, range:1.1, unlock:7, off:false,
     gun:{range:300, cd:.9, spd:520, dmg:14, spread:.015, r:3, arc:Math.PI, over:true, fx:'oval'}, ab:'fire', abName:'Fire control: every weapon fires 50% faster for 4 s', abCd:20, en:1, coreHp:2, small:false, arc:1, cells:[[-1,0],[1,0],[0,1]]},
-  phantom:{name:'Phantom bridge', desc:'A long-range sniper gun. Turns 10% faster. Weaker core.', turn:1.1, range:1, unlock:10, off:false,
+  phantom:{name:'Phantom bridge', turn:1.1, range:1, unlock:10, off:false,
     gun:{range:480, cd:1.6, spd:950, dmg:18, spread:.005, r:2, arc:Math.PI, over:true, fx:'line'}, ab:'cloak', abName:'Cloak: enemies lose track of you for 3 s', abCd:18, en:1, coreHp:.8, small:false, arc:1, cells:[[0,-1],[0,1]]},
 };
 export type CockpitId = keyof typeof COCKPITS;
