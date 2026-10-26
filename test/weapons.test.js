@@ -55,3 +55,10 @@ fresh();
   sim(4);
   ok('gatling fires over its own hull', hpLost(e) > 0, `damage ${Math.round(hpLost(e))}`);
 }
+// the railgun charges first, then its slug travels: nothing is hit at the moment it fires
+fresh(); armed('rail');
+const rt = dummy(600);
+G.player.rails[0].cd = 0; sim(.3);
+ok('the railgun is still charging after 0.3 s', hpLost(rt) === 0 && G.player.rails[0].chg > 0);
+sim(1);
+ok('then its slug reaches the target', hpLost(rt) > 0, `damage ${Math.round(hpLost(rt))}`);

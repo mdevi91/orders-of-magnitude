@@ -86,6 +86,7 @@ export function designStats(){
     if (d.pd) pd++;
     if (c.t==='shield') sh++;
     if (isCraft(c.t)){ dps += CRAFT[c.t].gun.dmg/CRAFT[c.t].gun.cd*m; if (c.t==='fbay') fb++; else bb++; }
+    if (c.t==='core' && cockpit().deck) fb++;
     if (BEAM(c.t)){
       if (!laneFwd(designType, c.i, c.j, c.o)) badW++;
       else dps += (d.rail ? d.rail.pool/d.rail.cd : d.laser ? d.laser.dps*.6 : 0)*m;
@@ -116,7 +117,7 @@ export function syncUI(){
   // Engineering picks the cockpit; in a run it is fixed
   const cps = $('cockpits'); cps.hidden = !G.outfit;
   if (G.outfit) cps.innerHTML = '<h3 class="palh">Cockpit</h3>' + (Object.keys(COCKPITS) as CockpitId[]).filter(id => !COCKPITS[id].off).map(id =>
-    `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"${cpUnlocked(id) ? '' : ' disabled'}><span><span class="nm">${COCKPITS[id].name}</span><span class="ct">${cpUnlocked(id) ? `${COCKPITS[id].desc} Right-click: ${COCKPITS[id].abName}.` : `Locked. Reach sector ${COCKPITS[id].unlock} to unlock it.`}</span></span></button>`).join('') +
+    `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"${cpUnlocked(id) ? '' : ' disabled'}><span><span class="nm">${cpUnlocked(id) || COCKPITS[id].off ? COCKPITS[id].name : '???'}</span><span class="ct">${cpUnlocked(id) ? `${COCKPITS[id].desc} Right-click: ${COCKPITS[id].abName}.` : `Unlocks at sector ${COCKPITS[id].unlock}.`}</span></span></button>`).join('') +
     // paint: one swatch per scheme, hull colour over armour colour
     '<h3 class="palh">Paint</h3><div class="paints">' + Object.entries(PAINTS).map(([id, p]) =>
       `<button type="button" class="paint" data-paint="${id}" aria-pressed="${G.paint===id}" aria-label="${p.name} paint" title="${p.name}" style="--a:${p.hull[1]};--b:${p.armor[1]}"></button>`).join('') + '</div>';

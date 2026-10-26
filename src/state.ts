@@ -8,7 +8,7 @@ export const G: GameState = {
   cockpit:'std', paint:'steel', stage:1, credits:0, design:new Map(), dirs:new Map(), lv:{}, inv:{}, dmg:{}, grp:{}, auto:[false,false,false,true,false],
   broken:new Set(), lost:new Set(), fresh:new Set(),
   map:null, node:null, pendingNode:null, shopNode:null, mapHover:null, stats:null, meta:{data:0, lv:{}}, bounty:0, outfit:false, pick:null,
-  fight:'fight', ships:[], player:null, boss:null, pb:[], eb:[], fx:[], beams:[],
+  fight:'fight', ships:[], player:null, boss:null, pb:[], eb:[], fx:[], beams:[], slugs:[],
   waves:[], waveIdx:0, waveGap:0, time:0, S:1, SC:1, AW:0, AH:0, camX:0, camY:0, camOX:0, camOY:0, zoom:1, camMul:1,
   span:0, spanT:0, span0:0, spanAt:0, spanStage:null, fit:0, swarmT:0,
   paused:false, aimAuto:false, shiftAbs:false, calm:false, impT:0, abT:0, abReq:false, fireT:0, salvoT:0, cloakT:0, fireHeld:false, mouse:{x:0,y:0,has:false}, joy:null, aimJoy:null,

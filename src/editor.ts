@@ -45,7 +45,7 @@ export function placeCheck(i: number, j: number, t: BlockType, o: Facing): true 
   const R = buildR(), oo = faceFor(t, o), cells = cellsFor(i,j,t,oo);
   for (const [a,b] of cells) if (Math.max(Math.abs(a),Math.abs(b)) > R) return 'Outside the build grid';
   const k = K(i,j), cur = G.design.get(k);
-  if (cur==='core') return 'The core stays where it is';
+  if (cur==='core' || cur==='cockpit') return 'The cockpit stays where it is';
   if (cur && isPart(cur)) return `Sell that ${T[cur].name.toLowerCase()} first`;
   if (PARTS[t]) for (const [a,b] of cells) if (G.design.has(K(a,b))) return `${T[t].name} needs ${cells.length} empty cells`;
   if (cur===t && (!T[t].rot || (G.dirs.get(k)||0)===oo)) return 'Already placed';
@@ -97,7 +97,7 @@ export function removeCell(k: Key){
 }
 export function sellAt(i: number, j: number){
   const cur = G.design.get(K(i,j));
-  if (!cur || cur==='core') return;
+  if (!cur || cur==='core' || cur==='cockpit') return;
   const [hi_, hj] = headOf(i,j), ht = G.design.get(K(hi_,hj))!;
   if (PARTS[ht]){
     const cells = cellsFor(hi_,hj,ht,G.dirs.get(K(hi_,hj))||0);

@@ -1,12 +1,12 @@
-import { BCOL, BEAM, ESH, GCOL, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isWeapon, lvOf, shRad } from './catalog';
+import { BCOL, BEAM, COCKPITS, ESH, GCOL, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isWeapon, lvOf, shRad } from './catalog';
 import { rangeOf } from './bullets';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { WARP } from './fights';
-import { BS, FA, FACE, K, KI, KJ, SWING, TAU, angDiff, clamp, rand } from './grid';
+import { BS, CORE, FA, FACE, K, KI, KJ, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { laneFwd } from './physics';
 import { wpos } from './ships';
 import { G, buildR, spanFor } from './state';
-import { JOY_R, keys } from './update';
+import { JOY_R, RAIL_CHARGE, keys } from './update';
 import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship, Stick, Team } from './types';
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 
@@ -81,6 +81,9 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
   if (arc) ang = -Math.PI/2 + clamp(angDiff(ang,-Math.PI/2), -arc, arc);
   const ca = Math.cos(ang), sa = Math.sin(ang), gun: Pal3 = team!=='e' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
   switch (t as string){
+    case 'cockpit':
+      // cockpit plating, seen only when its cockpit sprite can't be drawn whole
+      X.fillStyle = '#3a4a5c'; X.fillRect(x-3,y-3,6,6); X.fillStyle = '#5fd8ff'; X.fillRect(x-1.5,y-.5,3,1); break;
     case 'hull':
       // a panel seam and four rivets
       X.fillStyle = base[2]; X.fillRect(x-.5,y-3,1,6);
@@ -88,16 +91,14 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     case 'armor':
       X.fillStyle = base[2]; X.fillRect(x-3,y-3,6,6); X.fillStyle = base[0]; X.fillRect(x-3,y-3,5,1); X.fillRect(x-3,y-3,1,5);
       X.fillStyle = base[0]; for (const [a,b] of [[-3.4,-3.4],[2.6,-3.4],[-3.4,2.6],[2.6,2.6]]) X.fillRect(x+a,y+b,.9,.9); break;
-    case 'core': {
-      // the player's cockpit variant: swept wings for the corvette, a gold-cornered armoured bridge for the command bridge
-      const cp = team==='p' ? G.cockpit : 'std';
-      if (cp==='fighter'){ X.fillStyle = '#7a8496'; X.beginPath(); X.moveTo(x, y-5); X.lineTo(x+5, y+4.5); X.lineTo(x, y+2.5); X.lineTo(x-5, y+4.5); X.closePath(); X.fill(); }
-      if (cp==='battle'){ X.fillStyle = '#ffc46b'; for (const [sx2, sy2] of [[-1,-1],[1,-1],[1,1],[-1,1]]){ X.fillRect(x + sx2*4.6 - (sx2 > 0 ? 1.6 : 0), y + sy2*4.6 - (sy2 > 0 ? .7 : 0), 1.6, .7); X.fillRect(x + sx2*4.6 - (sx2 > 0 ? .7 : 0), y + sy2*4.6 - (sy2 > 0 ? 1.6 : 0), .7, 1.6); } }
-      orb(X,x,y,cp==='fighter' ? 3.4 : 4.2, team!=='p' ? ['#5a1008','#c0301a','#ff8a5a','#fff0d0'] : cp==='fighter' ? ['#0a4a3a','#1ab08a','#7fffd0','#e8fff8'] : cp==='battle' ? ['#4a3008','#c08a1a','#ffd27a','#fff8e0'] : ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff']);
+    case 'core':
+      // the core: a glowing orb with a pulsing halo; bigger cockpits are drawn over their whole footprint by drawCockpit
+      orb(X,x,y,4.2, team!=='p' ? ['#5a1008','#c0301a','#ff8a5a','#fff0d0'] : ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff']);
       X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill();
-      // a pulsing halo ring so the core stands out on any hull
-      X.globalAlpha = .55 + .35*Math.sin(G.time*4); X.strokeStyle = team!=='p' ? '#ffb08a' : cp==='fighter' ? '#7fffd0' : cp==='battle' ? '#ffd27a' : '#7fe8ff'; X.lineWidth = .9;
-      X.beginPath(); X.arc(x,y,5.6 + .5*Math.sin(G.time*4),0,TAU); X.stroke(); X.globalAlpha = 1; break; }
+      // the halo ring, except under a bigger cockpit, whose sprite covers the core
+      if (team!=='p' || !cockpit().cells.length){ X.globalAlpha = .55 + .35*Math.sin(G.time*4); X.strokeStyle = team!=='p' ? '#ffb08a' : '#7fe8ff'; X.lineWidth = .9;
+        X.beginPath(); X.arc(x,y,5.6 + .5*Math.sin(G.time*4),0,TAU); X.stroke(); }
+      X.globalAlpha = 1; break;
     case 'cannon': case 'gun':
       // a long slim barrel through a cooling shroud
       barrel(X,x,y,ca,sa,9,1.8,gun); barrel(X,x,y,ca,sa,5,3.2,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
@@ -246,6 +247,56 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     if (L >= MAXLV){ X.globalAlpha = .7; X.fillRect(bx-5,by-5,10,.8); X.globalAlpha = 1; }
   }
 }
+// Each cockpit has its own sprite drawn over its whole footprint (ship-local units, the core at 0,0, front is up).
+// has() says whether a cell is still there; a cockpit missing a cell falls back to plain plating.
+export function drawCockpit(X: Ctx, id: string, has: (k: Key) => boolean){
+  const C = COCKPITS[id as keyof typeof COCKPITS]; if (!C || !C.cells.length || !C.cells.every(([i,j]) => has(K(i,j))) || !has(CORE)) return;
+  const P = PAINTS[G.paint] || MET.p, ink = '#0b0d12', glass = ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff'];
+  const poly = (pts: number[], col: string) => { X.fillStyle = col; X.beginPath(); X.moveTo(pts[0], pts[1]); for (let n=2; n<pts.length; n+=2) X.lineTo(pts[n], pts[n+1]); X.closePath(); X.fill(); };
+  const rect = (x0: number, y0: number, x1: number, y1: number, col: string) => { X.fillStyle = col; X.fillRect(x0, y0, x1-x0, y1-y0); };
+  const pulse = .55 + .35*Math.sin(G.time*4);
+  if (id==='fighter'){
+    // corvette: a dart with a long teardrop canopy and swept wing roots
+    poly([0,-6.6, 5.6,6, 5.6,15.4, -5.6,15.4, -5.6,6], ink);
+    poly([0,-5, 4.6,6.2, 4.6,14.6, -4.6,14.6, -4.6,6.2], P.hull[1]);
+    poly([0,4, 4.6,6.2, 4.6,14.6, 0,14.6], P.hull[2]);
+    X.fillStyle = glass[1]; X.beginPath(); X.ellipse(0, 2, 2.2, 5, 0, 0, TAU); X.fill();
+    X.fillStyle = glass[2]; X.beginPath(); X.ellipse(-.5, 1, 1.2, 3.4, 0, 0, TAU); X.fill();
+    rect(-3.6, 13.4, -1.4, 14.6, '#ffb27a'); rect(1.4, 13.4, 3.6, 14.6, '#ffb27a');
+  } else if (id==='cruiser'){
+    // cruiser bridge: a chamfered armoured block with a window band and a grid of missile hatches
+    poly([-2,-5.6, 12,-5.6, 15.6,-2, 15.6,12, 12,15.6, -2,15.6, -5.6,12, -5.6,-2], ink);
+    poly([-1.4,-4.8, 11.4,-4.8, 14.8,-1.4, 14.8,11.4, 11.4,14.8, -1.4,14.8, -4.8,11.4, -4.8,-1.4], P.armor[1]);
+    rect(-4.8, 7, 14.8, 11.4, P.armor[2]); rect(-1.4, -4.8, 11.4, -3.8, P.armor[0]);
+    rect(-2.4, -2.4, 12.4, .8, ink); rect(-1.8, -1.8, 11.8, .2, glass[2]);
+    for (let q=0; q<6; q++){ const hx = -1 + (q % 3)*5, hy = 4 + Math.floor(q/3)*4.6; rect(hx-1.6, hy-1.6, hx+1.6, hy+1.6, ink); rect(hx-1, hy-1, hx+1, hy-.2, '#ff8a3a'); }
+  } else if (id==='carrier'){
+    // carrier deck: a long flight deck with a dashed runway, edge stripes and a small bridge island
+    rect(-5.6, -15.6, 5.6, 25.6, ink); rect(-4.8, -14.8, 4.8, 24.8, '#2a2e36');
+    rect(-4.8, -14.8, -3.4, 24.8, P.hull[1]); rect(3.4, -14.8, 4.8, 24.8, P.hull[1]);
+    X.fillStyle = '#ffd04a'; for (let y = -12; y < 23; y += 5) X.fillRect(-.5, y, 1, 2.6);
+    poly([0,-15, 2.6,-11, -2.6,-11], '#ffd04a');
+    rect(1.4, -3, 4.8, 3, P.hull[2]); rect(2, -2, 4.2, -.4, glass[2]);
+    X.globalAlpha = pulse; rect(-3, 22.6, 3, 23.6, '#5fd8ff'); X.globalAlpha = 1;
+  } else if (id==='battle'){
+    // command bridge: a wide armoured bar with gold trim and side windows, a glass dome at the heart, a ribbed tower behind
+    rect(-15.6, -5.6, 15.6, 5.6, ink); rect(-5.6, 5, 5.6, 15.6, ink);
+    rect(-14.8, -4.8, 14.8, 4.8, P.armor[1]); rect(-4.8, 4, 4.8, 14.8, P.armor[1]);
+    rect(-14.8, 1.6, 14.8, 4.8, P.armor[2]);
+    rect(-14.8, -4.8, 14.8, -4, '#ffc46b'); rect(-14.8, -4.8, -14, 4.8, '#ffc46b'); rect(14, -4.8, 14.8, 4.8, '#ffc46b');
+    for (const s of [-1, 1]){ rect(s > 0 ? 7 : -13, -1.6, s > 0 ? 13 : -7, .4, ink); rect(s > 0 ? 7.6 : -12.4, -1, s > 0 ? 12.4 : -7.6, -.2, glass[2]); }
+    for (let y = 7; y < 14; y += 2.4) rect(-3.6, y, 3.6, y + .8, P.armor[2]);
+    orb(X, 0, 0, 4, ['#4a3008','#c08a1a','#ffd27a','#fff8e0']);
+    X.globalAlpha = pulse; X.strokeStyle = '#ffd27a'; X.lineWidth = .9; X.beginPath(); X.arc(0, 0, 5.2, 0, TAU); X.stroke(); X.globalAlpha = 1;
+  } else if (id==='phantom'){
+    // phantom: a faceted black hull with a violet slit sensor
+    poly([0,-16.4, 5.6,-8, 5.6,12, 2.4,15.6, -2.4,15.6, -5.6,12, -5.6,-8], ink);
+    poly([0,-15, 4.8,-7.6, 4.8,11.6, 2,14.8, -2,14.8, -4.8,11.6, -4.8,-7.6], '#1c1c26');
+    poly([0,-15, 4.8,-7.6, 4.8,11.6, 0,14.8], '#14141c');
+    X.strokeStyle = '#34344a'; X.lineWidth = .5; X.beginPath(); X.moveTo(-4.8,-7.6); X.lineTo(0,-4); X.lineTo(4.8,-7.6); X.moveTo(0,-4); X.lineTo(0,12); X.stroke();
+    X.globalAlpha = .4 + .4*pulse; rect(-4, -1.2, 4, 1.2, '#c070ff'); X.globalAlpha = 1; rect(-3, -.4, 3, .4, '#f0d8ff');
+  }
+}
 // Hangar craft (fighters and bombers, on either side) are tiny pixel-art sprites, not block grids; their single block still
 // takes the hits, so they flash when struck and darken as they wear. The nose points to local -y; one sprite pixel is one world unit.
 // o outline, h hull, d shade, c cockpit glass, e engine
@@ -391,6 +442,22 @@ export function renderCombat(){
   }
   ctx.setLineDash([]); ctx.globalAlpha = 1;
 
+  // railgun slugs in flight: a white-hot head with a violet trail behind it
+  for (const S of G.slugs){
+    const hx = S.ox + S.dx*S.d, hy = S.oy + S.dy*S.d, tl = Math.min(S.d, 120*G.SC);
+    ctx.strokeStyle = '#b9a8f0'; ctx.lineWidth = 2; ctx.globalAlpha = .7; ctx.beginPath(); ctx.moveTo(sx(hx - S.dx*tl), sy(hy - S.dy*tl)); ctx.lineTo(sx(hx), sy(hy)); ctx.stroke();
+    ctx.globalAlpha = .25; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx(S.ox), sy(S.oy)); ctx.lineTo(sx(hx), sy(hy)); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(sx(hx), sy(hy), 2, 0, TAU); ctx.fill();
+  }
+  // railguns charging: a violet glow swells at the muzzle and energy lines pull in
+  if (p && p.alive) for (const h of p.rails) if (h.chg && h.chg > G.time){
+    const k = 1 - (h.chg - G.time)/RAIL_CHARGE, [wx, wy] = wpos(p, h), f = p.a + FA[h.o], X = sx(wx + Math.cos(f)*BS*.7), Y = sy(wy + Math.sin(f)*BS*.7);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .25 + .6*k; ctx.fillStyle = '#b48cff';
+    ctx.beginPath(); ctx.arc(X, Y, (1.5 + 5*k)*z, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#efe6ff'; ctx.lineWidth = 1;
+    for (let q=0; q<5; q++){ const a = q*TAU/5 + G.time*6, r0 = (14 - 10*k)*z, r1 = r0*.45; ctx.beginPath(); ctx.moveTo(X + Math.cos(a)*r0, Y + Math.sin(a)*r0); ctx.lineTo(X + Math.cos(a)*r1, Y + Math.sin(a)*r1); ctx.stroke(); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
   // beams: point defense zaps and railgun lines
   for (const b of G.beams){
     const a = b.life/b.max;

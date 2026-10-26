@@ -7,6 +7,7 @@ import type { BlockDef, BlockType, Cell, CraftDef, CraftKind, EnemyCell, EnemyGu
 // BLOCKS keeps its literal keys (they become the BlockType union); T is the same table read as BlockDefs.
 export const BLOCKS = {
   core:   {name:'Core', cost:0, hp:80, mass:3, thrust:4, torque:12, gun:{range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true}, desc:'Your heart. Lose it, or all of the ship’s life, and the run is over. Gives a little thrust in every direction.'},
+  cockpit:{name:'Cockpit', cost:0, hp:45, mass:1.2, desc:'Part of the cockpit. It goes wherever the cockpit goes.'},
   hull:   {name:'Hull', key:'1', unlock:1, rar:0, cost:2, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
   hullc:  {name:'Hull corner', key:'l', unlock:1, rar:0, cost:2, hp:16, mass:.7, rot:true, desc:'Hull with one corner cut away at 45°, for angled edges and noses. R turns it.'},
   armorc: {name:'Armor corner', key:'t', unlock:1, rar:0, cost:8, hp:52, mass:2.2, rot:true, desc:'Armor with one corner cut away at 45°. Takes 30% less damage, like armor. R turns it.'},
@@ -53,7 +54,7 @@ export const def = (t: Cell): BlockDef | undefined => T[t as BlockType];
 // multi-cell parts: len cells trailing behind the head along its facing, w columns wide extending to the head's starboard,
 // or an explicit shape: cells as [cells behind the head, cells to its starboard]
 export const PARTS: Partial<Record<Cell, PartDef>> = {bigcannon:{len:3, cells:[[1,0],[2,0],[2,-1],[2,1]], body:'bigcannon_b'}, hgatling:{len:2, body:'hgatling_b'}, rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}, torpedo:{len:2, body:'torpedo_b'}, aegis:{len:4, w:4, body:'aegis_b'}};
-export const HEAD_OF: Partial<Record<Cell, BlockType>> = {bigcannon_b:'bigcannon', hgatling_b:'hgatling', rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv', torpedo_b:'torpedo', aegis_b:'aegis'};
+export const HEAD_OF: Partial<Record<Cell, BlockType>> = {cockpit:'core', bigcannon_b:'bigcannon', hgatling_b:'hgatling', rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv', torpedo_b:'torpedo', aegis_b:'aegis'};
 /** Every cell of a part as [behind, starboard] from its head, the head first. */
 export const partOffsets = (P: PartDef): [number, number][] => {
   if (P.cells) return [[0,0], ...P.cells];
@@ -126,19 +127,20 @@ type AbilityId = 'jump' | 'roll' | 'fire' | 'salvo' | 'scramble' | 'cloak';
 const STD_GUN: GunDef = {range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true};
 // craftHp and build scale hangar craft health and bay rebuild speed; mrl scales how fast missile and torpedo launchers reload.
 export const COCKPITS: Record<'std' | 'fighter' | 'cruiser' | 'carrier' | 'battle' | 'phantom', {name: string; desc: string; turn: number; range: number; unlock: number; off: boolean;
-  gun: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean; arc: number; craftHp?: number; build?: number; mrl?: number}> = {
+  gun?: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean; arc: number; craftHp?: number; build?: number; mrl?: number;
+  /** the cockpit's other cells round the core, [right, back] (front is -back) */ cells: [number, number][]; /** launches its own fighter */ deck?: boolean}> = {
   std:    {name:'Standard cockpit', desc:'Balanced, no strings attached.', turn:1, range:1, unlock:1, off:false,
-    gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1},
+    gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1, cells:[]},
   fighter:{name:'Corvette cockpit', desc:'Twin rapid guns, turrets swing 25% wider. Small ships fly faster, turn quicker and take less damage; the edge fades by 40 blocks. Weaker core.', turn:1, range:1, unlock:2, off:false,
-    gun:{range:200, cd:.13, spd:720, dmg:1.3, spread:.05, r:1.6, arc:Math.PI, over:true, pellets:2, fan:.07}, ab:'roll', abName:'Evasive roll: a burst of speed, untouchable for half a second', abCd:6, en:1, coreHp:.7, small:true, arc:1.25},
+    gun:{range:200, cd:.13, spd:720, dmg:1.3, spread:.05, r:1.6, arc:Math.PI, over:true, pellets:2, fan:.07}, ab:'roll', abName:'Evasive roll: a burst of speed, untouchable for half a second', abCd:6, en:1, coreHp:.7, small:true, arc:1.25, cells:[[0,1]]},
   cruiser:{name:'Cruiser bridge', desc:'Fires small homing missiles. Missile and torpedo launchers reload 25% faster. Turns 15% slower.', turn:.85, range:1, unlock:4, off:false,
-    gun:{range:700, cd:1.4, spd:220, dmg:6, spread:.3, r:2, arc:Math.PI, over:true, homing:true}, ab:'salvo', abName:'Salvo: every missile and torpedo launcher fires at once', abCd:15, en:1, coreHp:1, small:false, arc:1, mrl:1.25},
-  carrier:{name:'Carrier deck', desc:'An anti-craft gun: goes for fighters and bombers first and hits them twice as hard. Fighters and bombers have 25% more health and bays rebuild them 50% faster.', turn:1, range:1, unlock:5, off:false,
-    gun:{range:240, cd:.18, spd:760, dmg:2.4, spread:.05, r:1.6, arc:Math.PI, over:true, aa:true}, ab:'scramble', abName:'Scramble: every bay launches or refits its craft at once', abCd:25, en:1, coreHp:1, small:false, arc:1, craftHp:1.25, build:1.5},
+    gun:{range:700, cd:1.4, spd:220, dmg:6, spread:.3, r:2, arc:Math.PI, over:true, homing:true}, ab:'salvo', abName:'Salvo: every missile and torpedo launcher fires at once', abCd:15, en:1, coreHp:1, small:false, arc:1, mrl:1.25, cells:[[1,0],[0,1],[1,1]]},
+  carrier:{name:'Carrier deck', desc:'No core gun: the deck launches its own fighter. Fighters and bombers have 25% more health and bays rebuild them 50% faster.', turn:1, range:1, unlock:5, off:false,
+    deck:true, ab:'scramble', abName:'Scramble: every bay launches or refits its craft at once', abCd:25, en:1, coreHp:1, small:false, arc:1, craftHp:1.25, build:1.5, cells:[[0,-1],[0,1],[0,2]]},
   battle: {name:'Command bridge', desc:'A heavy long-range cannon. Twice the core health, every weapon reaches 10% further. Turns 30% slower.', turn:.7, range:1.1, unlock:7, off:false,
-    gun:{range:300, cd:.9, spd:520, dmg:14, spread:.015, r:3, arc:Math.PI, over:true, fx:'oval'}, ab:'fire', abName:'Fire control: every weapon fires 50% faster for 4 s', abCd:20, en:1, coreHp:2, small:false, arc:1},
+    gun:{range:300, cd:.9, spd:520, dmg:14, spread:.015, r:3, arc:Math.PI, over:true, fx:'oval'}, ab:'fire', abName:'Fire control: every weapon fires 50% faster for 4 s', abCd:20, en:1, coreHp:2, small:false, arc:1, cells:[[-1,0],[1,0],[0,1]]},
   phantom:{name:'Phantom bridge', desc:'A long-range sniper gun. Weaker core.', turn:1.1, range:1, unlock:10, off:false,
-    gun:{range:480, cd:1.6, spd:950, dmg:18, spread:.005, r:2, arc:Math.PI, over:true, fx:'line'}, ab:'cloak', abName:'Cloak: enemies lose track of you for 3 s', abCd:18, en:1, coreHp:.8, small:false, arc:1},
+    gun:{range:480, cd:1.6, spd:950, dmg:18, spread:.005, r:2, arc:Math.PI, over:true, fx:'line'}, ab:'cloak', abName:'Cloak: enemies lose track of you for 3 s', abCd:18, en:1, coreHp:.8, small:false, arc:1, cells:[[0,-1],[0,1]]},
 };
 export type CockpitId = keyof typeof COCKPITS;
 export const cockpit = () => COCKPITS[G.cockpit] || COCKPITS.std;
@@ -176,7 +178,9 @@ export const HM = {
 // a group on auto fires on its own at the nearest hostile.
 export const WGRP: Partial<Record<Cell, number>> = {plasma:1, swarm:2, core:1, cannon:1, bigcannon:1, gatling:1, hgatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4};
 export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
-export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t];
+export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t] && (t!=='core' || !!cockpit().gun);
+/** What a bay launches: a hangar bay's craft, or a fighter from the Carrier deck's core. */
+export const bayKind = (b: {t: Cell}): CraftKind | null => isCraft(b.t) ? b.t : b.t==='core' && cockpit().deck ? 'fbay' : null;
 export const grpOf = (k: Key, t: Cell) => G.grp[k] || WGRP[t] || 1;
 // What menus say about a block: weapons, point defense and hangars get a line of numbers; everything else its short description.
 const m = (u: number) => Math.round(u/BS) + ' m', n1 = (v: number) => (Math.round(v*10)/10).toString();

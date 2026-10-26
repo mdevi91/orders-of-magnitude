@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { EB_SPD, eBullet, leadAngle, pBullet } from './bullets';
-import { CRAFT, HM, LV, T, cockpit, ewOf, isCraft } from './catalog';
+import { CRAFT, HM, LV, T, bayKind, cockpit, ewOf, isCraft } from './catalog';
 import { craftCap, eDmg } from './fights';
 import { BS, FA, K, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { boomAt, damage, laneClear, makeShip, rayHits, sparks, wpos } from './ships';
@@ -44,12 +44,12 @@ export function updateECraft(A: Ship, dt: number, allies: Ship[]){
   if (A.vx*A.vx + A.vy*A.vy > 4) A.a += clamp(angDiff(Math.atan2(A.vx,-A.vy), A.a), -C.turn*dt, C.turn*dt);
 }
 export function launchCraft(p: Ship, b: Block){
-  if (!isCraft(b.t)) return;
-  const C = CRAFT[b.t], [wx,wy] = wpos(p,b), dir = p.a + FA[b.o], v = C.spd*G.SC*.6;
-  const A = makeShip(craftDesign(b.t), 'a', wx, wy, C.hp*LV(b.t)*(cockpit().craftHp || 1));
+  const kd = bayKind(b); if (!kd) return;
+  const C = CRAFT[kd], [wx,wy] = wpos(p,b), dir = p.a + FA[b.o], v = C.spd*G.SC*.6;
+  const A = makeShip(craftDesign(kd), 'a', wx, wy, C.hp*LV(kd)*(cockpit().craftHp || 1));
   A.a = dir + Math.PI/2; A.c = Math.cos(A.a); A.sn = Math.sin(A.a); A.aimA = dir;
   A.vx = p.vx + Math.cos(dir)*v; A.vy = p.vy + Math.sin(dir)*v;
-  A.kind = b.t; A.bay = b; A.sortie = C.sortie; A.cd = .5; A.pick = 0; A.orb = rand(0,TAU);
+  A.kind = kd; A.bay = b; A.sortie = C.sortie; A.cd = .5; A.pick = 0; A.orb = rand(0,TAU);
   for (const x of A.blocks.values()) if (x.t==='engine') x.firing = true;
   b.ally = A; G.ships.push(A); sfx('launch');
 }
@@ -85,21 +85,32 @@ export function updateCraft(A: Ship, dt: number, enemies: Ship[]){
   A.x = clamp(A.x + A.vx*dt, 0, G.AW); A.y = clamp(A.y + A.vy*dt, 0, G.AH);
   if (A.vx*A.vx + A.vy*A.vy > 4) A.a += clamp(angDiff(Math.atan2(A.vx,-A.vy), A.a), -C.turn*dt, C.turn*dt);
 }
+// The railgun fires a slug that crosses its whole range in about a third of a second, piercing until its damage is spent.
+export const SLUG_SPD = 3200;
 export function fireRail(p: Ship, wx: number, wy: number, face: number){
   const R = T.rail.rail!, SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = R.range*SC*cockpit().range;
-  let pool = R.pool*LV('rail')*HM.dmg(), end = len;
-  for (const h of rayHits(ox, oy, dx, dy, len, false)){
-    if (!h.e.alive) continue;
-    const b = h.e.blocks.get(h.k); if (!b) continue;
-    const d = Math.min(pool, b.hp + .01);
-    damage(h.e, h.k, d); pool -= d;
-    sparks(ox + dx*h.t, oy + dy*h.t, face + Math.PI, 3, 220*SC, ['#ffffff','#efe6ff']);
-    if (pool <= 0){ end = h.t; boomAt(ox + dx*h.t, oy + dy*h.t, 10*SC, .2); break; }
-  }
-  G.beams.push({x1:ox, y1:oy, x2:ox + dx*end, y2:oy + dy*end, life:.35, max:.35, kind:'rail'});
+  G.slugs.push({ox, oy, dx, dy, len, d:0, pool:R.pool*LV('rail')*HM.dmg()});
   boomAt(ox, oy, 6*SC, .1);
   const kick = 70*SC/Math.sqrt(p.ph.mass); p.vx -= dx*kick; p.vy -= dy*kick;
   if (!REDUCE) G.shake = Math.min(4, G.shake + 2.4);
+}
+/** Move the slugs on; each hits what lies on the stretch it just crossed. Past 60% of its range it loses up to 30% of its punch. */
+export function updateSlugs(dt: number){
+  const SC = G.SC;
+  for (const S of G.slugs){
+    const d0 = S.d; S.d = Math.min(S.len, S.d + SLUG_SPD*SC*dt);
+    for (const h of rayHits(S.ox, S.oy, S.dx, S.dy, S.d, false)){
+      if (h.t <= d0 || !h.e.alive || S.pool <= 0) continue;
+      const b = h.e.blocks.get(h.k); if (!b) continue;
+      const fall = 1 - .3*Math.max(0, h.t/S.len - .6)/.4, d = Math.min(S.pool, (b.hp + .01)/fall);
+      damage(h.e, h.k, d*fall); S.pool -= d;
+      sparks(S.ox + S.dx*h.t, S.oy + S.dy*h.t, Math.atan2(-S.dy, -S.dx), 3, 220*SC, ['#ffffff','#efe6ff']);
+      if (S.pool <= 0){ S.d = h.t; boomAt(S.ox + S.dx*h.t, S.oy + S.dy*h.t, 10*SC, .2); }
+    }
+    // spent or out of range: leave the trace of its whole path, fading
+    if (S.pool <= 0 || S.d >= S.len) G.beams.push({x1:S.ox, y1:S.oy, x2:S.ox + S.dx*S.d, y2:S.oy + S.dy*S.d, life:.35, max:.35, kind:'rail'});
+  }
+  G.slugs = G.slugs.filter(S => S.pool > 0 && S.d < S.len);
 }
 export function enemyFire(e: Ship, dt: number){
   const p = G.player!;

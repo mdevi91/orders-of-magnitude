@@ -1,6 +1,6 @@
 import { sfx } from './audio';
-import { COCKPITS, HEAD_OF, PAL, PLATE, RARITY, T, blurb, type CockpitId, cpUnlocked, outfitPrice, rarName, rarOf, unlocked } from './catalog';
-import { K } from './grid';
+import { COCKPITS, HEAD_OF, cockpit, PAL, PLATE, RARITY, T, blurb, type CockpitId, cpUnlocked, outfitPrice, rarOf, unlocked } from './catalog';
+import { CORE, K, NB } from './grid';
 import { undoStack } from './input';
 import { clearRun, load, resetAll, save, saveMeta } from './save';
 import { tile } from './shop';
@@ -82,7 +82,7 @@ const RUMORS = [
 ];
 export function showCantina(){
   const m = G.meta, best = m.best || 1, next = PAL.map(t => T[t].unlock || 1).filter(u => u > best).sort((a,b) => a-b)[0];
-  const rumor = next && Math.random() < .4 ? `Word is that the sector ${next} yards build ${unlocksAt(next).map(rarName).join(' and ')}. Get there and they’re yours.` : RUMORS[(Math.random()*RUMORS.length)|0];
+  const rumor = next && Math.random() < .4 ? `Word is that the sector ${next} yards are building something new. Get there and see.` : RUMORS[(Math.random()*RUMORS.length)|0];
   const ro = (v: string | number, k: string) => `<div class="readout"><b>${v}</b><span>${k}</span></div>`;
   const who = PILOTS[(Math.random()*PILOTS.length)|0];
   // wiping every save takes three clicks; the button counts down
@@ -95,8 +95,10 @@ export function showCantina(){
 // Ship deck: every block, what it does, how rare it is, and where it unlocks.
 export function showDeck(){
   const best = G.meta.best || 1, ts = PAL.filter(t => t!=='sell' && !PLATE(t)).sort((a,b) => rarOf(a) - rarOf(b) || (T[a].unlock || 1) - (T[b].unlock || 1));
-  const card = (t: BlockType) => tile({ic:icon(t), rc:RARITY[rarOf(t)].col, name:T[t].name, tag:RARITY[rarOf(t)].name + (T[t].make ? ' · ' + T[t].make : ''), locked:!unlocked(t), label:'', act:'',
-    desc:unlocked(t) ? blurb(t) : `Locked. Reach sector ${T[t].unlock} to unlock it.`});
+  // a locked block gives nothing away: no picture, name or numbers, only where it unlocks
+  const card = (t: BlockType) => unlocked(t)
+    ? tile({ic:icon(t), rc:RARITY[rarOf(t)].col, name:T[t].name, tag:RARITY[rarOf(t)].name + (T[t].make ? ' · ' + T[t].make : ''), label:'', act:'', desc:blurb(t)})
+    : tile({name:'???', tag:'Locked', locked:true, label:'', act:'', desc:`Unlocks at sector ${T[t].unlock}.`});
   const open = ts.filter(unlocked), shut = ts.filter(t => !unlocked(t));
   showOverlay('Ship deck', `<div class="readouts"><div class="readout"><b>${open.length}/${ts.length}</b><span>Blocks unlocked</span></div><div class="readout"><b>${best}</b><span>Best sector</span></div></div>` +
     'Unlocked blocks turn up in loot and shops from sector 1 on, and Engineering can build them into your starting ship.' +
@@ -119,9 +121,17 @@ export function enterEngineering(){
   engRun = !!G.stats; save();
   const st = startDesign();
   G.stats = null; G.stage = 1; G.lv = {}; G.inv = {}; G.dmg = {}; G.broken = new Set(); G.fresh = new Set(); G.grp = {...(st.g || {})};
-  G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std'; G.paint = st.p || 'steel';
+  G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std'; G.paint = st.p || 'steel'; fitCockpit();
   G.credits = budget() - designCost(G.design); G.outfit = true; undoStack.length = 0;
   toDrydock(); tut('eng');
+}
+/** Lay the cockpit's own cells round the core (they replace whatever was there) and drop anything that no longer reaches the core. */
+export function fitCockpit(){
+  for (const [k, t] of [...G.design]) if (t==='cockpit'){ G.design.delete(k); G.dirs.delete(k); }
+  for (const [i, j] of cockpit().cells){ const k = K(i,j); G.design.set(k, 'cockpit'); G.dirs.delete(k); }
+  const seen = new Set([CORE]), q = [CORE];
+  while (q.length){ const c = q.pop()!; for (const d of NB){ const n = c + d; if (G.design.has(n) && !seen.has(n)){ seen.add(n); q.push(n); } } }
+  for (const k of [...G.design.keys()]) if (!seen.has(k)){ G.design.delete(k); G.dirs.delete(k); }
 }
 const shipNow = (): StartDesign => ({d:[...G.design], o:[...G.dirs], g:{...G.grp}, c:G.cockpit, p:G.paint});
 /** Engineering: picking another cockpit files the current ship under the old one and brings back the ship built for the new one. */
@@ -131,6 +141,7 @@ export function switchCockpit(id: CockpitId){
   builds[G.cockpit] = shipNow(); G.cockpit = id;
   const b = builds[id];
   if (b){ const f = keepUnlocked(b); G.design = new Map(f.d); G.dirs = new Map(f.o); G.grp = {...(f.g || {})}; }
+  fitCockpit();
   G.credits = budget() - designCost(G.design); undoStack.length = 0; saveMeta();
   toast(b ? `Your ${COCKPITS[id].name} ship` : `First ${COCKPITS[id].name} ship: starting from the last one`); syncUI();
 }
@@ -143,7 +154,7 @@ export function leaveEngineering(){
 export function newRun(){
   const st = startDesign();
   G.stage = 1; G.pendingNode = null; G.bounty = 0; G.lv = {}; G.broken = new Set(); G.fresh = new Set(); G.spanT = G.span0 = 0; G.spanStage = null;
-  G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std'; G.paint = st.p || 'steel';
+  G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std'; G.paint = st.p || 'steel'; fitCockpit();
   G.inv = {}; G.dmg = {}; G.grp = {...(st.g || {})}; G.auto = [false,false,false,true,false];
   const arms = (['cannon','scatter','gatling','missile','flak'] as BlockType[]).filter(unlocked);
   for (let q=0; q<metaLv('arms'); q++){ const t = arms[(Math.random()*arms.length)|0]; G.inv[t] = (G.inv[t]||0) + 1; }
@@ -175,6 +186,6 @@ export function runOver(why: 'dead' | 'won' | 'abandoned'){
     `<div class="rep-status">${tag(dead ? 'Warning' : 'Status', dead ? 'red' : '')}<p class="log">HULL&nbsp;&nbsp;&nbsp;${dead ? '000.0%' : 'INTACT'}<br>CORE&nbsp;&nbsp;&nbsp;${dead ? 'OFFLINE' : 'ONLINE'}<br>SECTOR&nbsp;${pad2(G.stage)}<br><span class="${dead ? 'red' : ''}">STATUS ${dead ? 'LOST' : won ? 'VICTORIOUS' : 'RECALLED'}</span></p></div></div>` +
     `<h3>Combat log</h3><div class="rep-grid">${pairs.map(([k, v, c]) => `<span>${k}</span><b class="${c || ''}">${v}</b>`).join('')}</div>` +
     `<h3>New patterns registered <small>${pad2(newB.length + newC.length)}</small></h3>` +
-    (tags ? `<div class="ptags">${tags}</div>` : `<p class="log">&gt; NOTHING NEW${next ? ` · REACH SECTOR ${pad2(next)} FOR ${unlocksAt(next).map(t => T[t].name.toUpperCase()).join(', ')}` : ''}</p>`) + '</div>';
+    (tags ? `<div class="ptags">${tags}</div>` : `<p class="log">&gt; NOTHING NEW${next ? ` · ?? UNLOCKS AT SECTOR ${pad2(next)}` : ''}</p>`) + '</div>';
   showOverlay(dead ? 'Ship lost' : won ? 'Run complete' : 'Run abandoned', s, [['Return to base', showTitle]], true, {screen:'report', ac:dead ? 'var(--foe)' : 'var(--line)'});
 }

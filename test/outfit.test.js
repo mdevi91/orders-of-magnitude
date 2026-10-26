@@ -37,7 +37,7 @@ ok('command bridge reaches 10% further', Math.abs(cockpit().range - 1.1) < 1e-9)
 // Engineering keeps one ship per cockpit: switching files the current ship and brings back the other
 G.meta.best = 12; enterEngineering();
 const shipA = G.design.size;
-switchCockpit('battle'); G.design.set(K(3,3), 'hull'); G.design.set(K(3,2), 'hull');
+switchCockpit('battle'); G.design.set(K(2,0), 'hull'); G.design.set(K(3,0), 'hull'); // on the end of the bridge's bar
 const shipB = G.design.size;
 switchCockpit('std');
 ok('switching back brings the first ship back', G.design.size === shipA, `${G.design.size} vs ${shipA}`);

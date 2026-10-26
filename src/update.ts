@@ -1,7 +1,7 @@
 import { sfx } from './audio';
 import { PD_KINDS, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
-import { BCOL, CRAFT, ESH, HM, LV, T, cockpit, cpArc, cpSpeed, cpTurn, def, grpOf, isCraft } from './catalog';
-import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx } from './craft';
+import { BCOL, CRAFT, ESH, HM, LV, T, bayKind, cockpit, cpArc, cpSpeed, cpTurn, def, grpOf, isCraft } from './catalog';
+import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx, updateSlugs } from './craft';
 import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
 import { BS, FA, K, NB, SWING, angDiff, clamp, rand } from './grid';
@@ -28,6 +28,8 @@ export function ionJam(e: Ship, hit: Block){
 /** Fires the cockpit's right-click ability toward the aim point (ax, ay); (ux, uy) is the way the player is steering, if any. */
 /** Missile, MIRV and torpedo launchers: the guns a Salvo fires and a Cruiser reloads faster. */
 const missileGun = (g: Block) => { const gun = def(g.t)?.gun; return !!gun && (!!gun.homing || !!gun.mirv || gun.fx==='torp') && g.t!=='core'; };
+/** Seconds a railgun charges, glowing, before its slug leaves. */
+export const RAIL_CHARGE = .45;
 export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: number){
   const C = cockpit(), SC = G.SC;
   G.abT = C.abCd;
@@ -56,7 +58,7 @@ export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: numb
     // scramble: empty bays launch now, craft already out are patched up and sent back to fight
     for (const b of p.bays){
       if (!b.ally) b.bt = 0;
-      else { const A = b.ally; for (const x of A.blocks.values()) x.hp = x.max; A.life = A.lifeMax; A.sortie = CRAFT[b.t as keyof typeof CRAFT].sortie; }
+      else { const A = b.ally; for (const x of A.blocks.values()) x.hp = x.max; A.life = A.lifeMax; A.sortie = CRAFT[bayKind(b) || 'fbay'].sortie; }
     }
     sfx('launch');
   }
@@ -219,6 +221,8 @@ export function update(dt: number){
     // railguns: fire when the aim point sits on their line
     const RG = T.rail.rail!;
     for (const h of p.rails){
+      // a charging railgun fires when its charge is full, along the aim it took
+      if (h.chg){ if (G.time < h.chg) continue; h.chg = 0; const [wx,wy] = wpos(p,h); fireRail(p, wx, wy, p.a + FA[h.o] + clamp(h.off || 0, -SWING, SWING)); sfx('rail'); continue; }
       if (!may(h)) continue;
       if (h.cd > 0){ h.cd -= dt*RATE; if (h.cd > 0) continue; }
       if (!h.lane) continue;
@@ -228,9 +232,10 @@ export function update(dt: number){
       if (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > RG.range*SC*RM) continue;
       if (Math.abs(off) > SWING + .02) continue;
       if (!spend(RG.en)) continue;
-      h.cd = RG.cd; fireRail(p, wx, wy, face + clamp(off, -SWING, SWING)); sfx('rail');
+      h.cd = RG.cd; h.chg = G.time + RAIL_CHARGE; h.off = off; sfx('pd', .6);
     }
   }
+  updateSlugs(dt);
   // lasers: continuous beam on whatever is first along their line within range
   if (p.alive) for (const h of p.lasers){
     h.beam = null; if (!h.lane || !enemies.length || !may(h)) continue;
@@ -289,8 +294,8 @@ export function update(dt: number){
   }
   // hangar bays: launch a craft, take it back after its sortie, send it out again; a lost craft takes longer to replace
   if (p.alive) for (const b of p.bays){
-    if (!isCraft(b.t)) continue;
-    if (b.ally && !b.ally.alive){ b.ally = null; b.bt = CRAFT[b.t].rebuild/(cockpit().build || 1); }
+    const kd = bayKind(b); if (!kd) continue;
+    if (b.ally && !b.ally.alive){ b.ally = null; b.bt = CRAFT[kd].rebuild/(cockpit().build || 1); }
     if (!b.ally && (b.bt = (b.bt || 0) - dt) <= 0) launchCraft(p,b);
   }
   for (const A of allies) if (A.alive) updateCraft(A, dt, enemies);

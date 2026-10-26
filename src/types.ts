@@ -66,6 +66,8 @@ export interface Bubble { hp: number; max: number; down: number; last: number; f
 /** A block on a live ship. */
 export interface Block {
   t: Cell; i: number; j: number; o: Facing; hp: number; max: number;
+  /** railgun: charging until chg (game time), aimed off its facing by off */
+  chg?: number; off?: number;
   /** weapon cooldown */
   cd: number;
   /** time it was last hit, for the white flash */
@@ -192,6 +194,8 @@ export interface GameState {
   pick: ((t: BlockType | null) => void) | null;
   // the fight
   fight: FightKind; ships: Ship[]; player: Ship | null; boss: Ship | null; pb: Bullet[]; eb: Bullet[]; fx: Fx[]; beams: Beam[];
+  /** railgun slugs in flight: origin, direction, full length, distance flown, damage left to deal */
+  slugs: {ox: number; oy: number; dx: number; dy: number; len: number; d: number; pool: number}[];
   waves: WavePlan; waveIdx: number; waveGap: number; time: number; S: number; SC: number; AW: number; AH: number;
   camX: number; camY: number; camOX: number; camOY: number; zoom: number; camMul: number;
   span: number; spanT: number; span0: number; spanAt: number; spanStage: number | null; fit: number; swarmT: number;

@@ -189,7 +189,7 @@ export function startFight(kind: FightKind){
   // a starbase needs room above the player
   if (kind==='station'){ G.AW *= 1.4; G.AH *= 2; }
   p.x = G.AW/2; p.y = G.AH*(kind==='station' ? .85 : .72);
-  G.ships = [p]; G.pb = []; G.eb = []; G.fx = []; G.beams = [];
+  G.ships = [p]; G.pb = []; G.eb = []; G.fx = []; G.beams = []; G.slugs = [];
   G.waves = planFight(kind, G.stage, G.node ? G.node.col : 1); G.waveIdx = 0; G.waveGap = 2.5;
   G.camX = p.x; G.camY = p.y; G.joy = null; G.aimJoy = null; G.deadT = 0; G.earned = 0; G.paused = false;
   G.banner = {text:G.waves.name || NODE[kind].name, sub:`Sector ${G.stage}`, t:2};
