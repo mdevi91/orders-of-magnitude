@@ -375,13 +375,12 @@ button,.pal,label{touch-action:manipulation}
 /* ---------- the space base: invisible hit areas over the doorways; the names are lit on the signs in the room ---------- */
 #base{position:fixed;inset:0;z-index:4;pointer-events:none}
 /* the base's bottom bar: a hazard band, the title, two readouts and the options hint */
-.base-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;padding:22px max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(16px,env(safe-area-inset-left,0px));background:rgba(0,0,0,.82)}
+.base-bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:flex-end;align-items:flex-end;gap:18px;flex-wrap:wrap;padding:22px max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(16px,env(safe-area-inset-left,0px));background:rgba(0,0,0,.82)}
 .base-bar::before{content:'';position:absolute;left:0;right:0;top:0;height:10px;background:var(--hazard)}
-.base-title{font:400 clamp(30px,5vw,56px)/.95 var(--display);text-transform:uppercase;letter-spacing:.02em;color:var(--foe);margin-right:auto}
 .base-bar .hexo b{font-size:30px}
 /* the station screen speaks in one colour: the signs' yellow */
 .base-bar{--say:#ffd200}
-.base-bar .base-title,.base-bar .hexo span,.base-bar .hexo b,.base-bar .base-esc,.base-bar kbd{color:var(--say)}
+.base-bar .hexo span,.base-bar .hexo b,.base-bar .base-esc,.base-bar kbd{color:var(--say)}
 .base-bar .hexo polygon{stroke:var(--say)}
 .base-bar kbd{border-color:var(--say)}
 .base-ro{display:flex;flex-direction:column;align-items:center;justify-content:center;width:112px;height:84px;font-weight:600;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:var(--ink);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);box-shadow:inset 0 0 0 2px var(--line)}

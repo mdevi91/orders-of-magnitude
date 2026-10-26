@@ -4,7 +4,7 @@ import { KI, KJ, clamp } from './grid';
 import { startDesign } from './runs';
 import { G } from './state';
 import type { BlockType, Cell } from './types';
-import { $, DPR, FONT, H, PX, REDUCE, W, ctx, hctx } from './view';
+import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 
 // ---------- the space base ----------
 // The main menu is the inside of a space base, drawn as flat-shaded 3D polygons into the low-res game canvas (90s VGA style).
@@ -17,7 +17,7 @@ type RGB = [number, number, number];
  * One polygon. Lower layers draw first; within a layer, farther first. n is the outward normal of a box face, used to
  * skip faces turned away from the camera. A glowing face ignores lighting; blink makes it flicker; st ties it to a station.
  */
-interface Face { p: V3[]; c: RGB; layer: number; glow?: boolean; n?: V3; blink?: number; st?: number; lit?: RGB; /** cached centre, for the alarm beacon */ ctr?: V3 }
+interface Face { p: V3[]; c: RGB; layer: number; glow?: boolean; n?: V3; blink?: number; st?: number; lit?: RGB; }
 
 /** sign: the short name lit on the sign over its doorway */
 export interface Station { id: string; name: string; sign: string; col: RGB }
@@ -101,8 +101,6 @@ function buildRoom(){
   quad([-14,WALL_H,-12], [14,WALL_H,-12], [14,WALL_H,8], [-14,WALL_H,8], CEIL, 0, {n:[0,-1,0]});
   // ceiling: a glowing hub over the holotable, beams out to the wall corners, light panels between them
   prism(HOLO[0], HOLO[2], 1.5, WALL_H-.25, WALL_H, TRIM, 1, 8, {c:[255,220,180], glow:true});
-  // the alarm beacon hanging under the hub: a red lamp housing whose beams sweep the room (see BEACON)
-  prism(HOLO[0], HOLO[2], .32, WALL_H-.85, WALL_H-.25, [120,20,12], 1.5, 8, {c:[255,70,30], glow:true});
   for (let k=0; k<5; k++){ const c = corner(k, WALL_H-.2); beam([HOLO[0], WALL_H-.2, HOLO[2]], c, .35, .4, TRIM, 1); }
   for (let k=0; k<4; k++){
     const a = (ANG[k] + ANG[k+1])/2, s = Math.sin(a), c = -Math.cos(a), px = -c, pz = s, y = WALL_H-.02;
@@ -251,16 +249,8 @@ function clipNear(ps: V3[]): V3[] {
   }
   return out;
 }
-// The alarm beacon: two opposite beams turn round the hub; whatever they cross lights up (the grade turns it yellow).
-const BEACON: V3 = [0, WALL_H-.55, 1.2], BEAM_SPD = 2.2;
-function beacon(f: Face): number {
-  if (REDUCE) return 0;
-  const c = f.ctr ??= centre(f.p), d = Math.hypot(c[0]-BEACON[0], c[2]-BEACON[2]);
-  return Math.pow(Math.abs(Math.cos(Math.atan2(c[2]-BEACON[2], c[0]-BEACON[0]) - G.time*BEAM_SPD)), 14)*Math.min(1, d/2)/(1 + d*.06);
-}
 function shade(f: Face, depth: number, far: boolean): string {
   let c = f.glow ? f.c : f.lit || light(f);
-  if (!far){ const k = beacon(f); if (k > .01) c = c.map(v => v + k*130) as RGB; }
   if (f.blink != null) c = scale(c, .55 + .45*Math.max(0, Math.sin(G.time*(2.2 + f.blink%1.7) + f.blink*2.1)));
   if (f.st != null && f.st === hover){ const k = .3 + .2*Math.sin(G.time*6); c = c.map(v => Math.min(255, v*(1 + k) + 24*k)) as RGB; }
   const fog = far ? clamp(depth/160, .15, .55) : clamp((depth - 6)/26, 0, .7);
