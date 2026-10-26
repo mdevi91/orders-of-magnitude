@@ -321,7 +321,9 @@ export function update(dt: number){
       e.orb += e.orbSpd*dt;
       const tx = clamp(p.x + Math.cos(e.orb)*e.pref, 0, G.AW), ty = clamp(p.y + Math.sin(e.orb)*e.pref, 0, G.AH);
       const ex = tx-e.x, ey = ty-e.y, el = Math.hypot(ex,ey) || 1, ux = ex/el, uy = ey/el;
-      const v = e.vmax === 0 ? 0 : Math.min(dirSpeed(ph, ux*e.c + uy*e.sn, -ux*e.sn + uy*e.c)*e.sc, el*1.2);
+      // big hulls lumber: top speed falls off with size, from full at about 24 blocks to under a third for a dreadnought
+      const bulk = Math.min(1, Math.max(.3, Math.pow(24/Math.max(1, e.blocks.size), .45)));
+      const v = e.vmax === 0 ? 0 : Math.min(dirSpeed(ph, ux*e.c + uy*e.sn, -ux*e.sn + uy*e.c)*e.sc*bulk, el*1.2);
       e.vx += (ex/el*v - e.vx)*Math.min(1,dt*1.4); e.vy += (ey/el*v - e.vy)*Math.min(1,dt*1.4);
       e.x += e.vx*dt; e.y += e.vy*dt;
     }
