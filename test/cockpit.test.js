@@ -1,4 +1,4 @@
-// Cockpits: each brings its own core gun and right-click ability; the interceptor's edge depends on ship size.
+// Cockpits: each brings its own core gun and right-click ability; the corvette's edge depends on ship size.
 fresh(); G.meta.best = 9;
 const turret = K(0,-1);
 function fight(cp){
@@ -15,19 +15,19 @@ ok('Jump moves the ship toward the mouse', p.x - x0 > 100*G.SC && Math.abs(p.y -
 ok('Jump goes on cooldown', G.abT > 7);
 const x1 = p.x; G.abReq = true; sim(.1);
 ok('no second jump while cooling down', Math.abs(p.x - x1) < 30*G.SC);
-// interceptor: twin guns, a roll that makes the ship untouchable for a moment, and a size-based edge
+// corvette: twin guns, a roll that makes the ship untouchable for a moment, and a size-based edge
 fight('fighter');
-ok('the interceptor core fires twin rounds', T.core.gun.pellets === 2);
-ok('a 3-block interceptor gets its full edge', smallK() === 1);
+ok('the corvette core fires twin rounds', T.core.gun.pellets === 2);
+ok('a 3-block corvette gets its full edge', smallK() === 1);
 const q = G.player, core = q.blocks.get(CORE), hp0 = core.hp;
 damage(q, CORE, 10);
-ok('a small interceptor takes 40% less damage', Math.abs(hp0 - core.hp - 6) < 1e-6, hp0 - core.hp);
+ok('a small corvette takes 40% less damage', Math.abs(hp0 - core.hp - 6) < 1e-6, hp0 - core.hp);
 G.abReq = true; sim(.1);
 const hp1 = core.hp; damage(q, CORE, 10);
 ok('mid-roll nothing gets through', core.hp === hp1);
 const big = new Map([[CORE,'core']]); for (let i=-3; i<=3; i++) for (let j=1; j<=6; j++) big.set(K(i,j),'hull');
 G.design = big;
-ok('a 43-block interceptor has lost its edge', smallK() === 0, blockCount());
+ok('a 43-block corvette has lost its edge', smallK() === 0, blockCount());
 // cruiser, carrier and command bridge
 fight('cruiser');
 ok('the cruiser core fires homing missiles', !!T.core.gun.homing);

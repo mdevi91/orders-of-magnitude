@@ -29,7 +29,7 @@ G.meta.best = 9; G.meta.start = {...G.meta.start, c:'std'};
 enterEngineering();
 const turn0 = designStats().turn;
 G.cockpit = 'fighter';
-ok('a small interceptor turns up to 60% faster', Math.abs(designStats().turn/turn0 - (1 + .6*smallK())) < 1e-6 && smallK() > 0, `${designStats().turn/turn0}, edge ${smallK()}`);
+ok('a small corvette turns up to 60% faster', Math.abs(designStats().turn/turn0 - (1 + .6*smallK())) < 1e-6 && smallK() > 0, `${designStats().turn/turn0}, edge ${smallK()}`);
 $('launch').click(); newRun();
 ok('the cockpit is saved with the design, but a switched-off one flies as standard', G.meta.start.c === 'fighter' && G.cockpit === (COCKPITS.fighter.off ? 'std' : 'fighter'));
 G.cockpit = 'battle';

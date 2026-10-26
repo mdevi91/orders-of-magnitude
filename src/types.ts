@@ -31,6 +31,8 @@ export interface GunDef {
   arc?: number;
   fx?: BulletKind; homing?: boolean; mirv?: number; pellets?: number; fan?: number; ion?: boolean;
   life?: number; fuse?: number; blast?: number; lob?: boolean; nofall?: boolean;
+  /** anti-craft: picks fighters and bombers first and does double damage to them */
+  aa?: boolean;
   /** fires over the ship's own hull, so nothing on board blocks it */
   over?: boolean;
 }
@@ -108,7 +110,7 @@ export interface Ship {
   sc: number;
   fireMul: number; ft: number; phase: number; spin: number; orb: number; orbSpd: number; pref: number; vmax: number; turn: number; value: number;
   tgt: Ship | null; armed?: boolean; sights: [number, number, number][] | null; wob?: number;
-  /** player: untouchable until this time (the interceptor's roll) */
+  /** player: untouchable until this time (the corvette's roll) */
   ghost?: number;
   /** enemy: the local bearing (0 = +x, -PI/2 = nose) it turns toward its target, and when it next re-checks */
   bside?: number; bsT?: number; flT?: number; rbT?: number;
@@ -122,7 +124,7 @@ export interface Ship {
 
 export interface Bullet {
   x: number; y: number; vx: number; vy: number; sp: number; r: number; dmg: number; life: number; life0?: number; kind: BulletKind;
-  dead?: boolean; fuse?: number; blast?: number; fall?: boolean; ion?: boolean; homing?: boolean; mirv?: number;
+  dead?: boolean; fuse?: number; blast?: number; fall?: boolean; ion?: boolean; homing?: boolean; mirv?: number; aa?: boolean;
   /** missile exhaust trail as x,y pairs */
   tr?: number[] | null;
   /** what the player's missile homes on */

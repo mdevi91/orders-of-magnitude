@@ -10,9 +10,9 @@ const k = K(-1,0); damage(G.player, k, 999);
 ok('damage taken and blocks lost are counted', G.stats.taken > 0 && G.stats.lost === 1, `${G.stats.taken} / ${G.stats.lost}`);
 sim(1);
 ok('time in combat is counted', G.stats.secs > .9);
-// reaching sector 2 unlocks the gatling, missile and the interceptor cockpit
+// reaching sector 2 unlocks the gatling, missile and the corvette cockpit
 reachSector(2);
 runOver('abandoned');
 const txt = $('ovText').textContent;
 ok('the report shows the combat log', txt.includes('Damage dealt') && txt.includes('Blocks lost') && txt.includes('Time in combat'));
-ok('the report lists what the run unlocked', txt.includes('Unlocked this run') && txt.includes(T.gatling.name) && txt.includes('Interceptor'), txt.slice(txt.indexOf('Unlocked'), txt.indexOf('Unlocked') + 160));
+ok('the report lists what the run unlocked', txt.includes('Unlocked this run') && txt.includes(T.gatling.name) && txt.includes('Corvette'), txt.slice(txt.indexOf('Unlocked'), txt.indexOf('Unlocked') + 160));

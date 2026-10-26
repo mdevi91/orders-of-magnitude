@@ -54,7 +54,7 @@ export function pBullet(x: number, y: number, ang: number, gun: GunDef, target: 
   // missiles fly 15% under their listed speed; guided ones steer for 6 s, then fly straight for 3 s and burn out
   const sp = gun.spd*G.SC*(gun.homing || gun.mirv ? .85 : 1), life = gun.homing ? 9 : gun.life || (gun.range ? gun.range*cockpit().range/gun.spd : 3);
   G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC,
-    life, life0:life, fall:!!gun.range && !gun.homing && !gun.lob && !gun.nofall, homing:!!gun.homing, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0,
+    life, life0:life, fall:!!gun.range && !gun.homing && !gun.lob && !gun.nofall, homing:!!gun.homing, aa:!!gun.aa, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0,
     kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot'});
 }
 // every enemy shot flies this much faster than its base speed

@@ -89,7 +89,7 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.fillStyle = base[2]; X.fillRect(x-3,y-3,6,6); X.fillStyle = base[0]; X.fillRect(x-3,y-3,5,1); X.fillRect(x-3,y-3,1,5);
       X.fillStyle = base[0]; for (const [a,b] of [[-3.4,-3.4],[2.6,-3.4],[-3.4,2.6],[2.6,2.6]]) X.fillRect(x+a,y+b,.9,.9); break;
     case 'core': {
-      // the player's cockpit variant: swept wings for the interceptor, a gold-cornered armoured bridge for the command bridge
+      // the player's cockpit variant: swept wings for the corvette, a gold-cornered armoured bridge for the command bridge
       const cp = team==='p' ? G.cockpit : 'std';
       if (cp==='fighter'){ X.fillStyle = '#7a8496'; X.beginPath(); X.moveTo(x, y-5); X.lineTo(x+5, y+4.5); X.lineTo(x, y+2.5); X.lineTo(x-5, y+4.5); X.closePath(); X.fill(); }
       if (cp==='battle'){ X.fillStyle = '#ffc46b'; for (const [sx2, sy2] of [[-1,-1],[1,-1],[1,1],[-1,1]]){ X.fillRect(x + sx2*4.6 - (sx2 > 0 ? 1.6 : 0), y + sy2*4.6 - (sy2 > 0 ? .7 : 0), 1.6, .7); X.fillRect(x + sx2*4.6 - (sx2 > 0 ? .7 : 0), y + sy2*4.6 - (sy2 > 0 ? 1.6 : 0), .7, 1.6); } }

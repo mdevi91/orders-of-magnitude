@@ -27,7 +27,7 @@ export function updateECraft(A: Ship, dt: number, allies: Ship[]){
   A.cd -= dt;
   if (!A.tgt || !A.tgt.alive || (A.pick -= dt) <= 0){
     A.pick = 1.5; A.tgt = p; let bd = (p.x-A.x)**2 + (p.y-A.y)**2;
-    if (A.kind==='fbay') for (const o of allies){ const d = (o.x-A.x)**2 + (o.y-A.y)**2; if (o.alive && d < bd){ bd = d; A.tgt = o; } }
+    if (A.kind==='fbay') for (const o of allies){ const d = (o.x-A.x)**2 + (o.y-A.y)**2; if (o.alive && d < bd*2.2){ bd = d/2.2; A.tgt = o; } }
   }
   const o = A.tgt!, R = o.r*C.over + C.orbit*SC;
   A.orb += C.orbSpd*dt;
@@ -145,7 +145,7 @@ export function enemyFire(e: Ship, dt: number){
     if (w.burst && (g.shots = (g.shots || 0) + 1) < w.burst) g.cd = w.gap!;
     else { g.shots = 0; g.cd = w.cd*rand(.85,1.15); }
     // a fast target is harder to lead: extra scatter grows with its speed, up to ±7° at 700 units/s
-    const jit = .12*Math.min(1, Math.hypot(tgt.vx, tgt.vy)/(700*G.SC));
+    const jit = tgt.craft ? 0 : .12*Math.min(1, Math.hypot(tgt.vx, tgt.vy)/(700*G.SC));
     const ang = leadAngle(wx,wy,sp,.95,tgt) + (Math.random()-.5)*2*((w.spread || 0) + jit);
     const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC, w.kind, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.r*e.sc/G.SC);
     if (!b) continue;

@@ -174,13 +174,13 @@ export function update(dt: number){
   const tgtM = near(ax!,ay);
   // Auto weapons pick their own target: the nearest hostile inside their reach and arc, led on its motion.
   // Slow guns leave fighters alone while anything bigger is in reach.
-  const pick = (wx: number, wy: number, face: number, arc: number, reach: number, spd: number, fast: boolean): [Ship, number, number] | null => {
+  const pick = (wx: number, wy: number, face: number, arc: number, reach: number, spd: number, fast: boolean, aa = false): [Ship, number, number] | null => {
     let best: Ship | null = null, bd = 1e18;
     for (const e of enemies){
       if (!e.alive) continue;
       const d = Math.hypot(e.x-wx, e.y-wy) - e.r; if (d > reach) continue;
       if (arc < Math.PI && Math.abs(angDiff(Math.atan2(e.y-wy, e.x-wx), face)) > arc + .25) continue;
-      const score = d + (e.craft && !fast ? 600 : 0); if (score < bd){ bd = score; best = e; }
+      const score = d + (e.craft ? (aa ? -600 : fast ? 0 : 600) : 0); if (score < bd){ bd = score; best = e; }
     }
     if (!best) return null;
     const b: Ship = best, d = Math.hypot(b.x-wx, b.y-wy), t = spd ? d/spd*rand(.2,1.3) : 0, [ox,oy] = wobble(b, d);
@@ -197,7 +197,7 @@ export function update(dt: number){
       const gun = def(g.t)!.gun!, arc = cpArc(gun.arc || 0), [wx,wy] = wpos(p,g);
       let tg = tgtM, tx = aimX(g), ty = aimY(g);
       if (isAuto(g) || self){
-        const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RM, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak');
+        const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RM, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak', !!gun.aa);
         if (!P){ g.cd = .15; continue; }
         [tg, tx, ty] = P;
       }
@@ -300,7 +300,7 @@ export function update(dt: number){
     if (!e.station && G.time >= (e.bsT || 0)){ e.bside = broadside(e); e.bsT = G.time + 2; }
     const want = Math.atan2(dx,-dy) - ((e.bside ?? FA[0]) - FA[0]);
     // aimed guns switch to a hangar craft that comes much closer than the player
-    let td = Math.hypot(dx,dy)*.6; e.tgt = p;
+    let td = Math.hypot(dx,dy)*.95; e.tgt = p;
     for (const A of allies){ const d = Math.hypot(A.x-e.x, A.y-e.y); if (A.alive && d < td){ td = d; e.tgt = A; } }
     if (e.station) e.a += .03*e.spin*dt; // starbases turn slowly in place
     else {
@@ -371,7 +371,7 @@ export function update(dt: number){
         const burst = b.kind==='flak' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse || 0 : b.r);
         if (k >= 0 && burst){ flakBurst(b); break; }
         if (k >= 0){
-          const hb = e.blocks.get(k)!; b.dmg *= fallOff(b); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.homing) missileBlast(b,e,k);
+          const hb = e.blocks.get(k)!; b.dmg *= fallOff(b)*(b.aa && e.craft ? 2 : 1); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.homing) missileBlast(b,e,k);
           if (b.kind==='torp'){ missileBlast(b,e,k); impact(b,e,k); }
           if (b.ion){ ionJam(e, hb); sparks(b.x, b.y, 0, 8, 140*SC, ['#a070ff','#e8dcff','#ffffff']); } G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }
