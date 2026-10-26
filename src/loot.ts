@@ -42,7 +42,7 @@ export function chooseLoot(n: number, boost: number, title: string, intro: strin
     showOverlay(title, intro + `<div class="rows"><h3>Choose one${n > 1 ? ` · ${got.length+1}/${n}` : ''}</h3></div><div class="picks">` +
       offers.map((t, i) => `<button class="pick" type="button" data-act="pick:${t}" style="--rc:${RARITY[rarOf(t)].col}">${icon(t)}<i>${RARITY[rarOf(t)].name}</i><b>${T[t].name}</b>${T[t].make ? `<small class="mk">${T[t].make}</small>` : ''}` +
         `<small>${blurb(t)}</small>${owned(t) ? '' : '<span class="new">New</span>'}<kbd>${i+1}</kbd></button>`).join('') + '</div>',
-      [['Skip', () => G.pick && G.pick(null), 'ghost']], true, {eye:'Salvage recovered'});
+      [], true, {eye:'Salvage recovered'});
   };
   step();
 }

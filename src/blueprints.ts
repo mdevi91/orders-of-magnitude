@@ -30,7 +30,7 @@ export function bpLoad(n: number){
   const b = bpGet()[n]; if (!b) return;
   if (G.broken.size){ toast('Repair or remove damaged blocks first'); return; }
   undoStack.push(snap());
-  for (const k of [...G.design.keys()]) if (k!==CORE) removeCell(k);
+  for (const k of [...G.design.keys()]) if (k!==CORE && G.design.get(k)!=='cockpit') removeCell(k); // the cockpit stays as it is
   const want = new Map(b.d.filter(([,t]) => T[t])), dirs = new Map(b.o), missing: Partial<Record<BlockType, number>> = {};
   // nearest cells first, so whatever runs out is the outer edge of the design
   const heads = [...want].filter(([k,t]) => k!==CORE && !HEAD_OF[t]).sort(([a],[c]) => Math.hypot(KI(a),KJ(a)) - Math.hypot(KI(c),KJ(c)));

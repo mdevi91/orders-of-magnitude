@@ -208,7 +208,7 @@ export function honeycomb(cells: [string, string | number, boolean?][]){
 export const pad2 = (v: number) => v < 10 && v >= 0 ? '0' + v : String(v);
 export function showOverlay(title: string, html: string, actions: OverlayAction[], wide=false, o: OverlayOpts = {}){
   $('ovTitle').textContent = title; $('ovText').innerHTML = html; $('ovEye').textContent = o.eye || '';
-  $('ovTitle').closest<HTMLElement>('.card')!.dataset.screen = o.screen || '';
+  const cd = $('ovTitle').closest<HTMLElement>('.card')!; if (o.screen) cd.dataset.screen = o.screen; else delete cd.dataset.screen;
   const card = $('ovTitle').closest<HTMLElement>('.card')!;
   card.classList.toggle('wide', wide); card.style.setProperty('--ac', o.ac || 'var(--line)');
   const a = $('ovActions'); a.innerHTML = ''; a.classList.toggle('list', !!o.list);

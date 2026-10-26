@@ -11,7 +11,14 @@ import { G } from './state';
 import { syncUI, toast } from './ui';
 import { $ } from './view';
 
-export const abandon = () => { if (confirm('Abandon this run? You keep the data it has earned so far.')){ G.paused = false; runOver('abandoned'); } };
+// Abandon run asks twice in the game itself (no browser pop-up): the first click arms the button for 3 s, the second ends the run.
+let abandonArmed = -1e9;
+export const abandon = (e?: Event) => {
+  const b = (e?.currentTarget || document.activeElement) as HTMLElement | null;
+  if (performance.now() - abandonArmed < 3000){ abandonArmed = -1e9; G.paused = false; runOver('abandoned'); return; }
+  abandonArmed = performance.now();
+  if (b && b.tagName === 'BUTTON'){ const was = b.textContent; b.textContent = 'Click again to abandon'; setTimeout(() => { if (b.textContent === 'Click again to abandon') b.textContent = was; }, 3000); }
+};
 export const zoomBtn = (f: number) => { const L = layoutBuild(); zoomAt(L.cx, L.cy, f); };
 export function cycleMirror(){ G.mir = (G.mir + 1) % 4; syncUI(); }
 
