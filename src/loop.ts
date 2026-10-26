@@ -14,7 +14,8 @@ export function frame(now: number){
   requestAnimationFrame(frame);
   const dt = Math.min(.033, (now-lastT)/1000); lastT = now;
   try {
-    if (G.mode==='combat' && !G.paused) update(dt);
+    // targeting mode runs the fight at a fifth of the speed while you pick
+    if (G.mode==='combat' && !G.paused) update(G.tgtMode ? dt*.2 : dt);
     else if (G.mode==='clear' || G.mode==='dead') { G.time += dt; updateFx(dt); }
     else G.time += dt;
     ctx.setTransform(1,0,0,1,0,0); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';

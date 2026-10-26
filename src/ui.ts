@@ -1,6 +1,6 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
+import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpPerks, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
 import { PAINTS, aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
@@ -117,7 +117,7 @@ export function syncUI(){
   // Engineering picks the cockpit; in a run it is fixed
   const cps = $('cockpits'); cps.hidden = !G.outfit;
   if (G.outfit) cps.innerHTML = '<h3 class="palh">Cockpit</h3>' + (Object.keys(COCKPITS) as CockpitId[]).filter(id => !COCKPITS[id].off).map(id =>
-    `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"${cpUnlocked(id) ? '' : ' disabled'}><span><span class="nm">${cpUnlocked(id) || COCKPITS[id].off ? COCKPITS[id].name : '???'}</span><span class="ct">${cpUnlocked(id) ? `Right-click: ${COCKPITS[id].abName.split(':')[0]}` : `Unlocks at sector ${COCKPITS[id].unlock}.`}</span></span></button>`).join('') +
+    `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"${cpUnlocked(id) ? '' : ' disabled'}><span><span class="nm">${cpUnlocked(id) || COCKPITS[id].off ? COCKPITS[id].name : '???'}</span><span class="ct">${cpUnlocked(id) ? `Right-click: ${COCKPITS[id].abName.split(':')[0]}` : `Unlocks at sector ${COCKPITS[id].unlock}.`}</span>${cpUnlocked(id) && cpPerks(id).length ? `<span class="ct cb">${cpPerks(id).join(' · ')}</span>` : ''}</span></button>`).join('') +
     // paint: one swatch per scheme, hull colour over armour colour
     '<h3 class="palh">Paint</h3><div class="paints">' + Object.entries(PAINTS).map(([id, p]) =>
       `<button type="button" class="paint" data-paint="${id}" aria-pressed="${G.paint===id}" aria-label="${p.name} paint" title="${p.name}" style="--a:${p.hull[1]};--b:${p.armor[1]}"></button>`).join('') + '</div>';

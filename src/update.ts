@@ -8,6 +8,7 @@ import { BS, FA, K, NB, SWING, angDiff, clamp, rand } from './grid';
 import { dirSpeed } from './physics';
 import { boomAt, broadside, damage, hitShip, impact, killShip, laneClear, rayHits, sparks, wpos } from './ships';
 import { G, turnOf } from './state';
+import { tut, tutTick } from './tutorial';
 import type { Block, Key, Ship } from './types';
 import { locked } from './targeting';
 import { H, REDUCE, W } from './view';
@@ -17,10 +18,13 @@ import { H, REDUCE, W } from './view';
 export const keys: Record<string, boolean> = {};
 export const JOY_R = 26;
 // Auto fire picks a drifting spot somewhere on the target's hull (and a little past its edge further out), not its centre.
-export function wobble(e: Ship, d: number): [number, number] {
-  const w = e.wob ??= Math.random()*99, amp = e.r*1.1 + d*.03;
-  return [Math.sin(G.time*1.7 + w)*Math.cos(G.time*.6 + w*.4)*amp, Math.sin(G.time*2.3 + w*1.3)*Math.cos(G.time*.8 + w*.9)*amp];
+// Each weapon (seed) drifts on its own phase and pace, so guns on one target don't sweep in step.
+export function wobble(e: Ship, d: number, seed = 0): [number, number] {
+  const w = (e.wob ??= Math.random()*99) + seed*37.17, k = 1 + ((seed*.618034) % 1 - .5)*.6, amp = e.r*1.1 + d*.03, t = G.time*k;
+  return [Math.sin(t*1.7 + w)*Math.cos(t*.6 + w*.4)*amp, Math.sin(t*2.3 + w*1.3)*Math.cos(t*.8 + w*.9)*amp];
 }
+/** A weapon's own wobble seed, from where it sits on the hull. */
+const wseed = (b: Block) => 1 + Math.abs(b.i*31 + b.j*17 + b.o*7) % 97;
 // An ion bolt jams the enemy weapons near the block it hits (turrets, point defense, carrier bays) for ION_T seconds.
 export const ION_R = 2.5, ION_T = 1.5;
 export function ionJam(e: Ship, hit: Block){
@@ -69,7 +73,7 @@ export function collide(p: Ship, e: Ship){
   crush(e, cx, cy, hitE);
   sparks(cx, cy, Math.atan2(ny, nx), 6 + Math.min(14, sm|0), 200*G.SC, ['#ffffff','#ffd23a','#ff8a00']);
   if (sm > 8) boomAt(cx, cy, Math.min(26, 6 + sm)*G.SC, .25);
-  G.shake = Math.max(G.shake, Math.min(5, sm/5)); sfx('ram', Math.min(1.6, .5 + sm/15));
+  G.shake = Math.max(G.shake, Math.min(5, sm/5)); sfx('ram', Math.min(1.6, .5 + sm/15)); tut('ram');
 }
 /** Seconds a railgun charges, glowing, before its slug leaves. */
 export const RAIL_CHARGE = .45;
@@ -122,6 +126,7 @@ export function update(dt: number){
   }
   const arriving = G.ships.some(s => s.alive && s.team==='e' && !s.fodder && (s.warp || 0) > 0);
   const enemies = G.ships.filter(s => s.alive && s.team==='e' && !((s.warp || 0) > 0)), allies = G.ships.filter(s => s.alive && s.team==='a');
+  tutTick(dt, enemies.filter(s => !s.craft).length);
 
   // aim
   let ax: number | undefined, ay = 0;
@@ -225,7 +230,7 @@ export function update(dt: number){
   // Slow guns leave fighters alone while anything bigger is in reach.
   // The lock (targeting mode) comes first whenever it is inside the weapon's reach and arc.
   const lock = locked();
-  const pick = (wx: number, wy: number, face: number, arc: number, reach: number, spd: number, fast: boolean, aa = false): [Ship, number, number] | null => {
+  const pick = (wx: number, wy: number, face: number, arc: number, reach: number, spd: number, fast: boolean, aa = false, seed = 0): [Ship, number, number] | null => {
     let best: Ship | null = null, bd = 1e18;
     const fits = (e: Ship) => Math.hypot(e.x-wx, e.y-wy) - e.r <= reach && (arc >= Math.PI || Math.abs(angDiff(Math.atan2(e.y-wy, e.x-wx), face)) <= arc + .25);
     if (lock && fits(lock)) best = lock;
@@ -236,7 +241,7 @@ export function update(dt: number){
       const score = d + (e.craft ? (aa ? -600 : fast ? 0 : 600) : 0); if (score < bd){ bd = score; best = e; }
     }
     if (!best) return null;
-    const b: Ship = best, d = Math.hypot(b.x-wx, b.y-wy), t = spd ? d/spd*rand(.2,1.3) : 0, [ox,oy] = wobble(b, d);
+    const b: Ship = best, d = Math.hypot(b.x-wx, b.y-wy), t = spd ? d/spd*rand(.2,1.3) : 0, [ox,oy] = wobble(b, d, seed);
     return [b, b.x + b.vx*t + ox, b.y + b.vy*t + oy];
   };
   if (p.alive){
@@ -251,7 +256,7 @@ export function update(dt: number){
       // missiles launched by hand home on the lock, if there is one
       let tg = gun.homing && lock ? lock : tgtM, tx = aimX(g), ty = aimY(g);
       if (isAuto(g) || self){
-        const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RM, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak', !!gun.aa);
+        const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RM, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak', !!gun.aa, wseed(g));
         if (!P){ g.cd = .15; continue; }
         [tg, tx, ty] = P;
       }
@@ -282,7 +287,7 @@ export function update(dt: number){
       if (!may(h)) continue;
       if (h.cd > 0){ h.cd -= dt*RATE; if (h.cd > 0) continue; }
       if (!h.lane) continue;
-      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, RG.range*SC*RM, 0, true) : null;
+      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, RG.range*SC*RM, 0, true, false, wseed(h)) : null;
       if (isAuto(h) && !P) continue;
       const tg = P ? P[0] : tgtM, off = angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), face);
       if ((isAuto(h) || !held) && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > RG.range*SC*RM)) continue;
@@ -296,7 +301,7 @@ export function update(dt: number){
   if (p.alive) for (const h of p.lasers){
     h.beam = null; if (!h.lane || !may(h)) continue;
     const L = T.laser.laser!, [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
-    const P = isAuto(h) ? pick(wx, wy, base, SWING, L.range*SC*RM, 0, true) : null;
+    const P = isAuto(h) ? pick(wx, wy, base, SWING, L.range*SC*RM, 0, true, false, wseed(h)) : null;
     if (isAuto(h) && !P) continue;
     const face = base + clamp(angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), base), -SWING, SWING), dx = Math.cos(face), dy = Math.sin(face);
     const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC*RM;

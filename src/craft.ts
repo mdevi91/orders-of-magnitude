@@ -5,6 +5,7 @@ import { craftCap, eDmg, eReach } from './fights';
 import { BS, FA, K, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { boomAt, damage, laneClear, makeShip, rayHits, sparks, wpos } from './ships';
 import { G } from './state';
+import { tut } from './tutorial';
 import type { Block, BlockType, Bullet, Cell, CraftKind, Key, Ship } from './types';
 import { locked } from './targeting';
 import { REDUCE } from './view';
@@ -52,7 +53,7 @@ export function launchCraft(p: Ship, b: Block){
   A.vx = p.vx + Math.cos(dir)*v; A.vy = p.vy + Math.sin(dir)*v;
   A.kind = kd; A.bay = b; A.sortie = C.sortie; A.cd = .5; A.pick = 0; A.orb = rand(0,TAU);
   for (const x of A.blocks.values()) if (x.t==='engine') x.firing = true;
-  b.ally = A; G.ships.push(A); sfx('launch');
+  b.ally = A; G.ships.push(A); sfx('launch'); tut('craft');
 }
 // Out on sortie the craft circles the nearest enemy and shoots it (or escorts the player); when the sortie ends it flies home and docks.
 export function updateCraft(A: Ship, dt: number, enemies: Ship[]){

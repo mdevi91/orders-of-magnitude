@@ -154,6 +154,19 @@ export const cpArc = (a: number) => a >= Math.PI - .01 ? a : Math.min(Math.PI, a
 export const cpTurn = () => cockpit().turn*(1 + .6*smallK());
 export const cpSpeed = () => 1 + .6*smallK();
 export const cpGuard = () => 1 - .4*smallK();
+/** A cockpit's bonuses and drawbacks as short tags, for the Engineering list. */
+export function cpPerks(id: CockpitId){
+  const C = COCKPITS[id], out: string[] = [];
+  if (C.small) out.push('Nimble when small');
+  if (C.turn !== 1) out.push(C.turn > 1 ? 'Quick turns' : 'Slow turns');
+  if (C.range > 1) out.push('Long range');
+  if (C.arc > 1) out.push('Wide arcs');
+  if (C.mrl) out.push('Fast missiles');
+  if (C.deck) out.push('Own fighter');
+  if (C.craftHp || C.build) out.push('Better craft');
+  if (C.coreHp !== 1) out.push(C.coreHp > 1 ? 'Tough core' : 'Fragile core');
+  return out;
+}
 export const cpUnlocked = (id: CockpitId) => !COCKPITS[id].off && COCKPITS[id].unlock <= (G.meta.best || 1);
 // block levels: bought per type at shops, +35% to the block's main stat per level up to Lv5, then +20% per level up to Lv10
 export const MAXLV = 10;

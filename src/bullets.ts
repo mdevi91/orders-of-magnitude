@@ -3,6 +3,7 @@ import { ESH, T, cockpit, def, shRad } from './catalog';
 import { BS, clamp, rand } from './grid';
 import { boomAt, damage, sparks, wpos } from './ships';
 import { G } from './state';
+import { tut } from './tutorial';
 import type { BlockType, Bullet, BulletKind, GunDef, Key, Ship } from './types';
 import { locked } from './targeting';
 import { REDUCE } from './view';
@@ -82,7 +83,7 @@ export function shieldBlock(p: Ship, b: Bullet){
     if (dx*dx + dy*dy > (rad + b.r)**2 || dx*b.vx + dy*b.vy > 0) continue;
     B.hp -= b.dmg*(b.ion ? 5 : 1); B.last = B.flash = G.time; B.ha = Math.atan2(dy, dx); sfx('shield', p.team==='p' ? 1 : .5);
     sparks(b.x, b.y, Math.atan2(dy,dx), 4, 120*G.SC, ['#5fd3ff','#ffffff']);
-    if (B.hp <= 0){ sfx('pop'); B.hp = 0; B.down = SH.down; G.fx.push({k:'ring', x:cx, y:cy, r:rad*1.1, life:.5, max:.5, col:p.team==='p' ? '#5fd3ff' : '#ff9a5a'}); }
+    if (B.hp <= 0){ sfx('pop'); B.hp = 0; B.down = SH.down; if (p.team==='p') tut('shieldDown'); G.fx.push({k:'ring', x:cx, y:cy, r:rad*1.1, life:.5, max:.5, col:p.team==='p' ? '#5fd3ff' : '#ff9a5a'}); }
     return true;
   }
   return false;
