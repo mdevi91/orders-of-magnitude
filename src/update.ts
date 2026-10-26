@@ -44,6 +44,7 @@ export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: numb
 export function update(dt: number){
   const RM = cockpit().range; // the command bridge stretches every weapon's reach
   G.time += dt;
+  if (G.stats) G.stats.secs = (G.stats.secs || 0) + dt;
   const p = G.player!, SC = G.SC;
   for (const s of G.ships){ s.c = Math.cos(s.a); s.sn = Math.sin(s.a); }
   // ships still in their jump in can't be hit and don't act; they drop out with a flash

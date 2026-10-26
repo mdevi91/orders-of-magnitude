@@ -227,13 +227,15 @@ export function damage(s: Ship, k: Key, dmg: number){
   const b = s.blocks.get(k); if (!b || !s.alive || (s.warp || 0) > 0 || (s.ghost || 0) > G.time) return;
   if (b.t==='armor') dmg *= 1 - ARMOR_DR;
   if (s.team==='p') dmg *= cpGuard(); // a small interceptor shrugs off hits
-  s.life -= Math.min(Math.max(0, b.hp), dmg); b.hp -= dmg; b.hit = G.time;
+  const took = Math.min(Math.max(0, b.hp), dmg);
+  s.life -= took; b.hp -= dmg; b.hit = G.time;
+  if (G.stats){ if (s.team==='e') G.stats.dealt = (G.stats.dealt || 0) + took; else if (s.team==='p') G.stats.taken = (G.stats.taken || 0) + took; }
   if (b.hp <= 0) destroyBlock(s,k,b);
   if (s.alive && s.life <= 0) killShip(s);
 }
 export function destroyBlock(s: Ship, k: Key, b: Block){
   s.blocks.delete(k); debris(s,b,true);
-  if (s.team==='p') G.lost.add(k);
+  if (s.team==='p'){ G.lost.add(k); if (G.stats) G.stats.lost = (G.stats.lost || 0) + 1; }
   if (b.t==='core'){ killShip(s); return; }
   // an enemy generator goes up and takes its neighbours with it
   if (s.team==='e' && b.t==='gen'){

@@ -154,7 +154,10 @@ export interface MapNode {
   ev?: number;
 }
 export interface StarMap { nodes: MapNode[]; cur: number; done: boolean; seen: number[] }
-export interface RunStats { kills: number; nodes: number; elites: number; flags: number; sectors: number; bonus: number; won: boolean }
+export interface RunStats { kills: number; nodes: number; elites: number; flags: number; sectors: number; bonus: number; won: boolean;
+  /** for the after-action report: hit points dealt and taken, own blocks destroyed, seconds in combat, biggest ship (blocks),
+   *  and the best sector before the run (to list what it unlocked). Optional: older saves lack them. */
+  dealt?: number; taken?: number; lost?: number; secs?: number; peak?: number; best0?: number }
 /** A starting ship from Engineering: cells, facings, weapon groups. */
 export interface StartDesign { d: [Key, BlockType][]; o: [Key, Facing][]; g?: Record<Key, number>; c?: CockpitId }
 /** What outlives every run: data to spend, research levels, the furthest sector reached, the starting ship, and records. */

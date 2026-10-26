@@ -9,7 +9,7 @@ import { save } from './save';
 import { showOptions } from './options';
 import { genDesign, gunDirs, makeShip } from './ships';
 import { NODE, goOn, nextSector, toMap } from './starmap';
-import { G, scaleOf, spanFor } from './state';
+import { G, blockCount, scaleOf, spanFor } from './state';
 import { tut } from './tutorial';
 import { designStats, hideOverlay, showOverlay, syncUI, toast } from './ui';
 import { keys } from './update';
@@ -177,6 +177,7 @@ export function flyDesign(){
 }
 export function startFight(kind: FightKind){
   undoStack.length = 0; G.fight = kind; G.lost = new Set(); G.boss = null; G.abT = 0; G.abReq = false;
+  if (G.stats) G.stats.peak = Math.max(G.stats.peak || 0, blockCount());
   G.S = scaleOf(G.stage); G.SC = Math.pow(G.S,.8);
   const p = G.player = makeShip(flyDesign(),'p',0,0,1,G.dirs);
   // every sector opens on last sector's view and slowly pulls back to a wider one, even if the hull didn't grow

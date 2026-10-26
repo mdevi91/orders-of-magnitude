@@ -1,11 +1,11 @@
 import { sfx } from './audio';
-import { HEAD_OF, PAL, PLATE, RARITY, T, blurb, cpUnlocked, outfitPrice, rarName, rarOf, unlocked } from './catalog';
+import { COCKPITS, HEAD_OF, PAL, PLATE, RARITY, T, blurb, type CockpitId, cpUnlocked, outfitPrice, rarName, rarOf, unlocked } from './catalog';
 import { K } from './grid';
 import { undoStack } from './input';
 import { clearRun, load, resetAll, save, saveMeta } from './save';
 import { tile } from './shop';
 import { curNode, genMap, toDrydock, toMap } from './starmap';
-import { G } from './state';
+import { G, blockCount } from './state';
 import { tut } from './tutorial';
 import type { BlockType, Key, StartDesign } from './types';
 import { hideOverlay, icon, pips, showOverlay, syncUI, toast } from './ui';
@@ -136,7 +136,7 @@ export function newRun(){
   const arms = (['cannon','scatter','gatling','missile','flak'] as BlockType[]).filter(unlocked);
   for (let q=0; q<metaLv('arms'); q++){ const t = arms[(Math.random()*arms.length)|0]; G.inv[t] = (G.inv[t]||0) + 1; }
   G.credits = Math.max(0, budget() - designCost(G.design)); G.outfit = false;
-  G.stats = {kills:0, nodes:0, elites:0, flags:0, sectors:0, bonus:0, won:false};
+  G.stats = {kills:0, nodes:0, elites:0, flags:0, sectors:0, bonus:0, won:false, dealt:0, taken:0, lost:0, secs:0, peak:blockCount(), best0:G.meta.best || 1};
   G.map = genMap(1); G.node = curNode(); undoStack.length = 0;
   toMap(); save();
 }
@@ -145,9 +145,20 @@ export function runOver(why: 'dead' | 'won' | 'abandoned'){
   const data = st.sectors*6 + st.elites*2 + st.flags*15 + Math.floor(st.nodes/2) + Math.floor(st.kills/8) + (st.bonus||0) + (st.won ? 25 : 0);
   const m = G.meta; m.data += data; m.earned = (m.earned || 0) + data; m.runs = (m.runs || 0) + 1; m.kills = (m.kills || 0) + st.kills; if (st.won) m.wins = (m.wins || 0) + 1;
   saveMeta(); clearRun(); tut('data');
-  const ro = (v: string | number, k: string, c = '') => `<div class="readout"><b${c}>${v}</b><span>${k}</span></div>`;
+  const ro = (v: string | number, k: string, c = '') => `<div class="readout"><b${c}>${v}</b><span>${k}</span></div>`, n = (v?: number) => Math.round(v || 0).toLocaleString('en');
+  const secs = Math.round(st.secs || 0), time = `${Math.floor(secs/60)}:${String(secs % 60).padStart(2, '0')}`;
+  // what reaching new sectors opened up for good: blocks and cockpits
+  const b0 = st.best0 ?? (m.best || 1), b1 = m.best || 1, newB = PAL.filter(t => t!=='sell' && !PLATE(t) && (T[t].unlock || 1) > b0 && (T[t].unlock || 1) <= b1);
+  const newC = (Object.keys(COCKPITS) as CockpitId[]).filter(id => !COCKPITS[id].off && COCKPITS[id].unlock > b0 && COCKPITS[id].unlock <= b1);
+  const next = PAL.map(t => T[t].unlock || 1).filter(u => u > b1).sort((a,b) => a-b)[0];
+  const unl = newB.length || newC.length
+    ? '<div class="unl">' + newB.map(t => `<span style="--rc:${RARITY[rarOf(t)].col}">${icon(t)}${T[t].name}</span>`).join('') +
+      newC.map(id => `<span style="--rc:var(--gold)">${COCKPITS[id].name}</span>`).join('') + '</div>'
+    : `<p>Nothing new this time.${next ? ` Reach sector ${next} to unlock ${unlocksAt(next).map(t => T[t].name).join(', ')}.` : ''}</p>`;
   showOverlay(why==='dead' ? 'Ship lost' : why==='won' ? 'Run complete' : 'Run abandoned',
-    `<div class="readouts">${ro(G.stage, 'Sector')}${ro(st.nodes, 'Jumps')}${ro(st.kills, 'Kills')}${ro(st.flags, 'Capital ships')}${ro('+'+data, 'Data', ' class="gold"')}</div>` +
+    `<div class="readouts">${ro(G.stage, 'Sector')}${ro(st.nodes, 'Jumps')}${ro(st.kills, 'Kills')}${ro(st.elites, 'Elites')}${ro(st.flags, 'Capital ships')}${ro('+'+data, 'Data', ' class="gold"')}</div>` +
+    `<div class="rows"><h3>Combat log</h3></div><div class="readouts">${ro(n(st.dealt), 'Damage dealt')}${ro(n(st.taken), 'Damage taken')}${ro(n(st.lost), 'Blocks lost')}${ro(time, 'Time in combat')}${ro(n(st.peak), 'Biggest ship')}</div>` +
+    `<div class="rows"><h3>Unlocked this run</h3></div>${unl}` +
     (why==='dead' ? 'The wreck goes dark. What your sensors logged on the way still counts: the data goes to Research &amp; Development.' : 'The data you brought back goes to Research &amp; Development.'),
-    [['Back to base', showTitle]], false, {eye:'After-action report', ac:why==='dead' ? 'var(--foe)' : 'var(--gold)'});
+    [['Back to base', showTitle]], true, {eye:'After-action report', ac:why==='dead' ? 'var(--foe)' : 'var(--gold)'});
 }
