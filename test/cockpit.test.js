@@ -43,5 +43,5 @@ G.cockpit = 'carrier';
 ok('the carrier rebuilds craft faster', cockpit().build > 1 && cockpit().craftHp > 1);
 // phantom: Cloak makes enemy guns hold fire at the player
 fight('phantom');
-const foe = dummy(150); foe.guns = [...foe.blocks.values()].filter(b => b.t==='core'); G.abReq = true; sim(.1);
+dummy(150); G.abReq = true; sim(.1);
 ok('Cloak hides the ship for a few seconds', G.cloakT > G.time + 2);
