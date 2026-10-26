@@ -352,8 +352,8 @@ export function update(dt: number){
     if (b.kind==='mine'){ const f = Math.pow(.35, dt); b.vx *= f; b.vy *= f; }
     if (b.homing){
       if (!b.target || !b.target.alive){ let bd = 1e18; b.target = null; for (const e of enemies){ const d = (e.x-b.x)**2 + (e.y-b.y)**2; if (d < bd){ bd = d; b.target = e; } } }
-      // guidance burns out after 2 s; after that the warhead flies straight
-      if (b.target && b.life > 4){
+      // guidance burns out after 6 s; after that the warhead flies straight until it burns out 3 s later
+      if (b.target && b.life > 3){
         const cur = Math.atan2(b.vy,b.vx), want = Math.atan2(b.target.y-b.y, b.target.x-b.x);
         const na = cur + clamp(angDiff(want,cur), -1.5*dt, 1.5*dt);
         b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp;
@@ -383,9 +383,9 @@ export function update(dt: number){
   for (const b of G.eb){
     if (b.dead) continue;
     if (b.kind==='emiss'){
-      // enemy missiles home for 2 s like the player's
+      // enemy missiles steer for 6 s like the player's, then fly straight for 3 s and burn out
       const t = b.tgt && b.tgt.alive ? b.tgt : p;
-      if (b.life > 6){
+      if (b.life > 3){
         const cur = Math.atan2(b.vy,b.vx), na = cur + clamp(angDiff(Math.atan2(t.y-b.y, t.x-b.x), cur), -1.5*dt, 1.5*dt);
         b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp;
       }

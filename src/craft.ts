@@ -150,7 +150,7 @@ export function enemyFire(e: Ship, dt: number){
     const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC, w.kind, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.r*e.sc/G.SC);
     if (!b) continue;
     if (w.range && !w.fuse && w.kind!=='emiss'){ b.life = b.life0 = w.range/(w.spd*EB_SPD); b.fall = true; }
-    if (w.kind==='emiss'){ b.tgt = tgt; b.tr = []; b.life = 10; }
+    if (w.kind==='emiss'){ b.tgt = tgt; b.tr = []; b.life = 9; }
     if (w.fuse){ b.fuse = w.fuse*e.sc; b.blast = w.blast!*e.sc; b.life = w.life!; }
   }
 }
