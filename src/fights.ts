@@ -39,7 +39,9 @@ export function planFight(kind: FightKind, s: number, col: number): WavePlan {
   if (kind==='fight'){
     // a random encounter: a patrol, a lone cruiser, a carrier, or a pack of light raiders
     const r = Math.random();
-    if (r < .3){ waves.name = 'Cruiser'; waves.push([ship(2, {guns:g+2})]); }
+    // the last sectors send lone dreadnoughts: one hulking warship bristling with guns
+    if (s >= 10 && r < .45){ waves.name = 'Dreadnought'; waves.push([ship(2.4, {guns:g+6})]); }
+    else if (r < .3){ waves.name = 'Cruiser'; waves.push([ship(2, {guns:g+2})]); }
     else if (r < .5 && s >= 2){ waves.name = 'Carrier'; waves.push([ship(1.7, {guns:Math.max(1, g-1), bays:1 + (s >= 5 ? 1 : 0)})]); }
     else if (r < .7){ waves.name = 'Raiders'; waves.push(Array.from({length:2 + (s >= 3 ? 1 : 0) + (Math.random() < s/10 ? 1 : 0)}, () => ship(.6, {guns:3}))); }
     else { waves.name = 'Patrol'; waves.push([ship(1.3), ...(s >= 2 && Math.random() < .6 ? [ship(.8)] : [])]); }
@@ -119,7 +121,7 @@ export function spawnWave(list: Wave){
     e.pref = (spec.boss ? 360 : e.guns.some(g => g.t==='rail') ? rand(420,520) : rand(220,380))*G.SC + e.r;
     // close in until the shortest-ranged gun can reach
     if (e.guns.length) e.pref = Math.min(e.pref, Math.min(...e.guns.map(g => ewOf(g.t)!.range))*.75*G.SC*eReach() + e.r*.5);
-    e.vmax = 200/Math.sqrt(1 + d.size/30); e.turn = 1.6/Math.sqrt(1 + d.size/20);
+    e.vmax = 1; // flies on its own engines and gyros (see update); 0 holds it still
     // salvage grows with the square root of size, so big late-game hulls don't flood the run with credits
     e.value = inc((4 + Math.sqrt(d.size)*2.2)*(spec.flag ? 5 : spec.boss ? 3 : spec.elite ? 2 : 1));
     e.a = Math.atan2(G.player!.x-e.x, -(G.player!.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
@@ -153,7 +155,7 @@ export function makeFighter(x: number, y: number, tier: number){
     e.fodder = true; e.sc = tS;
     e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);
     e.pref = p.r + rand(140,260)*tS + e.r;
-    e.vmax = 190/Math.sqrt(1 + d.size/30); e.turn = 2.4;
+    e.vmax = 1;
     e.value = inc(2 + Math.sqrt(d.size));
     e.a = Math.atan2(p.x-e.x, -(p.y-e.y)); e.c = Math.cos(e.a); e.sn = Math.sin(e.a);
     warpIn(e); G.ships.push(e);

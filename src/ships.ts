@@ -35,7 +35,8 @@ export function recalc(s: Ship){
   s.r = r;
   if (s.team==='a') return; // hangar craft fly and shoot from updateCraft
   if (s.team !== 'p'){
-    // enemies: guns, shield bubbles, carrier bays; each generator speeds up their fire
+    // enemies: guns, shield bubbles, carrier bays; each generator speeds up their fire. They fly on the player's physics.
+    s.ph = physics(s.blocks.values(), (k: Key) => s.blocks.get(k)?.t, false);
     let gens = 0;
     for (const b of s.blocks.values()){
       if (ewOf(b.t)) s.guns.push(b); else if (b.t==='bay') s.bays.push(b); else if (b.t==='gen') gens++; else if (b.t==='pd') s.epd.push(b);
@@ -76,8 +77,14 @@ const PROFILES: ((t: number) => number)[] = [
   t => t < .25 ? .3 + 2.4*t : .9 - .3*t,            // frigate: a long even body
   t => t < .3 ? .9 : t < .8 ? .45 : .8,             // hammerhead: wide bow, waist, wide stern
 ];
-function hullShape(n: number){
-  const prof = PROFILES[(Math.random()*PROFILES.length)|0], aspect = rand(1.5, 2.3);
+// Capital ships and the last sectors' warships: long, heavy silhouettes that tower over the player.
+const BIG_PROFILES: ((t: number) => number)[] = [
+  t => .06 + .94*t,                                 // destroyer: a long wedge from a needle bow to a broad stern
+  t => t < .12 ? .45 : t < .82 ? .8 : 1,            // dreadnought: a blunt slab with a stepped, wider stern
+  t => t < .2 ? .9 : t < .7 ? .55 : .85,            // battleship: a hammer bow, a long waist and heavy aft sponsons
+];
+function hullShape(n: number, big = false){
+  const prof = big ? BIG_PROFILES[(Math.random()*BIG_PROFILES.length)|0] : PROFILES[(Math.random()*PROFILES.length)|0], aspect = big ? rand(2.6, 3.3) : rand(1.5, 2.3);
   let cells = new Set<Key>();
   for (let s = 1; s < 60 && cells.size < n; s += .25){
     const L = Math.max(2, Math.round(s*aspect)), front = Math.max(1, Math.round(L*.45));
@@ -103,7 +110,7 @@ function hullShape(n: number){
   return cells;
 }
 export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
-  const cells = hullShape(n), d = new Map<Key, EnemyCell>();
+  const cells = hullShape(n, boss || n >= 110 || G.stage >= 10), d = new Map<Key, EnemyCell>();
   const pa = Math.min(.6, .2 + .05*stage), pg = boss ? .18 : .24;
   const open = (k: Key, o: number) => !cells.has(k+o), edge = (k: Key) => NB.some(o => open(k,o));
   const twin = (k: Key) => K(-KI(k), KJ(k));
@@ -114,8 +121,11 @@ export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
   // engines across the stern: cells with nothing behind them, rearmost first
   const back = K(0,1) - CORE;
   const stern = [...cells].filter(k => open(k, back) && KI(k) >= 0 && free(k)).sort((a,b) => KJ(b) - KJ(a) || KI(a) - KI(b));
-  let ne = Math.min(6, Math.max(1, Math.round(cells.size/16)));
+  let ne = Math.min(4, Math.max(1, Math.round(cells.size/32))); // warships, not racers: a few engines for a big hull
   for (const k of stern){ if (ne <= 0) break; if (!free(k)) continue; set(k,'engine'); ne -= KI(k) ? 2 : 1; }
+  // gyros deep inside, about one per 14 blocks, so a big hull can still turn
+  let ny = Math.max(1, Math.round(cells.size/14));
+  for (const k of [...cells].filter(k => KI(k) >= 0 && !edge(k) && free(k)).sort(() => Math.random() - .5)){ if (ny <= 0) break; if (!free(k)) continue; set(k, 'gyro'); ny -= KI(k) ? 2 : 1; }
   // guns on the outer edge, bow and flanks before the stern
   const rim = [...cells].filter(k => KI(k) >= 0 && edge(k) && free(k)).map(k => ({k, w:-KJ(k)*.5 + KI(k) + rand(0,2.5)})).sort((a,b) => b.w - a.w);
   let ng = Math.max(1, Math.min(maxGuns, Math.round(cells.size*pg)));

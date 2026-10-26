@@ -312,10 +312,14 @@ export function update(dt: number){
     for (const A of allies){ const d = Math.hypot(A.x-e.x, A.y-e.y); if (A.alive && d < td){ td = d; e.tgt = A; } }
     if (e.station) e.a += .03*e.spin*dt; // starbases turn slowly in place
     else {
-      e.a += clamp(angDiff(want,e.a), -e.turn*dt, e.turn*dt);
+      // the same physics as the player: turning from the core, gyros and engine jets against the hull's inertia;
+      // speed from the thrust that points the way it wants to go, against its mass
+      const ph = e.ph, turn = turnOf(ph.torque + (ph.jetCW + ph.jetCCW)/2, ph.inertia, ph.mass);
+      e.a += clamp(angDiff(want,e.a), -turn*dt, turn*dt);
       e.orb += e.orbSpd*dt;
       const tx = clamp(p.x + Math.cos(e.orb)*e.pref, 0, G.AW), ty = clamp(p.y + Math.sin(e.orb)*e.pref, 0, G.AH);
-      const ex = tx-e.x, ey = ty-e.y, el = Math.hypot(ex,ey) || 1, v = Math.min(e.vmax*e.sc, el*1.2);
+      const ex = tx-e.x, ey = ty-e.y, el = Math.hypot(ex,ey) || 1, ux = ex/el, uy = ey/el;
+      const v = e.vmax === 0 ? 0 : Math.min(dirSpeed(ph, ux*e.c + uy*e.sn, -ux*e.sn + uy*e.c)*e.sc, el*1.2);
       e.vx += (ex/el*v - e.vx)*Math.min(1,dt*1.4); e.vy += (ey/el*v - e.vy)*Math.min(1,dt*1.4);
       e.x += e.vx*dt; e.y += e.vy*dt;
     }
