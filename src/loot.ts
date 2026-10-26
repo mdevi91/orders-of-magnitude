@@ -13,11 +13,13 @@ import { icon, showOverlay } from './ui';
 // ---------- loot ----------
 export const lootPool = () => PAL.filter(t => t!=='sell' && !PLATE(t) && unlocked(t));
 // Odds by rarity. Each step up is rarer, but deeper sectors, better sources (boost) and the hangar's prototype access
-// multiply every step, so legendaries grow from a long shot in sector 1 to a regular find late in a run.
-const RW = [100, 45, 20, 8, 3];
+// multiply every step, up to a cap per rarity, so an epic or legendary block never gets as common as a plain one.
+const RW = [100, 45, 20, 8, 3], RCAP = [100, 90, 60, 45, 25];
+// epic and up: at most one of these in any pick of three
+const TOP = 3;
 export function rollBlock(boost=1, pool=lootPool()): BlockType {
-  const f = (1 + .2*(G.stage-1))*(1 + .3*(boost-1))*(1 + .12*metaLv('proto'));
-  const w = pool.map(t => RW[rarOf(t)]*Math.pow(f, rarOf(t)));
+  const f = (1 + .1*(G.stage-1))*(1 + .3*(boost-1))*(1 + .12*metaLv('proto'));
+  const w = pool.map(t => Math.min(RW[rarOf(t)]*Math.pow(f, rarOf(t)), RCAP[rarOf(t)]));
   let r = Math.random()*w.reduce((a,b) => a+b, 0);
   for (let n=0; n<pool.length; n++) if ((r -= w[n]) < 0) return pool[n];
   return pool[0];
@@ -37,7 +39,10 @@ export function chooseLoot(n: number, boost: number, title: string, intro: strin
   const step = () => {
     if (got.length >= n) return done(got);
     const offers: BlockType[] = [];
-    for (let q=0; offers.length < 3 && q < 30; q++){ const t = rollBlock(boost); if (!offers.includes(t)) offers.push(t); }
+    for (let q=0; offers.length < 3 && q < 30; q++){
+      const top = offers.some(o => rarOf(o) >= TOP), t = rollBlock(boost, top ? lootPool().filter(x => rarOf(x) < TOP) : lootPool());
+      if (!offers.includes(t)) offers.push(t);
+    }
     G.pick = t => { G.pick = null; if (t){ addBlock(t); got.push(t); sfx('place'); } else got.push(null); step(); };
     showOverlay(title, intro + `<div class="rows"><h3>Choose one${n > 1 ? ` · ${got.length+1}/${n}` : ''}</h3></div><div class="picks">` +
       offers.map((t, i) => `<button class="pick" type="button" data-act="pick:${t}" style="--rc:${RARITY[rarOf(t)].col}">${icon(t)}<i>${RARITY[rarOf(t)].name}</i><b>${T[t].name}</b>${T[t].make ? `<small class="mk">${T[t].make}</small>` : ''}` +
