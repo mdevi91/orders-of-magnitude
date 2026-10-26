@@ -120,8 +120,7 @@ export function syncUI(){
   const rb = $<HTMLButtonElement>('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
   rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;
-  $('gridInfo').innerHTML = G.outfit ? `<b class="gold">Engineering.</b> Design the ship every run starts with. Any unlocked block is for sale; <b class="gold">${Math.round(G.credits)} cr</b> of budget left, and what you don't spend comes along as credits.`
-    : `Sector <b>${s}</b>. Plating costs credits; every other block comes from cargo. Upgrades are sold at shops.`;
+  $('gridInfo').innerHTML = G.outfit ? `Starting ship · <b class="gold">${Math.round(G.credits)} cr</b> budget left` : '';
   const st = designStats(), ms = (v: number) => (v/BS).toFixed(1);
   const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
   $('stats').innerHTML =

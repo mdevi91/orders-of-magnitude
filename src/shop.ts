@@ -32,7 +32,7 @@ export function openShop(n: MapNode){
     `<div class="readout"><b>${G.broken.size}</b><span>Damaged</span></div></div><div class="rows"><h3>Stock</h3></div><div class="tiles">` +
     offers.map((o,i) => tile({ic:icon(o.t), rc:RARITY[rarOf(o.t)].col, name:T[o.t].name, tag:RARITY[rarOf(o.t)].name + (T[o.t].make ? ' · ' + T[o.t].make : ''), desc:blurb(o.t), foot:o.n ? `×${o.n} left` : 'Sold out',
       label:o.n ? `${buyPrice(o.t)} cr` : 'sold', act:`buy:${i}`, dis:!o.n || buyPrice(o.t) > G.credits})).join('') + '</div><div class="rows">';
-  if (G.broken.size) h += `<h3>Repair · half price here</h3>` + row(`${G.broken.size} damaged block${G.broken.size>1?'s':''}`, 'Fixes as many as you can afford.', `${rep} cr`, 'rep:0', !canRepair(.5));
+  if (G.broken.size) h += `<h3>Repair · half price</h3>` + row(`${G.broken.size} damaged block${G.broken.size>1?'s':''}`, '', `${rep} cr`, 'rep:0', !canRepair(.5));
   h += `<h3>Upgrade</h3>` + (ups.length ? ups.map(t => row(`${T[t].name} ${pips(lvOf(t), MAXLV)}`, lvOf(t) < MAXLV ? `+${lvStep(lvOf(t))}% to every ${T[t].name.toLowerCase()} block.` : 'Fully upgraded.',
     lvOf(t) < MAXLV ? `${upCost(t)} cr` : 'max', `up:${t}`, lvOf(t) >= MAXLV || upCost(t) > G.credits, icon(t))).join('') : '<small>Nothing to upgrade.</small>');
   const cargo = cargoTypes();
@@ -40,7 +40,7 @@ export function openShop(n: MapNode){
   h += '</div>';
   // keep the scroll position when the shop redraws after a purchase
   const card = () => $('ovText').closest('.card')!, top = $('overlay').hidden ? 0 : card().scrollTop;
-  showOverlay('Trading post', h, [['Leave', toMap], ['Drydock', toDrydock, 'ghost']], true, {eye:`Sector ${G.stage} · Market`, ac:'var(--gold)'});
+  showOverlay('Trading post', h, [['Leave', toMap], ['Drydock', toDrydock, 'ghost']], true, {eye:`Sector ${G.stage} · Market`, ac:'var(--line)'});
   card().scrollTop = top;
 }
 export function canRepair(mul: number){ return [...G.broken].some(k => { const t = G.design.get(k); return !!t && Math.ceil(repCost(t)*mul) <= G.credits; }); }

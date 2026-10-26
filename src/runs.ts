@@ -62,14 +62,14 @@ export function showRnD(){
     return tile({name:m.name, tag:max ? 'Complete' : `Level ${lv} of ${m.max}`, desc:m.desc, foot:pips(lv, m.max), label:max ? 'max' : `${metaCost(m)} data`, act:`meta:${m.id}`, dis:max || metaCost(m) > G.meta.data}); };
   const spent = META.reduce((a, m) => a + metaLv(m.id), 0), total = META.reduce((a, m) => a + m.max, 0);
   showOverlay('Research & Development', `<div class="readouts"><div class="readout"><b class="gold">${G.meta.data}</b><span>Data</span></div><div class="readout"><b>${spent}/${total}</b><span>Projects done</span></div></div>` +
-    '<div class="rows"><h3>Logistics · every run starts stronger</h3></div><div class="tiles">' + META.filter(m => !m.ship).map(t).join('') + '</div>' +
-    '<div class="rows"><h3>Ship systems · every block hits harder</h3></div><div class="tiles">' + META.filter(m => m.ship).map(t).join('') + '</div>',
+    '<div class="rows"><h3>Logistics</h3></div><div class="tiles">' + META.filter(m => !m.ship).map(t).join('') + '</div>' +
+    '<div class="rows"><h3>Ship systems</h3></div><div class="tiles">' + META.filter(m => m.ship).map(t).join('') + '</div>',
     [['Back', showTitle]], true, {eye:'Station · Research & Development', ac:STATION_AC.rnd});
 }
 // Cantina: your records, a rumor from the bar, and the ship deck.
 const PILOTS = ['Vex, freighter captain', 'a bored dockhand', 'Okafor, ex-navy gunner', 'a pilot nursing a drink', 'Lin, salvage crew', 'the bartender'];
 // station accent colours, matching their doorways in the base
-const STATION_AC = {cantina:'#7fe07a', rnd:'#c88aff', eng:'#5fd8ff', hangar:'#ffc46b'};
+const STATION_AC = {cantina:'var(--line)', rnd:'var(--line)', eng:'var(--line)', hangar:'var(--line)'};
 const RUMORS = [
   'Pilots say armor plates shrug off a third of every hit. Wrap your core in them.',
   'Ion bolts jam the guns near where they hit. Aim them at a turret cluster.',
@@ -159,6 +159,7 @@ export function runOver(why: 'dead' | 'won' | 'abandoned'){
     `<div class="readouts">${ro(G.stage, 'Sector')}${ro(st.nodes, 'Jumps')}${ro(st.kills, 'Kills')}${ro(st.elites, 'Elites')}${ro(st.flags, 'Capital ships')}${ro('+'+data, 'Data', ' class="gold"')}</div>` +
     `<div class="rows"><h3>Combat log</h3></div><div class="readouts">${ro(n(st.dealt), 'Damage dealt')}${ro(n(st.taken), 'Damage taken')}${ro(n(st.lost), 'Blocks lost')}${ro(time, 'Time in combat')}${ro(n(st.peak), 'Biggest ship')}</div>` +
     `<div class="rows"><h3>Unlocked this run</h3></div>${unl}` +
-    (why==='dead' ? 'The wreck goes dark. What your sensors logged on the way still counts: the data goes to Research &amp; Development.' : 'The data you brought back goes to Research &amp; Development.'),
-    [['Back to base', showTitle]], true, {eye:'After-action report', ac:why==='dead' ? 'var(--foe)' : 'var(--gold)'});
+    // a terse system log instead of prose
+    `<div class="log">${why==='dead' ? '&gt; BLACK BOX RECOVERED<br>' : ''}&gt; SENSOR LOG UPLINKED TO R&amp;D <b>+${data}</b>${why==='dead' ? '<br><span class="red">&gt; PILOT STATUS: UNKNOWN</span>' : ''}</div>`,
+    [['Back to base', showTitle]], true, {eye:'After-action report', ac:why==='dead' ? 'var(--foe)' : 'var(--line)'});
 }

@@ -218,12 +218,12 @@ export function fightResult(kind: FightKind, cap: boolean, text: string, dmg: nu
     if (cap && G.stage >= 9 && !G.stats!.won){
       G.stats!.won = true; save();
       showOverlay('Victory', text + ` The third ${kind==='station' ? 'starbase' : 'flagship'} is down: the run is won. Keep going for more data, or end the run here.`,
-        [['Keep going', nextSector], ['End run', () => runOver('won'), 'ghost']], false, {eye:'Combat report · run won', ac:'var(--gold)'});
+        [['Keep going', nextSector], ['End run', () => runOver('won'), 'ghost']], false, {eye:'Combat report · run won', ac:'var(--line)'});
       return;
     }
     const nx = G.stage + 1;
     showOverlay(kind==='station' ? 'Starbase destroyed' : kind==='boss' ? 'Flagship destroyed' : `Sector ${G.stage} cleared`, text + ` The gate is open. Sector ${nx} is next${nx%3===0 ? ', and a flagship or starbase guards it' : ''}.`,
-      [[`Jump to sector ${nx}`, nextSector], ['Star map', toMap, 'ghost']], false, {eye:'Combat report · gate open', ac:'var(--gold)'});
+      [[`Jump to sector ${nx}`, nextSector], ['Star map', toMap, 'ghost']], false, {eye:'Combat report · gate open', ac:'var(--line)'});
   } else showOverlay('Victory', text, [[G.pendingNode ? 'Continue' : 'Star map', goOn]], false, {eye:'Combat report'});
   save();
 }
