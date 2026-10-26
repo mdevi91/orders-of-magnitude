@@ -1,8 +1,10 @@
-// Difficulty probe: a bot builds a reasonable ship for each sector (the old block limit as a size, unlocked weapons, some upgrades)
+// Difficulty probe: a bot builds a reasonable ship for each sector (sized like a fresh player's ship partway through it, only
+// the weapons that sector unlocks, some block upgrades, no R&D)
 // and fights with every group on auto while kiting at range. Logs win rates and damage taken; checks the game
 // is beatable early but not a walkover.
 function botShip(s){
-  const lim = Math.round((30 + 15*s)*.9);
+  // a run starts at 5 blocks and grows by salvage and shopping: about 11 in sector 1, 25 in 3, 60 in 6, 100 in 9
+  const lim = Math.round(6 + 4*s + .8*s*s);
   const guns = ['cannon','gatling','scatter','flak','missile','ion','torpedo','tesla'].filter(t => T[t].unlock <= s);
   // cells around the core, nearest first, in mirrored pairs
   const cells = [];
@@ -60,7 +62,7 @@ function botFight(kind){
 const rate = {};
 for (const s of [1,2,3,4,6,9]){
   for (const kind of ['fight','elite','gate', ...(s%3===0 ? ['boss','station'] : [])]){
-    const n = kind==='fight' ? 4 : 3, res = [];
+    const n = 8, res = [];
     for (let q=0; q<n; q++){ fresh(s); botShip(s); res.push(botFight(kind)); }
     if (kind==='fight'){ const st = designStats(); log(`  bot: ${blockCount()} blocks, ${Math.round(st.dps)} dps, ${Math.round(st.hp)} hp; enemy hull ${res.map(r => r.ehp).join('/')}`); }
     const won = res.filter(r => r.won).length, lost = res.reduce((a,r) => a + r.lost, 0)/n;

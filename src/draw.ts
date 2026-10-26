@@ -560,8 +560,9 @@ export function renderCombat(){
       ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(mx, my); ctx.stroke(); ctx.setLineDash([]);
       ctx.globalAlpha = .9; ctx.beginPath(); ctx.arc(mx, my, 5, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
     }
-    ctx.font = FONT(8); ctx.textAlign = 'left'; ctx.fillStyle = on ? '#ffc46b' : '#e2ecff'; ctx.globalAlpha = on ? 1 : .4;
-    ctx.fillText(on ? 'NOSE ON MOUSE · A/D STRAFE' : 'HOLD SHIFT: NOSE FOLLOWS MOUSE', 8, ly); ctx.globalAlpha = 1;
+    // small print on the full-resolution layer, so it stays a quiet footnote
+    hctx.font = FONT(8); hctx.textAlign = 'left'; hctx.fillStyle = on ? '#ffc46b' : '#e2ecff'; hctx.globalAlpha = on ? 1 : .45;
+    hctx.fillText(on ? 'NOSE ON MOUSE · A/D STRAFE' : 'SHIFT: NOSE FOLLOWS MOUSE', 8*PX, ly*PX); hctx.globalAlpha = 1;
   }
 
   // banner

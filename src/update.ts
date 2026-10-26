@@ -6,7 +6,7 @@ import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
 import { BS, FA, K, NB, SWING, angDiff, clamp, rand } from './grid';
 import { dirSpeed } from './physics';
-import { boomAt, damage, hitShip, impact, killShip, laneClear, rayHits, sparks, wpos } from './ships';
+import { boomAt, broadside, damage, hitShip, impact, killShip, laneClear, rayHits, sparks, wpos } from './ships';
 import { G, turnOf } from './state';
 import type { Block, Ship } from './types';
 import { H, W } from './view';
@@ -254,7 +254,9 @@ export function update(dt: number){
   for (const e of enemies){
     if (e.craft){ updateECraft(e, dt, allies); continue; }
     const dx = p.x-e.x, dy = p.y-e.y;
-    const want = Math.atan2(dx,-dy);
+    // turn the side with the most guns that bear toward the player, re-checked as guns are lost
+    if (!e.station && G.time >= (e.bsT || 0)){ e.bside = broadside(e); e.bsT = G.time + 2; }
+    const want = Math.atan2(dx,-dy) - ((e.bside ?? FA[0]) - FA[0]);
     // aimed guns switch to a hangar craft that comes much closer than the player
     let td = Math.hypot(dx,dy)*.6; e.tgt = p;
     for (const A of allies){ const d = Math.hypot(A.x-e.x, A.y-e.y); if (A.alive && d < td){ td = d; e.tgt = A; } }

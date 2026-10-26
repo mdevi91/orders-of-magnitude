@@ -1,10 +1,10 @@
 import { sfx } from './audio';
 import { COL, ESH, ET, HM, LV, PARTS, T, def, ewOf, isCraft, pickWeapon } from './catalog';
-import { BS, CORE, FA, K, KI, KJ, NB, angDiff, rand } from './grid';
+import { BS, CORE, FA, K, KI, KJ, NB, SWING, angDiff, rand } from './grid';
 import { laneFwd, partComplete, physics } from './physics';
 import { metaLv } from './runs';
 import { G } from './state';
-import type { Block, Cell, EnemyCell, Facing, Key, Physics, Ship, Team } from './types';
+import type { Block, BlockType, Cell, EnemyCell, Facing, Key, Physics, Ship, Team } from './types';
 import { REDUCE } from './view';
 
 // Life: every block adds its hit points times LIFE to the ship's life, and every point of damage a block takes comes off it too.
@@ -103,7 +103,7 @@ function hullShape(n: number){
 }
 export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
   const cells = hullShape(n), d = new Map<Key, EnemyCell>();
-  const pa = Math.min(.6, .2 + .05*stage), pg = boss ? .12 : .15;
+  const pa = Math.min(.6, .2 + .05*stage), pg = boss ? .18 : .24;
   const open = (k: Key, o: number) => !cells.has(k+o), edge = (k: Key) => NB.some(o => open(k,o));
   const twin = (k: Key) => K(-KI(k), KJ(k));
   const set = (k: Key, t: EnemyCell) => { d.set(k,t); d.set(twin(k),t); };
@@ -166,6 +166,18 @@ export function gunDirs(d: Map<Key, Cell>){
     dirs.set(k, best as Facing);
   }
   return dirs;
+}
+/** The local bearing an enemy wants its target on: the side where the most guns bear, the nose on a tie. */
+export function broadside(s: Ship){
+  let best = FA[0], bs = -1;
+  for (let q = 0; q < 16; q++){
+    const b = FA[0] + q*Math.PI/8;
+    let n = 0;
+    for (const g of s.guns){ const pg = T[g.t as BlockType].gun; if (Math.abs(angDiff(b, FA[g.o])) <= (pg ? pg.arc ?? Math.PI : SWING)) n++; }
+    const score = n - .05*Math.abs(angDiff(b, FA[0]));
+    if (score > bs){ bs = score; best = b; }
+  }
+  return best;
 }
 /** World position of a block on a ship. */
 export function wpos(s: Ship, b: {i: number; j: number}): [number, number] { const lx=b.i*BS, ly=b.j*BS; return [s.x + lx*s.c - ly*s.sn, s.y + lx*s.sn + ly*s.c]; }

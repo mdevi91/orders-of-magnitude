@@ -15,33 +15,35 @@ import type { EnemyCell, FightKind, Key, Ship, ShipSpec, Wave, WavePlan } from '
 import { H, W } from './view';
 
 // ---------- fights ----------
-export const bossSize = (s: number) => Math.round(32*Math.pow(s,1.45));
+// capital ships: a few times a fresh player's ship in that sector
+export const bossSize = (s: number) => Math.round(14*Math.pow(s,1.35));
 export const fodderCap = () => Math.min(3, 1 + Math.floor(G.stage/3));
 // enemy fighters and bombers alive at once
 export const craftCap = () => Math.min(6, 3 + Math.floor(G.stage/3));
-// sectors 1 to 3 shrink ships hard (a quarter, half, three quarters) so a starting ship can win its first fights
-export const shipSize = (s: number, col: number) => Math.max(4, Math.round((12 + 11*Math.pow(s,1.3))*Math.min(1, s/4)*(1 + .07*col)*rand(.9,1.15)));
+// a line ship is a bit smaller than a fresh player's ship in that sector (about 11 blocks in sector 1, 25 in 3, 60 in 6, 100 in 9)
+export const shipSize = (s: number, col: number) => Math.max(4, Math.round((4 + 3*s + .6*s*s)*(1 + .07*col)*rand(.9,1.15)));
 // credits for winning: base plus a per-sector part
 const BOUNTY: Record<FightKind, [number, number]> = {fight:[10,4], ambush:[8,3], elite:[20,7], gate:[30,10], boss:[75,25], station:[80,28]};
 // every enemy shot hits a little harder each sector, so fewer guns still keep up
 export const eDmg = () => 1.25 + .3*(G.stage-1);
-// Waves for one fight: few ships, but big and tough ones. Gun caps keep it readable: a few heavy guns per ship instead of a wall of small ones.
+// Waves for one fight: few ships, but big and tough ones. Gun caps keep it readable. Turrets face outward and only some bear
+// on any one target, so a ship carries more guns than it can fire at once.
 export function planFight(kind: FightKind, s: number, col: number): WavePlan {
-  const waves: WavePlan = [], g = Math.min(3 + Math.floor(s/2), 1 + s), ship = (m=1, x: Partial<ShipSpec> = {}): ShipSpec => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
+  const waves: WavePlan = [], g = Math.min(4 + s, 2 + 2*s), ship = (m=1, x: Partial<ShipSpec> = {}): ShipSpec => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
   if (kind==='fight'){
     // a random encounter: a patrol, a lone cruiser, a carrier, or a pack of light raiders
     const r = Math.random();
     if (r < .3){ waves.name = 'Cruiser'; waves.push([ship(2, {guns:g+2})]); }
     else if (r < .5 && s >= 2){ waves.name = 'Carrier'; waves.push([ship(1.7, {guns:Math.max(1, g-1), bays:1 + (s >= 5 ? 1 : 0)})]); }
-    else if (r < .7){ waves.name = 'Raiders'; waves.push(Array.from({length:2 + (s >= 3 ? 1 : 0) + (Math.random() < s/10 ? 1 : 0)}, () => ship(.6, {guns:2}))); }
+    else if (r < .7){ waves.name = 'Raiders'; waves.push(Array.from({length:2 + (s >= 3 ? 1 : 0) + (Math.random() < s/10 ? 1 : 0)}, () => ship(.6, {guns:3}))); }
     else { waves.name = 'Patrol'; waves.push([ship(1.3), ...(s >= 2 && Math.random() < .6 ? [ship(.8)] : [])]); }
     if (col >= 4 && Math.random() < .35) waves.push([ship(1.2)]);
   } else if (kind==='ambush') waves.push([ship(1.3), ...(s >= 5 ? [ship(.8)] : [])]);
   else if (kind==='elite') waves.push([{n:Math.round(bossSize(s)*.5), elite:true, guns:g+2, bays:s >= 4 ? 1 : 0}]);
   else if (kind==='gate'){
-    waves.push([ship(1.3), ...(s >= 4 ? [ship()] : [])]);
-    waves.push([{n:Math.round(bossSize(s)*1.1), boss:true, guns:4 + Math.floor(s/3), bays:s >= 3 ? 1 : 0}]);
-  } else if (kind==='boss') waves.push([{n:Math.min(1300, Math.round(bossSize(s)*1.3)), boss:true, flag:true, guns:4 + Math.floor(s/3), bays:1 + Math.floor(s/3)}]);
+    waves.push([ship(.9), ...(s >= 4 ? [ship(.7)] : [])]);
+    waves.push([{n:Math.round(bossSize(s)*.8), boss:true, guns:4 + Math.floor(s/2), bays:s >= 3 ? 1 : 0}]);
+  } else if (kind==='boss') waves.push([{n:Math.min(1300, Math.round(bossSize(s))), boss:true, flag:true, guns:5 + Math.floor(s/2), bays:1 + Math.floor(s/3)}]);
   else if (kind==='station') waves.push([{n:Math.min(1300, Math.round(bossSize(s)*1.8)), boss:true, flag:true, station:true, guns:s >= 6 ? 12 : 8, bays:4}]);
   return waves;
 }
@@ -140,7 +142,7 @@ export function spawnSwarm(){
 export function makeFighter(x: number, y: number, tier: number){
   const p = G.player!, tS = Math.pow(scaleOf(tier),.8);
   {
-    const d = genDesign(Math.round((7 + 3.2*Math.pow(tier,1.3))*rand(.85,1.1)), false, tierOf(tier), 2);
+    const d = genDesign(Math.round((4 + 2*Math.pow(tier,1.2))*rand(.85,1.1)), false, tierOf(tier), 2);
     const e = makeShip(d,'e', clamp(x, 0, G.AW), clamp(y, 0, G.AH), 1, gunDirs(d));
     e.fodder = true; e.sc = tS;
     e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);

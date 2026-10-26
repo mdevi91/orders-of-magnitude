@@ -107,7 +107,9 @@ export interface Ship {
   /** enemy scale: bullet speed and reach */
   sc: number;
   fireMul: number; ft: number; phase: number; spin: number; orb: number; orbSpd: number; pref: number; vmax: number; turn: number; value: number;
-  tgt: Ship | null; armed?: boolean; sights: [number, number, number][] | null; wob?: number; flT?: number; rbT?: number;
+  tgt: Ship | null; armed?: boolean; sights: [number, number, number][] | null; wob?: number;
+  /** enemy: the local bearing (0 = +x, -PI/2 = nose) it turns toward its target, and when it next re-checks */
+  bside?: number; bsT?: number; flT?: number; rbT?: number;
   // hangar craft (either side)
   kind: CraftKind | null; bay: Block | null; sortie: number; aimA: number; cd: number; pick: number;
   /** shared life pool: every block adds to it, damage to any block takes from it, and the ship explodes at 0 */
