@@ -8,7 +8,10 @@
     "typecheck": "tsc --noEmit",
     "test": "node test/run.js",
     "itch": "tsc --noEmit && vite build --base ./ --outDir itch/game --emptyOutDir",
-    "itch:push": "node scripts/itch-push.mjs"
+    "itch:push": "node scripts/itch-push.mjs",
+    "itch:zip": "node scripts/itch-zip.mjs",
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "release": "npm run deploy && node scripts/release-itch.mjs"
   },
   "devDependencies": {
     "javascript-obfuscator": "^4.1.1",
