@@ -467,7 +467,7 @@ export function renderCombat(){
       const k = SHAPE[b.kind] || b.kind;
       const X = Math.round(sx(b.x)), Y = Math.round(sy(b.y)), s = Math.max(1, Math.round(b.r*z));
       if (X < -s*4 || Y < -s*4 || X > W+s*4 || Y > H+s*4) continue;
-      if (k!=='line'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3; ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.arc(X, Y, s*2.6+1, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+      if (k!=='line' && k!=='shot'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3; ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.arc(X, Y, s*2.6+1, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
       if (b.tr && b.tr.length > 2){
         // exhaust trail: fades from hot yellow at the missile to dim orange at the tail
         const n = b.tr.length/2; ctx.lineWidth = 1;
@@ -503,6 +503,13 @@ export function renderCombat(){
           ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, s*2.2, s*1.1, ang, 0, TAU); ctx.fill();
           ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(X + ca*s*.5, Y + sa*s*.5, s*1.1, s*.5, ang, 0, TAU); ctx.fill();
         }
+        continue;
+      }
+      if (k==='shot'){
+        // the core gun's round: a gatling-style tracer, but a whole game pixel thick with a white-hot tip
+        const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang), len = Math.max(5, b.sp*z*.019);
+        ctx.strokeStyle = BCOL.shot; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(X - ca*len, Y - sa*len); ctx.lineTo(X, Y); ctx.stroke();
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(X, Y, 1, 1);
         continue;
       }
       ctx.fillStyle = BCOL[b.kind]; ctx.fillRect(X-s, Y-s+1, 2*s, 2*s-2); ctx.fillRect(X-s+1, Y-s, 2*s-2, 2*s);
