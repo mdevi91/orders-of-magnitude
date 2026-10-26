@@ -43,7 +43,7 @@ export function planFight(kind: FightKind, s: number, col: number): WavePlan {
     if (s >= 10 && r < .45){ waves.name = 'Dreadnought'; waves.push([ship(2.4, {guns:g+6})]); }
     else if (r < .3){ waves.name = 'Cruiser'; waves.push([ship(2, {guns:g+2})]); }
     else if (r < .5 && s >= 2){ waves.name = 'Carrier'; waves.push([ship(1.7, {guns:Math.max(1, g-1), bays:1 + (s >= 5 ? 1 : 0)})]); }
-    else if (r < .7){ waves.name = 'Raiders'; waves.push(Array.from({length:2 + (s >= 3 ? 1 : 0) + (Math.random() < s/10 ? 1 : 0)}, () => ship(.6, {guns:3}))); }
+    else if (r < .7){ waves.name = 'Raiders'; waves.push(Array.from({length:2 + (s >= 3 ? 1 : 0) + (Math.random() < s/10 ? 1 : 0)}, () => ship(.6, {guns:3 + Math.max(0, Math.floor((s - 4)/3))}))); }
     else { waves.name = 'Patrol'; waves.push([ship(1.3), ...(s >= 2 && Math.random() < .6 ? [ship(.8)] : [])]); }
     if (col >= 4 && Math.random() < .35) waves.push([ship(1.2)]);
   } else if (kind==='ambush') waves.push([ship(1.3), ...(s >= 5 ? [ship(.8)] : [])]);
@@ -109,7 +109,9 @@ export function spawnWave(list: Wave){
   const hpMul = 1.15 + .22*(G.stage-1), tier = tierOf(G.stage);
   let boss: Ship | null = null;
   for (const spec of list){
-    const d = spec.station ? genStation(spec.n, tier, spec.guns, spec.bays || 0) : genDesign(spec.n, !!(spec.boss || spec.elite), tier, spec.guns), pos = spawnPos();
+    // from sector 5 a hull carries guns in step with its size: one per 22 blocks there, one per 12 by sector 12
+    const guns = G.stage >= 5 ? Math.max(spec.guns, Math.round(spec.n*(.045 + .0055*(Math.min(G.stage, 12) - 5)))) : spec.guns;
+    const d = spec.station ? genStation(spec.n, tier, guns, spec.bays || 0) : genDesign(spec.n, !!(spec.boss || spec.elite), tier, guns), pos = spawnPos();
     if (spec.bays && !spec.station) addBays(d, spec.bays);
     // a starbase has so many blocks that each one is lighter
     const e = makeShip(d,'e',pos.x,pos.y,hpMul*(spec.elite ? 1.3 : spec.station ? .5 : 1), gunDirs(d));

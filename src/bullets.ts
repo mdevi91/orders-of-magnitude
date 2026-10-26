@@ -35,14 +35,14 @@ export function missileBlast(b: Bullet, e: Ship, k: Key){
   for (let n=0; n<4; n++) G.fx.push({k:'smoke', x:x + rand(-6,6)*SC, y:y + rand(-6,6)*SC, vx:rand(-14,14)*SC, vy:rand(-14,14)*SC, r:rand(6,11)*SC, life:rand(.7,1.2), max:1.2});
   if (!REDUCE) G.shake = Math.min(4, G.shake + 1.4);
 }
-// MIRV carrier: splits into homing warheads fanned out around its heading, spread over the nearest enemies.
+// MIRV carrier: splits into homing warheads fanned out wide around its heading, spread over the nearest enemies.
 export function mirvSplit(b: Bullet, enemies: Ship[]){
   b.dead = true; boomAt(b.x, b.y, 8*G.SC, .15); sfx('missile', .8);
   const ts = [...enemies].filter(e => e.alive).sort((p,q) => Math.hypot(p.x-b.x,p.y-b.y) - Math.hypot(q.x-b.x,q.y-b.y)).slice(0,3);
   const head = Math.atan2(b.vy,b.vx), sub: GunDef = {spd:T.mirv.gun!.spd*1.4, r:2.2, dmg:0, homing:true, cd:0, spread:0};
   const n = b.mirv || 0;
   for (let q=0; q<n; q++){
-    pBullet(b.x, b.y, head + (q - (n-1)/2)*.45, sub, ts.length ? ts[q % ts.length] : null);
+    pBullet(b.x, b.y, head + (q - (n-1)/2)*.8, sub, ts.length ? ts[q % ts.length] : null);
     G.pb[G.pb.length-1].dmg = b.dmg;
   }
 }
