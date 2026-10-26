@@ -8,15 +8,17 @@ import type { BlockDef, BlockType, Cell, CraftDef, CraftKind, EnemyCell, EnemyGu
 export const BLOCKS = {
   core:   {name:'Core', cost:0, hp:80, mass:3, thrust:4, torque:12, gun:{range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true}, desc:'Your heart. Lose it, or all of the ship’s life, and the run is over. Gives a little thrust in every direction.'},
   hull:   {name:'Hull', key:'1', unlock:1, rar:0, cost:2, hp:22, mass:1, desc:'Cheap structure that holds everything together.'},
-  hullc:  {name:'Hull corner', key:'h', unlock:1, rar:0, cost:2, hp:16, mass:.7, rot:true, desc:'Hull with one corner cut away at 45°, for angled edges and noses. R turns it.'},
-  armorc: {name:'Armor corner', key:'j', unlock:1, rar:0, cost:8, hp:52, mass:2.2, rot:true, desc:'Armor with one corner cut away at 45°. Takes 30% less damage, like armor. R turns it.'},
+  hullc:  {name:'Hull corner', key:'l', unlock:1, rar:0, cost:2, hp:16, mass:.7, rot:true, desc:'Hull with one corner cut away at 45°, for angled edges and noses. R turns it.'},
+  armorc: {name:'Armor corner', key:'t', unlock:1, rar:0, cost:8, hp:52, mass:2.2, rot:true, desc:'Armor with one corner cut away at 45°. Takes 30% less damage, like armor. R turns it.'},
   armor:  {name:'Armor', key:'2', unlock:1, rar:0, cost:10, hp:70, mass:3, desc:'Three times the toughness of hull, and takes 30% less damage. Heavy.'},
   cannon: {name:'KM-3 Cannon', make:'Kessler Arms', key:'3', unlock:1, rar:0, cost:33, hp:20, mass:1.5, rot:true, gun:{range:324, cd:.54, en:3, spd:480, dmg:9, spread:.02, r:2.8, arc:.9, fx:'oval'}, desc:'Turret. Heavy slugs that splash and shove, 17 damage per second. Covers 50° either side of its facing.'},
   bigcannon:{name:'Goliath Cannon', make:'Teller Heavy Industries', key:'k', unlock:4, rar:2, cost:120, hp:30, mass:3, rot:true, gun:{range:480, cd:1.3, en:9, spd:400, dmg:32, spread:.015, r:4.2, arc:.7, fx:'oval'}, desc:'Inverted T: a 3-wide base with a 2-cell nose ahead of it. Turret firing huge slugs, about 25 damage per second, from the tip of its nose. Covers 40° either side of its facing.'},
   hgatling:{name:'Maelstrom Gatling', make:'Teller Heavy Industries', key:'u', unlock:3, rar:2, cost:95, hp:22, mass:2.5, rot:true, gun:{range:280, cd:.1, en:1.1, spd:700, dmg:3.8, spread:.035, r:2, arc:1.05, fx:'line'}, desc:'2 blocks long. Turret with a hammering tracer stream, 38 damage per second. Covers 60° either side of its facing.'},
   gatling:{name:'Hailstorm Gatling', make:'Kessler Arms', key:'4', unlock:2, rar:0, cost:51, hp:16, mass:1.5, rot:true, gun:{range:273, cd:.15, en:1, spd:760, dmg:3.6, spread:.03, r:1.8, arc:1.25, fx:'line', over:true}, desc:'Turret. Tight tracer stream, 24 damage per second, fired over your own hull. Covers 70° either side of its facing.'},
-  missile:{name:'Viper Missile', make:'Orion Dynamics', key:'5', unlock:2, rar:1, cost:72, hp:16, mass:2, gun:{range:1100, cd:2.9, en:8, spd:172, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 2 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
+  missile:{name:'Viper Missile', make:'Orion Dynamics', key:'5', unlock:2, rar:1, cost:72, hp:16, mass:2, gun:{range:1100, cd:2.9, en:8, spd:172, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 6 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
   mirv:   {name:'Hydra MIRV', make:'Orion Dynamics', key:'v', unlock:6, rar:3, cost:180, hp:18, mass:2.5, gun:{range:1000, cd:7, en:22, spd:142, dmg:7, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:3}, desc:'2×2 launcher. A slow carrier missile that splits into 3 homing warheads near its target, each with its own blast. Enemy point defense can shoot them down.'},
+  plasma: {name:'Helios Plasma Cannon', make:'Teller Heavy Industries', key:'p', unlock:9, rar:3, cost:210, hp:30, mass:3, rot:true, gun:{range:520, cd:2.2, en:16, spd:300, dmg:40, spread:.02, r:4, arc:.8, fx:'plasma', fuse:26, blast:52, nofall:true}, desc:'Turret. A slow bolt of plasma that bursts beside a hull in a huge blast.'},
+  swarm:  {name:'Swarm Pod', make:'Orion Dynamics', key:'e', unlock:11, rar:4, cost:190, hp:22, mass:2, gun:{range:900, cd:3.6, en:14, spd:200, dmg:7, spread:.1, r:2, homing:true, arc:Math.PI, pellets:6, fan:1.4}, desc:'Fans out six micro-missiles that each find their own target.'},
   flak:   {name:'Bloom Flak', make:'Ashgrove Defense', key:'f', unlock:2, rar:1, cost:45, hp:18, mass:1.5, rot:true, gun:{range:460, cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', fuse:22, blast:26, nofall:true}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
   scatter:{name:'Shrike Scattergun', make:'Ruiz Ordnance', key:'c', unlock:1, rar:0, cost:40, hp:18, mass:1.5, rot:true, gun:{range:213, cd:1.1, en:4, spd:520, dmg:2.9, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32}, desc:'Turret. Blasts 7 pellets in a wide cone: about 18 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
   ion:    {name:'VH-9 Ion Lance', make:'Varga-Holt', key:'i', unlock:3, rar:2, cost:85, hp:18, mass:1.5, rot:true, gun:{range:380, cd:1.4, en:9, spd:420, dmg:6, spread:.03, r:2.6, arc:.8, fx:'ion', ion:true}, desc:'Turret. Ion bolts do 5× damage to shield bubbles and jam the enemy weapons within 2 cells of the hit for 1.5 s. Weak against hull. Covers 46° either side of its facing.'},
@@ -72,7 +74,7 @@ export const CRAFT = {
 } satisfies Record<string, CraftDef>;
 /** Is this cell a hangar that launches craft? */
 export const isCraft = (t: Cell): t is CraftKind => t in CRAFT;
-export const ET = {core:{hp:45}, engine:{hp:12}, hull:{hp:18}, armor:{hp:55}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}, pd:{hp:12}} satisfies Record<string, {hp:number}>;
+export const ET = {plasma:{hp:22}, swarm:{hp:18}, core:{hp:45}, engine:{hp:12}, hull:{hp:18}, armor:{hp:55}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}, pd:{hp:12}} satisfies Record<string, {hp:number}>;
 // Enemy turrets: the player's weapons, slowed down to enemy scale. They unlock on the same stages as the player's.
 // cd is per gun; gatlings fire bursts of `burst` shots `gap` apart; rails show a sight line for the last `aim` seconds.
 // Enemy rounds are fast enough that a ship can't simply outrun them; dodging means changing direction as they come.
@@ -82,6 +84,9 @@ export const EW = {
   missile:{unlock:3, w:1.5, range:1000, cd:8, spd:95, dmg:22, r:1.2, kind:'emiss', spread:.5},
   flak:   {unlock:4, w:2, range:560, cd:4.4, spd:240, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4},
   rail:   {unlock:7, w:1, range:1100, cd:6.5, spd:460, dmg:36, r:1.5, kind:'snipe', aim:.9},
+  // the last sectors' weapons (tiers 16 and 17 are sectors 10 and 11)
+  plasma: {unlock:16, w:1.4, range:560, cd:5.5, spd:230, dmg:30, r:2.2, kind:'eflak', spread:.05, fuse:22, blast:44, life:4},
+  swarm:  {unlock:17, w:1.2, range:1000, cd:7, burst:5, gap:.12, spd:100, dmg:9, r:1, kind:'emiss', spread:.6},
 } satisfies Record<string, EnemyGunDef>;
 /** An enemy turret's stats, if the cell is one. */
 export const ewOf = (t: Cell): EnemyGunDef | undefined => (EW as Record<string, EnemyGunDef>)[t];
@@ -92,7 +97,7 @@ export function pickWeapon(stage: number): EnemyGun {
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','ion','missile','mirv','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
+export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','missile','mirv','swarm','mine','torpedo','laser','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
@@ -100,7 +105,7 @@ export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
   a:{},
 }; // hangar craft
-export const BCOL: Record<string, string> = {pellet:'#fff0a0', ion:'#a070ff', torp:'#ffd04a', mine:'#ff7a3a', shot:'#7fe8ff', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
+export const BCOL: Record<string, string> = {pellet:'#fff0a0', ion:'#a070ff', torp:'#ffd04a', mine:'#ff7a3a', shot:'#7fe8ff', oval:'#5fd8ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', plasma:'#ff4ad0', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
 // Hull and armor are plating: bought with credits in drydock. Every other block comes out of cargo.
 export const PLATE = (t: Cell) => t==='hull' || t==='armor' || WEDGE(t);
 /** Corner plating: a half-cell triangle whose cut corner faces one of the four diagonals (an odd facing). */
@@ -117,10 +122,10 @@ export const tierOf = (s: number) => Math.floor(s*1.5 + 1);
 // Cockpits: the core comes in variants picked in Engineering. Each brings its own core gun, a right-click ability with a
 // cooldown (s), and bonuses: turn and range multiply, en scales the core's energy, coreHp its hit points, and small ships
 // (small:true) get faster, quicker to turn and tougher the fewer blocks they have (see smallK).
-type AbilityId = 'jump' | 'roll' | 'fire' | 'salvo' | 'scramble';
+type AbilityId = 'jump' | 'roll' | 'fire' | 'salvo' | 'scramble' | 'cloak';
 const STD_GUN: GunDef = {range:220, cd:.35, spd:600, dmg:4, spread:.03, r:2, arc:Math.PI, over:true};
 // craftHp and build scale hangar craft health and bay rebuild speed; mrl scales how fast missile and torpedo launchers reload.
-export const COCKPITS: Record<'std' | 'fighter' | 'cruiser' | 'carrier' | 'battle', {name: string; desc: string; turn: number; range: number; unlock: number; off: boolean;
+export const COCKPITS: Record<'std' | 'fighter' | 'cruiser' | 'carrier' | 'battle' | 'phantom', {name: string; desc: string; turn: number; range: number; unlock: number; off: boolean;
   gun: GunDef; ab: AbilityId; abName: string; abCd: number; en: number; coreHp: number; small: boolean; arc: number; craftHp?: number; build?: number; mrl?: number}> = {
   std:    {name:'Standard cockpit', desc:'Balanced, no strings attached.', turn:1, range:1, unlock:1, off:false,
     gun:STD_GUN, ab:'jump', abName:'Jump: warp a short way toward the mouse', abCd:8, en:1, coreHp:1, small:false, arc:1},
@@ -132,6 +137,8 @@ export const COCKPITS: Record<'std' | 'fighter' | 'cruiser' | 'carrier' | 'battl
     gun:{range:240, cd:.18, spd:760, dmg:2.4, spread:.05, r:1.6, arc:Math.PI, over:true, aa:true}, ab:'scramble', abName:'Scramble: every bay launches or refits its craft at once', abCd:25, en:1, coreHp:1, small:false, arc:1, craftHp:1.25, build:1.5},
   battle: {name:'Command bridge', desc:'A heavy long-range cannon. Twice the core health, every weapon reaches 10% further. Turns 30% slower.', turn:.7, range:1.1, unlock:7, off:false,
     gun:{range:300, cd:.9, spd:520, dmg:14, spread:.015, r:3, arc:Math.PI, over:true, fx:'oval'}, ab:'fire', abName:'Fire control: every weapon fires 50% faster for 4 s', abCd:20, en:1, coreHp:2, small:false, arc:1},
+  phantom:{name:'Phantom bridge', desc:'A long-range sniper gun. Weaker core.', turn:1.1, range:1, unlock:10, off:false,
+    gun:{range:480, cd:1.6, spd:950, dmg:18, spread:.005, r:2, arc:Math.PI, over:true, fx:'line'}, ab:'cloak', abName:'Cloak: enemies lose track of you for 3 s', abCd:18, en:1, coreHp:.8, small:false, arc:1},
 };
 export type CockpitId = keyof typeof COCKPITS;
 export const cockpit = () => COCKPITS[G.cockpit] || COCKPITS.std;
@@ -167,7 +174,7 @@ export const HM = {
 };
 // Weapon groups, Starsector style: every weapon on the ship (keyed by its head cell) sits in one of five groups, starting in its type's default;
 // a group on auto fires on its own at the nearest hostile.
-export const WGRP: Partial<Record<Cell, number>> = {core:1, cannon:1, bigcannon:1, gatling:1, hgatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4};
+export const WGRP: Partial<Record<Cell, number>> = {plasma:1, swarm:2, core:1, cannon:1, bigcannon:1, gatling:1, hgatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4};
 export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
 export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t];
 export const grpOf = (k: Key, t: Cell) => G.grp[k] || WGRP[t] || 1;

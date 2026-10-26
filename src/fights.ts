@@ -18,12 +18,14 @@ import { H, W } from './view';
 
 // ---------- fights ----------
 // capital ships: a few times a fresh player's ship in that sector
-export const bossSize = (s: number) => Math.round(14*Math.pow(s,1.35));
+// the last three sectors grow enemies far faster than any player ship can keep up with: +35% per sector past 9
+const late = (s: number) => s > 9 ? 1 + .35*(s - 9) : 1;
+export const bossSize = (s: number) => Math.round(14*Math.pow(s,1.35)*late(s));
 export const fodderCap = () => Math.min(3, 1 + Math.floor(G.stage/3));
 // enemy fighters and bombers alive at once
 export const craftCap = () => Math.min(6, 3 + Math.floor(G.stage/3));
 // a line ship is a bit smaller than a fresh player's ship in that sector (about 11 blocks in sector 1, 25 in 3, 60 in 6, 100 in 9)
-export const shipSize = (s: number, col: number) => Math.max(4, Math.round((4 + 3*s + .6*s*s)*(1 + .07*col)*rand(.9,1.15)));
+export const shipSize = (s: number, col: number) => Math.max(4, Math.round((4 + 3*s + .6*s*s)*late(s)*(1 + .07*col)*rand(.9,1.15)));
 // credits for winning: base plus a per-sector part
 const BOUNTY: Record<FightKind, [number, number]> = {fight:[10,4], ambush:[8,3], elite:[20,7], gate:[30,10], boss:[75,25], station:[80,28]};
 // every enemy shot hits a little harder each sector, so fewer guns still keep up
@@ -31,7 +33,7 @@ export const eDmg = () => 1.25 + .3*(G.stage-1);
 // Waves for one fight: few ships, but big and tough ones. Gun caps keep it readable. Turrets face outward and only some bear
 // on any one target, so a ship carries more guns than it can fire at once.
 export function planFight(kind: FightKind, s: number, col: number): WavePlan {
-  const waves: WavePlan = [], g = Math.min(4 + s, 2 + 2*s), ship = (m=1, x: Partial<ShipSpec> = {}): ShipSpec => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
+  const waves: WavePlan = [], g = Math.min(4 + s, 2 + 2*s) + Math.max(0, 2*(s - 9)), ship = (m=1, x: Partial<ShipSpec> = {}): ShipSpec => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
   if (kind==='fight'){
     // a random encounter: a patrol, a lone cruiser, a carrier, or a pack of light raiders
     const r = Math.random();
@@ -176,7 +178,7 @@ export function flyDesign(){
   return d;
 }
 export function startFight(kind: FightKind){
-  undoStack.length = 0; G.fight = kind; G.lost = new Set(); G.boss = null; G.abT = -1; G.abReq = false; G.fireT = G.salvoT = 0;
+  undoStack.length = 0; G.fight = kind; G.lost = new Set(); G.boss = null; G.abT = -1; G.abReq = false; G.fireT = G.salvoT = G.cloakT = 0;
   if (G.stats) G.stats.peak = Math.max(G.stats.peak || 0, blockCount());
   G.S = scaleOf(G.stage); G.SC = Math.pow(G.S,.8);
   const p = G.player = makeShip(flyDesign(),'p',0,0,1,G.dirs);

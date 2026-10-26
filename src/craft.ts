@@ -32,7 +32,7 @@ export function updateECraft(A: Ship, dt: number, allies: Ship[]){
   const o = A.tgt!, R = o.r*C.over + C.orbit*SC;
   A.orb += C.orbSpd*dt;
   const tx = o.x + Math.cos(A.orb)*R, ty = o.y + Math.sin(A.orb)*R;
-  if (p.alive && A.cd <= 0 && Math.hypot(o.x-A.x, o.y-A.y) < o.r + C.range*SC){
+  if (p.alive && A.cd <= 0 && !(o === p && G.cloakT > G.time) && Math.hypot(o.x-A.x, o.y-A.y) < o.r + C.range*SC){
     const bomb = A.kind==='bbay', ang = Math.atan2(o.y-A.y, o.x-A.x) + (Math.random()-.5)*2*C.gun.spread;
     A.cd = C.gun.cd*(bomb ? 1.6 : 2.4);
     const b = eBullet(A.x, A.y, ang, C.gun.spd/110*.45, bomb ? 'eflak' : 'egat', (bomb ? 18 : 4)*eDmg(), bomb ? 1.2 : .7);
@@ -131,6 +131,7 @@ export function enemyFire(e: Ship, dt: number){
   if (!e.armed){ e.armed = true; for (const g of e.guns){ g.cd = rand(.6, ewOf(g.t)!.cd); g.shots = 0; } }
   e.sights = null;
   const tgt = e.boss ? p : e.tgt || p;
+  if (tgt === p && G.cloakT > G.time) return; // the Phantom is cloaked: nothing to aim at
   for (const g of e.guns){
     if ((g.jam || 0) > G.time) continue;
     const w = ewOf(g.t)!, [wx,wy] = wpos(e,g), sp = w.spd*e.sc;

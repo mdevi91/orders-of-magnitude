@@ -41,6 +41,9 @@ export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: numb
     // evasive roll: a hard shove the way the ship is steering (or toward the mouse), and half a second untouchable
     let vx = ux, vy = uy; if (!vx && !vy){ const d = Math.hypot(ax - p.x, ay - p.y) || 1; vx = (ax - p.x)/d; vy = (ay - p.y)/d; }
     p.vx += vx*520*SC; p.vy += vy*520*SC; p.ghost = G.time + .5; sfx('launch', .5);
+  } else if (C.ab==='cloak'){
+    // cloak: enemies lose track of the ship and hold their fire for a few seconds
+    G.cloakT = G.time + 3; sfx('pop');
   } else if (C.ab==='fire'){
     // fire control: every weapon cycles 50% faster for a few seconds
     G.fireT = G.time + 4; sfx('upgrade');
@@ -368,7 +371,7 @@ export function update(dt: number){
       for (const e of enemies){
         if (!e.alive) continue;
         if (e.shields.length && shieldBlock(e,b)){ b.dead = true; break; }
-        const burst = b.kind==='flak' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse || 0 : b.r);
+        const burst = b.kind==='flak' || b.kind==='plasma' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse || 0 : b.r);
         if (k >= 0 && burst){ flakBurst(b); break; }
         if (k >= 0){
           const hb = e.blocks.get(k)!; b.dmg *= fallOff(b)*(b.aa && e.craft ? 2 : 1); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.homing) missileBlast(b,e,k);
@@ -377,7 +380,7 @@ export function update(dt: number){
       }
     }
     b.life -= dt;
-    if ((b.kind==='flak' || b.kind==='mine') && !b.dead && b.life <= 0) flakBurst(b);
+    if ((b.kind==='flak' || b.kind==='plasma' || b.kind==='mine') && !b.dead && b.life <= 0) flakBurst(b);
     if (b.life <= 0 || b.x < -mX || b.y < -mX || b.x > G.AW+mX || b.y > G.AH+mX) b.dead = true;
   }
   for (const b of G.eb){

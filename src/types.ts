@@ -20,7 +20,7 @@ export type NodeType = keyof typeof NODE;
 /** What a fight was started for: a map beacon, or an ambush from an event or interception. */
 export type FightKind = 'fight' | 'elite' | 'ambush' | 'gate' | 'boss' | 'station';
 
-export type BulletKind = 'shot' | 'oval' | 'line' | 'pellet' | 'ion' | 'torp' | 'mine' | 'miss' | 'mirv' | 'flak'
+export type BulletKind = 'shot' | 'oval' | 'line' | 'pellet' | 'ion' | 'torp' | 'mine' | 'miss' | 'mirv' | 'flak' | 'plasma'
   | 'eoval' | 'egat' | 'eflak' | 'emiss' | 'snipe' | 'ring' | 'aim';
 
 export interface GunDef {
@@ -197,7 +197,9 @@ export interface GameState {
   /** the cockpit ability: seconds of cooldown left, and a request from right-click or E waiting for the next update */
   abT: number; abReq: boolean;
   /** Fire control runs until fireT; a Salvo lets missile launchers fire on their own until salvoT */
-  fireT: number; salvoT: number; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
+  fireT: number; salvoT: number;
+  /** the Phantom's Cloak runs until cloakT: enemies hold fire at the player */
+  cloakT: number; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
   joy: Stick | null; aimJoy: Stick | null;
   banner: Banner | null; deadT: number; earned: number; shake: number; aim: { x: number; y: number };
 }

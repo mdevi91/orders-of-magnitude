@@ -142,6 +142,15 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     case 'gatling':
       barrel(X,x-sa*1.2,y+ca*1.2,ca,sa,6.6,1.2,gun); barrel(X,x+sa*1.2,y-ca*1.2,ca,sa,6.6,1.2,gun);
       orb(X,x,y,2.6, [gun[2],'#5a6270',gun[1]]); break;
+    case 'plasma':
+      // a fat emitter barrel over a violet containment orb
+      barrel(X,x,y,ca,sa,8,3.4,gun); orb(X,x,y,3.6, ['#3a0a3a','#c040c0','#ffb0ff']);
+      X.fillStyle = '#ffffff'; X.fillRect(x-.6,y-.6,1.2,1.2); break;
+    case 'swarm':
+      // a pod of six little tubes
+      X.fillStyle = '#20242c'; X.fillRect(x-4,y-4,8,8);
+      for (let q=0; q<6; q++){ const tx = x - 2.6 + (q % 3)*2.6, ty = y - 1.6 + Math.floor(q/3)*3.2; X.fillStyle = '#d8dde6'; X.fillRect(tx-.8,ty-1.1,1.6,2.2); X.fillStyle = '#ffb030'; X.fillRect(tx-.8,ty-1.1,1.6,.8); }
+      break;
     case 'missile':
       X.fillStyle = '#20242c'; X.fillRect(x-3.5,y-3.5,7,7);
       for (const dx of [-1.7,1.7]){ X.fillStyle = '#d8dde6'; X.fillRect(x+dx-.8,y-2.6,1.6,5); X.fillStyle = '#ff3d2a'; X.fillRect(x+dx-.8,y-3.2,1.6,1.4); }
@@ -322,7 +331,7 @@ export function drawShip(s: Ship){
     for (const b of s.blocks.values()) ctx.fillRect(b.i*BS-5-m, b.j*BS-5-m, 10+2*m, 10+2*m);
   }
   // mid-roll the ship flickers half see-through
-  const ghost = (s.ghost || 0) > G.time;
+  const ghost = (s.ghost || 0) > G.time || (s === G.player && G.cloakT > G.time);
   for (const b of s.blocks.values()){
     if (ghost) ctx.globalAlpha = .45 + .2*Math.sin(G.time*50);
     drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, b.firing);
