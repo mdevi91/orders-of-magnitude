@@ -139,6 +139,7 @@ export function syncUI(){
     (st.weakT ? `<dt class="gold">Boxed in</dt><dd class="gold">${st.weakT} turret${st.weakT>1?'s':''}</dd>` : '');
   $('launch').textContent = G.outfit ? 'Save design' : 'Star map';
   $('reset').hidden = G.outfit; $('base').hidden = G.mode!=='title';
+  if (G.mode==='title'){ $('baseBest').textContent = String(G.meta.best || 1); $('baseData').textContent = String(G.meta.data || 0); }
   const m = G.mode, fight = m==='combat' || ((m==='clear' || m==='dead') && G.player);
   $('panel').hidden = $('inspect').hidden = m!=='build'; $('mapPanel').hidden = m!=='map';
   $('hudWave').hidden = !fight; $('coreWrap').hidden = !fight; $('pauseBtn').hidden = !fight; $('aimBtn').hidden = !fight; $('zoomIn').hidden = $('zoomOut').hidden = !fight; $('groups').hidden = !fight;

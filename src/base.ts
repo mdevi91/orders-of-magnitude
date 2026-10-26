@@ -22,10 +22,10 @@ interface Face { p: V3[]; c: RGB; layer: number; glow?: boolean; n?: V3; blink?:
 /** sign: the short name lit on the sign over its doorway */
 export interface Station { id: string; name: string; sign: string; col: RGB }
 export const STATIONS: Station[] = [
-  {id:'cantina', name:'Cantina', sign:'CANTINA', col:[127,224,122]},
-  {id:'rnd', name:'Research & Development', sign:'R&D', col:[200,138,255]},
-  {id:'eng', name:'Engineering', sign:'ENGINEERING', col:[95,216,255]},
-  {id:'hangar', name:'Hangar', sign:'HANGAR', col:[255,196,107]},
+  {id:'cantina', name:'Cantina', sign:'CANTINA', col:[255,138,0]},
+  {id:'rnd', name:'Research & Development', sign:'R&D', col:[255,138,0]},
+  {id:'eng', name:'Engineering', sign:'ENGINEERING', col:[255,138,0]},
+  {id:'hangar', name:'Hangar', sign:'HANGAR', col:[255,59,47]},
 ];
 
 const R = 8, ZC = -1, WALL_H = 6, DOOR_W = 2.4, DOOR_H = 2.8, WIN_LO = 3.6, WIN_HI = 5.4, DEEP = 3.2, HOLO: V3 = [0, 0, 1.2];
@@ -42,13 +42,14 @@ const scale = (c: RGB, k: number): RGB => [c[0]*k, c[1]*k, c[2]*k];
 const hex = (h: string): RGB => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
 const centre = (ps: V3[]): V3 => mul(ps.reduce(add, [0,0,0] as V3), 1/ps.length);
 
-const WALL: RGB = [70,78,92], PANEL: RGB = [56,62,74], DADO: RGB = [40,44,54], FLOOR: RGB = [34,38,46], CEIL: RGB = [36,40,48], TRIM: RGB = [96,104,120];
-const DARK: RGB = [22,25,32], RUST: RGB = [96,80,64], HAZ: RGB = [214,170,40], DOOR: RGB = [84,92,108];
+// the alert look: near-black gunmetal so the orange doorways and signs carry the room
+const WALL: RGB = [46,46,50], PANEL: RGB = [36,36,40], DADO: RGB = [22,22,26], FLOOR: RGB = [24,24,28], CEIL: RGB = [26,26,30], TRIM: RGB = [72,72,78];
+const DARK: RGB = [12,12,14], RUST: RGB = [96,60,40], HAZ: RGB = [255,138,0], DOOR: RGB = [64,64,70];
 
 // ---------- lighting ----------
 // Fixed key light from above, a cool light over the holotable, and each doorway washing the room in its station's colour.
 const KEY = norm([.3, 1, .45]);
-const LIGHTS: {p: V3; c: RGB; s: number}[] = [{p:[0, 5.2, 1.2], c:[150,180,230], s:.5}];
+const LIGHTS: {p: V3; c: RGB; s: number}[] = [{p:[0, 5.2, 1.2], c:[255,170,110], s:.5}];
 function light(f: Face): RGB {
   const a = f.p[0], n = f.n || norm(cross(sub(f.p[1], a), sub(f.p[2], a))), c = centre(f.p);
   let k = .3 + .42*Math.abs(dot(n, KEY));
@@ -99,12 +100,12 @@ function buildRoom(){
   }
   quad([-14,WALL_H,-12], [14,WALL_H,-12], [14,WALL_H,8], [-14,WALL_H,8], CEIL, 0, {n:[0,-1,0]});
   // ceiling: a glowing hub over the holotable, beams out to the wall corners, light panels between them
-  prism(HOLO[0], HOLO[2], 1.5, WALL_H-.25, WALL_H, TRIM, 1, 8, {c:[200,225,255], glow:true});
+  prism(HOLO[0], HOLO[2], 1.5, WALL_H-.25, WALL_H, TRIM, 1, 8, {c:[255,220,180], glow:true});
   for (let k=0; k<5; k++){ const c = corner(k, WALL_H-.2); beam([HOLO[0], WALL_H-.2, HOLO[2]], c, .35, .4, TRIM, 1); }
   for (let k=0; k<4; k++){
     const a = (ANG[k] + ANG[k+1])/2, s = Math.sin(a), c = -Math.cos(a), px = -c, pz = s, y = WALL_H-.02;
     const P = (r: number, w: number): V3 => [HOLO[0] + s*r + px*w, y, HOLO[2] + c*r + pz*w];
-    quad(P(2.4,-.6), P(2.4,.6), P(5.6,.6), P(5.6,-.6), [180,210,240], 1, {glow:true});
+    quad(P(2.4,-.6), P(2.4,.6), P(5.6,.6), P(5.6,-.6), [220,210,200], 1, {glow:true});
   }
   // side walls closing the half circle back to the camera, each with a big status display and a vertical pipe
   for (const s of [-1, 1]){
@@ -115,8 +116,8 @@ function buildRoom(){
     quad(at(0,.9), at(9,.9), at(9,WALL_H), at(0,WALL_H), WALL, 2, {n:nn});
     // the display: a dark frame with a glowing sector map
     quad(at(1.5,1.6,.02), at(5.5,1.6,.02), at(5.5,4,.02), at(1.5,4,.02), DARK, 4, {n:nn});
-    quad(at(1.7,1.8,.03), at(5.3,1.8,.03), at(5.3,3.8,.03), at(1.7,3.8,.03), [16,40,64], 4.5, {glow:true});
-    for (let q=0; q<4; q++) quad(at(1.9+q*.85,2.2+((q*7)%3)*.45,.04), at(2.2+q*.85,2.2+((q*7)%3)*.45,.04), at(2.2+q*.85,2.4+((q*7)%3)*.45,.04), at(1.9+q*.85,2.4+((q*7)%3)*.45,.04), [95,216,255], 5, {glow:true, blink:q});
+    quad(at(1.7,1.8,.03), at(5.3,1.8,.03), at(5.3,3.8,.03), at(1.7,3.8,.03), [40,16,6], 4.5, {glow:true});
+    for (let q=0; q<4; q++) quad(at(1.9+q*.85,2.2+((q*7)%3)*.45,.04), at(2.2+q*.85,2.2+((q*7)%3)*.45,.04), at(2.2+q*.85,2.4+((q*7)%3)*.45,.04), at(1.9+q*.85,2.4+((q*7)%3)*.45,.04), [255,138,0], 5, {glow:true, blink:q});
     beam(at(7,0,.3), at(7,WALL_H,.3), .3, .3, RUST, 5);
   }
   // the four doorway walls
@@ -345,7 +346,7 @@ function signs(){
   doors.forEach((D, k) => {
     const cs = D.sign.map(toCam); if (cs.some(c => c[2] < .2)) return;
     const [tl, tr, bl] = cs.map(toScreen), S = STATIONS[k];
-    X.setTransform(1,0,0,1,0,0); X.font = FONT(16); const tw = Math.max(X.measureText(S.sign).width + 16, 90), th = 26;
+    X.setTransform(1,0,0,1,0,0); X.font = '30px Anton, Impact, sans-serif'; const tw = Math.max(X.measureText(S.sign).width + 16, 90), th = 34;
     // map the text box onto the sign: left to right along its top edge, top to bottom down its side
     X.setTransform((tr[0]-tl[0])/tw*k0, (tr[1]-tl[1])/tw*k0, (bl[0]-tl[0])/th*k0, (bl[1]-tl[1])/th*k0, tl[0]*k0, tl[1]*k0);
     const lit = hover === k ? 1 : .6 + .4*(.5 + .5*Math.sin(G.time*2 + k));
