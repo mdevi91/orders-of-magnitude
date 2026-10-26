@@ -268,9 +268,9 @@ export function update(dt: number){
       sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='slug' ? 'goliath' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
       if (gun.fx==='slug'){
         // a big muzzle blast, and the recoil shoves your own ship back
-        boomAt(wx + Math.cos(ang)*8, wy + Math.sin(ang)*8, 9*SC, .12); G.fx.push({k:'star', x:wx + Math.cos(ang)*10, y:wy + Math.sin(ang)*10, a:ang, r:(gun.r*3 + 6)*SC, life:.1, max:.1});
-        const rk = 30*SC/Math.sqrt(p.blocks.size + 1); p.vx -= Math.cos(ang)*rk; p.vy -= Math.sin(ang)*rk;
-        if (!REDUCE) G.shake = Math.min(4, G.shake + .6);
+        boomAt(wx + Math.cos(ang)*9, wy + Math.sin(ang)*9, 12*SC, .14); G.fx.push({k:'star', x:wx + Math.cos(ang)*11, y:wy + Math.sin(ang)*11, a:ang, r:(gun.r*3.6 + 8)*SC, life:.12, max:.12});
+        const rk = 45*SC/Math.sqrt(p.blocks.size + 1); p.vx -= Math.cos(ang)*rk; p.vy -= Math.sin(ang)*rk;
+        if (!REDUCE) G.shake = Math.min(4, G.shake + 1);
       }
       if (gun.fx==='oval'){ boomAt(wx + Math.cos(ang)*6, wy + Math.sin(ang)*6, 5*SC, .07); G.fx.push({k:'star', x:wx + Math.cos(ang)*8, y:wy + Math.sin(ang)*8, a:ang, r:(gun.r*2 + 4)*SC, life:.07, max:.07}); }
     }

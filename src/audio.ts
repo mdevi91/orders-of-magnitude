@@ -31,9 +31,9 @@ export const SFX: Record<string, (v: number) => void> = {
   shot:    v => tone('square', 900, 450, .05, .08*v),
   cannon:  v => { tone('square', 200, 70, .12, .16*v); noise(.08, .12*v, 1400, 300); },
   // Goliath: a deep thump under a sharp crack, with a long rumbling tail
-  goliath: v => { tone('sine', 120, 32, .45, .3*v); tone('square', 150, 45, .2, .12*v); noise(.05, .16*v, 6000, 1500); noise(.5, .16*v, 900, 90); },
+  goliath: v => { tone('sine', 110, 26, .6, .36*v); tone('square', 140, 38, .26, .14*v); noise(.06, .2*v, 6500, 1500); noise(.75, .2*v, 900, 60); },
   // a Goliath slug landing: a heavy low thud
-  thud:    v => { tone('sine', 95, 28, .3, .22*v); noise(.3, .14*v, 700, 80); },
+  thud:    v => { tone('sine', 85, 22, .45, .3*v); noise(.5, .2*v, 900, 50); noise(.25, .12*v, 300, 40, .08); },
   gatling: v => noise(.03, .07*v, 5000, 2000),
   missile: v => noise(.35, .1*v, 900, 200),
   laser:   v => tone('sawtooth', 1300, 1200, .07, .03*v),

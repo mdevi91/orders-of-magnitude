@@ -740,6 +740,30 @@ export function renderCombat(){
     hctx.fillText(on ? (G.shiftAbs ? 'NOSE ON MOUSE · WASD SCREEN' : 'NOSE ON MOUSE · A/D STRAFE') : 'SHIFT: NOSE FOLLOWS MOUSE', 8*PX, ly*PX); hctx.globalAlpha = 1;
   }
 
+  // reload strip, just above the weapon groups: one chip per slow-firing weapon type, its bar filling as the readiest one reloads
+  if (p.alive && G.mode==='combat'){
+    const rel = new Map<BlockType, number>();
+    for (const g of [...p.guns, ...p.rails]){
+      const d = T[g.t as BlockType], base = d?.gun ? d.gun.cd : d?.rail ? d.rail.cd : 0;
+      if (base < 1) continue;
+      const r = g.chg ? 0 : 1 - clamp(g.cd/base, 0, 1); rel.set(g.t as BlockType, Math.max(rel.get(g.t as BlockType) ?? 0, r));
+    }
+    const gr = $('groups').getBoundingClientRect();
+    if (rel.size && gr.height){
+      hctx.font = '600 12px Oswald, sans-serif'; hctx.textAlign = 'left'; hctx.textBaseline = 'alphabetic';
+      let x = gr.left; const y = gr.top - 10;
+      for (const [t, r] of rel){
+        const w = T[t].name.split(' '), lab = (w.find(q => q.length > 2 && q === q.toUpperCase() && !/d/.test(q)) || (/d/.test(w[0]) ? w[w.length-1] : w[0])).toUpperCase();
+        const bw = Math.max(44, hctx.measureText(lab).width), rdy = r >= 1;
+        hctx.globalAlpha = rdy ? 1 : .75; hctx.fillStyle = rdy ? '#ff8a00' : '#fff4e6'; hctx.fillText(lab, x, y - 6);
+        hctx.fillStyle = 'rgba(0,0,0,.7)'; hctx.fillRect(x, y - 2, bw, 5);
+        hctx.fillStyle = rdy ? '#ff8a00' : '#ffb066'; hctx.fillRect(x, y - 2, bw*r, 5);
+        hctx.strokeStyle = '#ff8a00'; hctx.lineWidth = 1; hctx.strokeRect(x + .5, y - 1.5, bw - 1, 4);
+        x += bw + 12;
+      }
+      hctx.globalAlpha = 1;
+    }
+  }
   drawTargeting(sx, sy);
   // banner
   if (G.banner){
