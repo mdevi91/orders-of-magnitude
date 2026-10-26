@@ -301,7 +301,7 @@ export function sparks(x: number, y: number, ang: number, n: number, spd: number
 export function impact(b: {x: number; y: number; vx: number; vy: number; dmg: number}, e: Ship, k: Key, light=false, heavy=false){
   const SC = G.SC, ang = Math.atan2(b.vy,b.vx), x = b.x, y = b.y;
   if (e.alive && heavy){
-    for (let di=-2; di<=2; di++) for (let dj=-2; dj<=2; dj++){ const r = Math.abs(di) + Math.abs(dj), q = k + di*1024 + dj; if (r && r <= 2 && e.blocks.has(q)) damage(e, q, b.dmg*(r===1 ? .5 : .25)); }
+    for (let di=-2; di<=2; di++) for (let dj=-2; dj<=2; dj++){ const r = Math.abs(di) + Math.abs(dj), q = k + di*1024 + dj; if (r && r <= 2 && e.blocks.has(q)) damage(e, q, b.dmg*(r===1 ? .35 : .15)); }
   } else if (e.alive) for (const d of NB) if (e.blocks.has(k+d)) damage(e, k+d, b.dmg*.4);
   const kick = (heavy ? 290 : 55)*SC/Math.sqrt(e.blocks.size + 1);
   e.vx += Math.cos(ang)*kick; e.vy += Math.sin(ang)*kick;
