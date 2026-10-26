@@ -8,7 +8,7 @@ import { BS, FA, K, NB, SWING, angDiff, clamp, rand } from './grid';
 import { dirSpeed } from './physics';
 import { boomAt, broadside, damage, hitShip, impact, killShip, laneClear, rayHits, sparks, wpos } from './ships';
 import { G, turnOf } from './state';
-import type { Block, Ship } from './types';
+import type { Block, Key, Ship } from './types';
 import { locked } from './targeting';
 import { H, W } from './view';
 
@@ -29,6 +29,48 @@ export function ionJam(e: Ship, hit: Block){
 /** Fires the cockpit's right-click ability toward the aim point (ax, ay); (ux, uy) is the way the player is steering, if any. */
 /** Missile, MIRV and torpedo launchers: the guns a Salvo fires and a Cruiser reloads faster. */
 const missileGun = (g: Block) => { const gun = def(g.t)?.gun; return !!gun && (!!gun.homing || !!gun.mirv || gun.fx==='torp') && g.t!=='core'; };
+// Collisions. Each touching pair of blocks pushes the hulls apart along the line between them. When they close faster than a
+// gentle bump, the impulse comes from both masses (a starbase does not move), and each side's damage grows with the hit's speed
+// and the other ship's mass, spread over the blocks that touched: a dreadnought crushes a frigate, a frigate dents a dreadnought.
+export const RAM_K = .1, RAM_MIN = 3;
+/** Impact damage: the blocks nearest the contact take it in turn until it is spent (up to a dozen blocks). */
+function crush(s: Ship, x: number, y: number, amount: number){
+  const near = [...s.blocks].map(([k, b]) => { const [bx, by] = wpos(s, b); return {k, b, d:(bx-x)**2 + (by-y)**2}; }).sort((a, b) => a.d - b.d).slice(0, 12);
+  for (const {k, b} of near){ if (amount <= 0 || !s.alive) break; const d = Math.min(amount, b.hp + .01); damage(s, k, d); amount -= d; }
+}
+export function collide(p: Ship, e: Ship){
+  const dx0 = e.x-p.x, dy0 = e.y-p.y; if (dx0*dx0 + dy0*dy0 > (p.r + e.r + BS)**2) return;
+  let nx = 0, ny = 0, n = 0;
+  const ek: Key[] = [];
+  for (const [k, b] of e.blocks){
+    const [bx, by] = wpos(e, b); if ((bx-p.x)**2 + (by-p.y)**2 > (p.r + BS)**2) continue;
+    const hk = hitShip(p, bx, by, BS*.45); if (hk < 0) continue;
+    const pb = p.blocks.get(hk)!, [qx, qy] = wpos(p, pb);
+    nx += qx-bx; ny += qy-by; n++;
+    if (!ek.length) ek.push(k);
+  }
+  if (!n) return;
+  // the push: from the enemy's touching blocks toward the player's
+  let l = Math.hypot(nx, ny); if (l < 1e-6){ nx = -dx0; ny = -dy0; l = Math.hypot(nx, ny) || 1; }
+  nx /= l; ny /= l;
+  const mp = p.ph.mass, me = e.station || e.vmax === 0 ? Infinity : e.ph.mass, wp = me === Infinity ? 1 : me/(mp + me);
+  // separate a little each frame, the lighter hull more
+  const sep = Math.min(BS*.6, BS*.12*n);
+  p.x += nx*sep*wp; p.y += ny*sep*wp;
+  if (me !== Infinity){ e.x -= nx*sep*(1-wp); e.y -= ny*sep*(1-wp); }
+  const vrel = (p.vx-e.vx)*nx + (p.vy-e.vy)*ny; if (vrel >= 0) return;
+  const J = -1.3*vrel/(1/mp + (me === Infinity ? 0 : 1/me));
+  p.vx += J/mp*nx; p.vy += J/mp*ny;
+  if (me !== Infinity){ e.vx -= J/me*nx; e.vy -= J/me*ny; }
+  const sm = -vrel/(BS*G.SC); if (sm < RAM_MIN) return;
+  const hitP = RAM_K*sm*Math.pow(e.ph.mass, .7), hitE = RAM_K*sm*Math.pow(mp, .7);
+  const [cx, cy] = wpos(e, e.blocks.get(ek[0])!);
+  if (!((p.ghost || 0) > G.time)) crush(p, cx, cy, hitP);
+  crush(e, cx, cy, hitE);
+  sparks(cx, cy, Math.atan2(ny, nx), 6 + Math.min(14, sm|0), 200*G.SC, ['#ffffff','#ffd23a','#ff8a00']);
+  if (sm > 8) boomAt(cx, cy, Math.min(26, 6 + sm)*G.SC, .25);
+  G.shake = Math.max(G.shake, Math.min(5, sm/5)); sfx('ram', Math.min(1.6, .5 + sm/15));
+}
 /** Seconds a railgun charges, glowing, before its slug leaves. */
 export const RAIL_CHARGE = .45;
 export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: number){
@@ -360,6 +402,8 @@ export function update(dt: number){
       if (b.bt <= 0 && G.ships.filter(x => x.alive && x.craft).length < craftCap()){ b.bt = 14; b.craft = launchECraft(e, b); }
     }
   }
+  // hulls collide with the player block on block: they bounce apart by mass, and both take damage from the hit
+  if (p.alive) for (const e of enemies) if (e.alive && !e.craft) collide(p, e);
   for (let a=0; a<enemies.length; a++) for (let b=a+1; b<enemies.length; b++){
     const A = enemies[a], B = enemies[b]; if (A.craft || B.craft) continue;
     const dx = B.x-A.x, dy = B.y-A.y, d = Math.hypot(dx,dy) || 1, min = (A.r+B.r)*.95;
