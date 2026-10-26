@@ -297,14 +297,15 @@ export function sparks(x: number, y: number, ang: number, n: number, spd: number
   }
 }
 // Cannon shell hit: splash onto neighbouring blocks, knockback, fireball, flying sparks, smoke, screen shake.
-// The light KM-3 shell gets a smaller blast and a gentler shake than the Goliath shell or a torpedo.
-export function impact(b: {x: number; y: number; vx: number; vy: number; dmg: number}, e: Ship, k: Key, light=false){
+// The light KM-3 shell gets a smaller blast and a gentler shake; the Goliath slug a bigger blast, a shockwave and a much harder shove.
+export function impact(b: {x: number; y: number; vx: number; vy: number; dmg: number}, e: Ship, k: Key, light=false, heavy=false){
   const SC = G.SC, ang = Math.atan2(b.vy,b.vx), x = b.x, y = b.y;
   if (e.alive) for (const d of NB) if (e.blocks.has(k+d)) damage(e, k+d, b.dmg*.4);
-  const kick = 55*SC/Math.sqrt(e.blocks.size + 1);
+  const kick = (heavy ? 190 : 55)*SC/Math.sqrt(e.blocks.size + 1);
   e.vx += Math.cos(ang)*kick; e.vy += Math.sin(ang)*kick;
-  boomAt(x, y, (light ? 10 : 13)*SC, light ? .22 : .24);
-  sparks(x, y, ang+Math.PI, light ? 10 : 12, 300*SC, ['#ffffff','#ffd27a','#ff8a4a']);
-  for (let n=0; n<3; n++) G.fx.push({k:'smoke', x:x + rand(-4,4)*SC, y:y + rand(-4,4)*SC, vx:rand(-12,12)*SC + e.vx*.4, vy:rand(-12,12)*SC + e.vy*.4, r:(light ? rand(4,7.5) : rand(5,9))*SC, life:rand(.6,1.1), max:1.1});
-  if (!REDUCE) G.shake = light ? Math.min(2.5, G.shake + .7) : Math.min(4, G.shake + 1.6);
+  boomAt(x, y, (light ? 10 : heavy ? 15.6 : 13)*SC, light ? .22 : heavy ? .3 : .24);
+  sparks(x, y, ang+Math.PI, light ? 10 : heavy ? 20 : 12, (heavy ? 380 : 300)*SC, ['#ffffff','#ffd27a','#ff8a4a']);
+  if (heavy){ G.fx.push({k:'ring', x, y, r:26*SC, life:.3, max:.3, col:'#ffd27a'}); boomAt(x + Math.cos(ang)*8*SC, y + Math.sin(ang)*8*SC, 8*SC, .2, .05); sfx('thud'); }
+  for (let n=0; n<(heavy ? 5 : 3); n++) G.fx.push({k:'smoke', x:x + rand(-4,4)*SC, y:y + rand(-4,4)*SC, vx:rand(-12,12)*SC + e.vx*.4, vy:rand(-12,12)*SC + e.vy*.4, r:(light ? rand(4,7.5) : rand(5,9))*SC, life:rand(.6,1.1), max:1.1});
+  if (!REDUCE) G.shake = light ? Math.min(2.5, G.shake + .7) : heavy ? Math.min(6, G.shake + 2.6) : Math.min(4, G.shake + 1.6);
 }

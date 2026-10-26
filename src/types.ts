@@ -20,7 +20,7 @@ export type NodeType = keyof typeof NODE;
 /** What a fight was started for: a map beacon, or an ambush from an event or interception. */
 export type FightKind = 'fight' | 'elite' | 'ambush' | 'gate' | 'boss' | 'station';
 
-export type BulletKind = 'shot' | 'oval' | 'line' | 'pellet' | 'ion' | 'torp' | 'mine' | 'miss' | 'mirv' | 'flak' | 'plasma'
+export type BulletKind = 'shot' | 'oval' | 'slug' | 'line' | 'pellet' | 'ion' | 'torp' | 'mine' | 'miss' | 'mirv' | 'flak' | 'plasma'
   | 'eoval' | 'egat' | 'eflak' | 'emiss' | 'snipe' | 'ring' | 'aim';
 
 export interface GunDef {

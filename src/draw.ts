@@ -648,6 +648,18 @@ export function renderCombat(){
         ctx.stroke();
         continue;
       }
+      if (k==='slug'){
+        // Goliath slug: a blunt, fat nose tapering to a narrow tail, a white-hot face and three heavy speed lines behind
+        const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang), q = s;
+        ctx.strokeStyle = BCOL.slug; ctx.globalAlpha = .5; ctx.lineWidth = .8;
+        for (const side of [-1, 0, 1]){ const ox = -sa*side*q*.6, oy = ca*side*q*.6; ctx.beginPath(); ctx.moveTo(X - ca*q*2.6 + ox, Y - sa*q*2.6 + oy); ctx.lineTo(X - ca*q*(side ? 8 : 11) + ox, Y - sa*q*(side ? 8 : 11) + oy); ctx.stroke(); }
+        ctx.globalAlpha = 1;
+        ctx.save(); ctx.translate(X, Y); ctx.rotate(ang);
+        ctx.fillStyle = BCOL.slug; ctx.beginPath(); ctx.moveTo(-q*2.5, -q*.3); ctx.lineTo(q*.5, -q*.85); ctx.arc(q*.5, 0, q*.85, -Math.PI/2, Math.PI/2); ctx.lineTo(-q*2.5, q*.3); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(q*.75, 0, q*.55, -Math.PI/2, Math.PI/2); ctx.lineTo(q*.2, q*.4); ctx.lineTo(q*.2, -q*.4); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        continue;
+      }
       if (k==='line' || k==='oval'){
         const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang);
         if (k==='line'){

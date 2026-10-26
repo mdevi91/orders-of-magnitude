@@ -10,7 +10,7 @@ import { boomAt, broadside, damage, hitShip, impact, killShip, laneClear, rayHit
 import { G, turnOf } from './state';
 import type { Block, Key, Ship } from './types';
 import { locked } from './targeting';
-import { H, W } from './view';
+import { H, REDUCE, W } from './view';
 
 // ---------- update ----------
 /** Keys held down, by KeyboardEvent.code. */
@@ -265,7 +265,13 @@ export function update(dt: number){
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
       const n = gun.pellets || 1;
       for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t)*HM.dmg());
-      sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
+      sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='slug' ? 'goliath' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
+      if (gun.fx==='slug'){
+        // a big muzzle blast, and the recoil shoves your own ship back
+        boomAt(wx + Math.cos(ang)*8, wy + Math.sin(ang)*8, 9*SC, .12); G.fx.push({k:'star', x:wx + Math.cos(ang)*10, y:wy + Math.sin(ang)*10, a:ang, r:(gun.r*3 + 6)*SC, life:.1, max:.1});
+        const rk = 30*SC/Math.sqrt(p.blocks.size + 1); p.vx -= Math.cos(ang)*rk; p.vy -= Math.sin(ang)*rk;
+        if (!REDUCE) G.shake = Math.min(4, G.shake + .6);
+      }
       if (gun.fx==='oval'){ boomAt(wx + Math.cos(ang)*6, wy + Math.sin(ang)*6, 5*SC, .07); G.fx.push({k:'star', x:wx + Math.cos(ang)*8, y:wy + Math.sin(ang)*8, a:ang, r:(gun.r*2 + 4)*SC, life:.07, max:.07}); }
     }
     // railguns: fire when the aim point sits on their line
@@ -438,7 +444,7 @@ export function update(dt: number){
         const burst = b.kind==='flak' || b.kind==='plasma' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse || 0 : b.r);
         if (k >= 0 && burst){ flakBurst(b); break; }
         if (k >= 0){
-          const hb = e.blocks.get(k)!; b.dmg *= fallOff(b)*(b.aa && e.craft ? 2 : 1); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.homing) missileBlast(b,e,k);
+          const hb = e.blocks.get(k)!; b.dmg *= fallOff(b)*(b.aa && e.craft ? 2 : 1); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.kind==='slug') impact(b,e,k, false, true); if (b.homing) missileBlast(b,e,k);
           if (b.kind==='torp'){ missileBlast(b,e,k); impact(b,e,k); }
           if (b.ion){ ionJam(e, hb); sparks(b.x, b.y, 0, 8, 140*SC, ['#a070ff','#e8dcff','#ffffff']); } G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }
