@@ -20,7 +20,8 @@ export const buildR = () => {
   let m = 0; for (const k of G.design.keys()) m = Math.max(m, Math.abs(KI(k)), Math.abs(KJ(k)));
   return Math.max(3, m + 2);
 };
-export const scaleOf = (s: number) => Math.pow(1.22, s-1);
+// Speeds, ranges and bullet sizes stay the same in every sector (they used to grow 22% per sector); only enemy ships grow.
+export const scaleOf = (_s: number) => 1;
 // A multi-cell part counts as one block.
 export const blockCount = () => { let n = 0; for (const t of G.design.values()) if (!HEAD_OF[t]) n++; return n; };
 // World units across the short side of the screen: the camera backs off as the player's hull grows.
