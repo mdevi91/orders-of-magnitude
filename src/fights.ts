@@ -5,7 +5,7 @@ import { undoStack } from './input';
 import { chooseLoot, inc, lootText } from './loot';
 import { runOver } from './runs';
 import { save } from './save';
-import { genDesign, makeShip } from './ships';
+import { genDesign, gunDirs, makeShip } from './ships';
 import { NODE, goOn, nextSector, toMap } from './starmap';
 import { G, scaleOf, spanFor } from './state';
 import { tut } from './tutorial';
@@ -102,7 +102,7 @@ export function spawnWave(list: Wave){
     const d = spec.station ? genStation(spec.n, tier, spec.guns, spec.bays || 0) : genDesign(spec.n, !!(spec.boss || spec.elite), tier, spec.guns), pos = spawnPos();
     if (spec.bays && !spec.station) addBays(d, spec.bays);
     // a starbase has so many blocks that each one is lighter
-    const e = makeShip(d,'e',pos.x,pos.y,hpMul*(spec.elite ? 1.3 : spec.station ? .5 : 1));
+    const e = makeShip(d,'e',pos.x,pos.y,hpMul*(spec.elite ? 1.3 : spec.station ? .5 : 1), gunDirs(d));
     e.boss = !!spec.boss; e.elite = !!spec.elite; e.flag = !!spec.flag; e.station = !!spec.station; e.n0 = d.size; e.phaseN = 1;
     if (e.boss) boss = e;
     e.sc = G.SC; e.ft = 3; e.phase = rand(0,TAU); e.spin = Math.random()<.5 ? 1 : -1;
@@ -141,7 +141,7 @@ export function makeFighter(x: number, y: number, tier: number){
   const p = G.player!, tS = Math.pow(scaleOf(tier),.8);
   {
     const d = genDesign(Math.round((7 + 3.2*Math.pow(tier,1.3))*rand(.85,1.1)), false, tierOf(tier), 2);
-    const e = makeShip(d,'e', clamp(x, 0, G.AW), clamp(y, 0, G.AH), 1);
+    const e = makeShip(d,'e', clamp(x, 0, G.AW), clamp(y, 0, G.AH), 1, gunDirs(d));
     e.fodder = true; e.sc = tS;
     e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);
     e.pref = p.r + rand(140,260)*tS + e.r;

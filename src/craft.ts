@@ -2,10 +2,10 @@ import { sfx } from './audio';
 import { EB_SPD, eBullet, leadAngle, pBullet } from './bullets';
 import { CRAFT, HM, LV, T, cockpit, ewOf, isCraft } from './catalog';
 import { craftCap, eDmg } from './fights';
-import { BS, FA, K, TAU, angDiff, clamp, rand } from './grid';
-import { boomAt, damage, makeShip, rayHits, sparks, wpos } from './ships';
+import { BS, FA, K, SWING, TAU, angDiff, clamp, rand } from './grid';
+import { boomAt, damage, laneClear, makeShip, rayHits, sparks, wpos } from './ships';
 import { G } from './state';
-import type { Block, Bullet, Cell, CraftKind, Key, Ship } from './types';
+import type { Block, BlockType, Bullet, Cell, CraftKind, Key, Ship } from './types';
 import { REDUCE } from './view';
 
 // ---------- hangar craft ----------
@@ -134,13 +134,14 @@ export function enemyFire(e: Ship, dt: number){
   for (const g of e.guns){
     if ((g.jam || 0) > G.time) continue;
     const w = ewOf(g.t)!, [wx,wy] = wpos(e,g), sp = w.spd*e.sc;
-    // blind behind: guns cover a cone off the nose, a little wider on capital ships; starbases cover all round
-    const inArc = e.station || Math.abs(angDiff(Math.atan2(tgt.y-wy, tgt.x-wx), e.a + FA[0])) <= w.arc*(e.boss ? 1.5 : 1);
+    // turrets follow the player's rules: they fire within their arc around their facing, and not through their own hull
+    const pg = T[g.t as BlockType].gun, arc = pg ? pg.arc ?? Math.PI : SWING, la = leadAngle(wx,wy,sp,.95,tgt);
+    const clear = Math.abs(angDiff(la, e.a + FA[g.o])) <= arc && (!!pg?.over || !!pg?.homing || laneClear(e, g, la));
     g.cd -= dt;
-    if (w.aim && g.cd < w.aim && inArc) (e.sights ||= []).push([wx, wy, leadAngle(wx,wy,sp,.6,tgt)]);
+    if (w.aim && g.cd < w.aim && clear) (e.sights ||= []).push([wx, wy, leadAngle(wx,wy,sp,.6,tgt)]);
     if (g.cd > 0) continue;
     if (w.range && Math.hypot(tgt.x-wx, tgt.y-wy) - tgt.r > w.range*e.sc){ g.cd = .3; g.shots = 0; continue; }
-    if (!inArc){ g.cd = .2; g.shots = 0; continue; }
+    if (!clear){ g.cd = .2; g.shots = 0; continue; }
     if (w.burst && (g.shots = (g.shots || 0) + 1) < w.burst) g.cd = w.gap!;
     else { g.shots = 0; g.cd = w.cd*rand(.85,1.15); }
     const ang = leadAngle(wx,wy,sp,.95,tgt) + (Math.random()-.5)*2*(w.spread || 0);

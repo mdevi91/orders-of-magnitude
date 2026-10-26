@@ -51,8 +51,6 @@ export interface BlockDef {
 export interface EnemyGunDef {
   unlock: number; w: number; range: number; cd: number; spd: number; dmg: number; r: number; kind: BulletKind; spread?: number;
   burst?: number; gap?: number; fuse?: number; blast?: number; life?: number; aim?: number;
-  /** half-width of the cone around the ship's nose the gun can fire into, radians */
-  arc: number;
 }
 export interface PartDef { len: number; w?: number; cells?: [number, number][]; body: BlockType }
 export interface CraftDef {

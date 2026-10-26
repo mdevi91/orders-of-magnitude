@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { COL, ESH, ET, HM, LV, PARTS, T, def, ewOf, isCraft, pickWeapon } from './catalog';
-import { BS, CORE, K, KI, KJ, NB, rand } from './grid';
+import { BS, CORE, FA, K, KI, KJ, NB, angDiff, rand } from './grid';
 import { laneFwd, partComplete, physics } from './physics';
 import { metaLv } from './runs';
 import { G } from './state';
@@ -67,21 +67,61 @@ export function recalc(s: Ship){
   // each shield block keeps its own bubble state
   for (const b of s.shields) if (!b.bub){ const max = T.shield.sh!.hp*LV('shield')*HM.sh(); b.bub = {hp:max, max, down:0, last:-9, flash:-9}; }
 }
-export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
-  const d = new Map<Key, EnemyCell>([[CORE,'core']]), keys = [CORE];
-  const pa = Math.min(.3, .08 + .025*stage), pg = boss ? .12 : .15;
-  let tries = 0;
-  while (d.size < n && tries++ < n*30){
-    const base = keys[(Math.random()*keys.length)|0];
-    const nk = base + NB[(Math.random()*4)|0];
-    if (d.has(nk)) continue;
-    const i = KI(nk), j = KJ(nk);
-    if (Math.abs(i) > 40 || Math.abs(j) > 40) continue;
-    const r = Math.random(), t: EnemyCell = r < pg ? pickWeapon(stage) : r < pg+pa ? 'armor' : 'hull';
-    d.set(nk,t); keys.push(nk);
-    if (i !== 0){ const mk = K(-i,j); if (!d.has(mk)){ d.set(mk,t); keys.push(mk); } }
+// Enemy hulls follow a ship silhouette, mirrored left to right with the nose at -j: a half-width profile from bow (t=0)
+// to stern (t=1), sometimes with side pods. Guns sit on the outer edge, engines across the stern, armour on bow and flanks.
+const PROFILES: ((t: number) => number)[] = [
+  t => .2 + .8*t,                                   // dart: widens toward the stern
+  t => t < .5 ? .4 : t < .85 ? 1 : .5,              // cruiser: narrow body, swept wings aft
+  t => t < .25 ? .3 + 2.4*t : .9 - .3*t,            // frigate: a long even body
+  t => t < .3 ? .9 : t < .8 ? .45 : .8,             // hammerhead: wide bow, waist, wide stern
+];
+function hullShape(n: number){
+  const prof = PROFILES[(Math.random()*PROFILES.length)|0], aspect = rand(1.5, 2.3);
+  let cells = new Set<Key>();
+  for (let s = 1; s < 60 && cells.size < n; s += .25){
+    const L = Math.max(2, Math.round(s*aspect)), front = Math.max(1, Math.round(L*.45));
+    cells = new Set();
+    for (let j = -front; j <= L - front; j++){
+      // the bow row tapers to a point
+      let hw = Math.round(s*.55*prof((j + front)/L)); if (j === -front) hw = Math.floor(hw/2);
+      for (let i = -hw; i <= hw; i++) cells.add(K(i,j));
+    }
   }
-  if (![...d.values()].some(t => ewOf(t))) d.set(keys[1] ?? K(0,-1), pickWeapon(stage));
+  // ragged edges: now and then a row ends one cell short (both sides alike)
+  const rows = new Map<number, number>();
+  for (const k of cells) rows.set(KJ(k), Math.max(rows.get(KJ(k)) ?? 0, KI(k)));
+  for (const [j, hw] of rows) if (hw > 1 && j !== 0 && Math.random() < .15){ cells.delete(K(hw,j)); cells.delete(K(-hw,j)); }
+  // big hulls may carry side pods on struts
+  if (n >= 40 && Math.random() < .5){
+    const js = [...rows.keys()], j0 = Math.min(...js), j1 = Math.max(...js), sj = Math.round(j0 + (j1-j0)*rand(.4,.7));
+    const span = Math.max(...rows.values()) + 2, len = Math.max(2, Math.round((j1-j0)*.35));
+    for (let i = 1; i <= span; i++){ cells.add(K(i,sj)); cells.add(K(-i,sj)); }
+    for (let j = sj - Math.floor(len/2); j <= sj + Math.ceil(len/2); j++){ cells.add(K(span,j)); cells.add(K(-span,j)); }
+  }
+  cells.add(CORE);
+  return cells;
+}
+export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
+  const cells = hullShape(n), d = new Map<Key, EnemyCell>();
+  const pa = Math.min(.6, .2 + .05*stage), pg = boss ? .12 : .15;
+  const open = (k: Key, o: number) => !cells.has(k+o), edge = (k: Key) => NB.some(o => open(k,o));
+  const twin = (k: Key) => K(-KI(k), KJ(k));
+  const set = (k: Key, t: EnemyCell) => { d.set(k,t); d.set(twin(k),t); };
+  for (const k of cells) d.set(k, 'hull');
+  d.set(CORE, 'core');
+  const free = (k: Key) => d.get(k)==='hull' && d.get(twin(k))==='hull';
+  // engines across the stern: cells with nothing behind them, rearmost first
+  const back = K(0,1) - CORE;
+  const stern = [...cells].filter(k => open(k, back) && KI(k) >= 0 && free(k)).sort((a,b) => KJ(b) - KJ(a) || KI(a) - KI(b));
+  let ne = Math.min(6, Math.max(1, Math.round(cells.size/16)));
+  for (const k of stern){ if (ne <= 0) break; if (!free(k)) continue; set(k,'engine'); ne -= KI(k) ? 2 : 1; }
+  // guns on the outer edge, bow and flanks before the stern
+  const rim = [...cells].filter(k => KI(k) >= 0 && edge(k) && free(k)).map(k => ({k, w:-KJ(k)*.5 + KI(k) + rand(0,2.5)})).sort((a,b) => b.w - a.w);
+  let ng = Math.max(1, Math.min(maxGuns, Math.round(cells.size*pg)));
+  for (const {k} of rim){ if (ng <= 0) break; if (!free(k)) continue; set(k, pickWeapon(stage)); ng -= KI(k) ? 2 : 1; }
+  // armour plates the rest of the rim, mostly toward the bow
+  for (const k of cells) if (KI(k) >= 0 && edge(k) && free(k) && Math.random() < pa*(KJ(k) < 0 ? 1.4 : .8)) set(k, 'armor');
+  if (![...d.values()].some(t => ewOf(t))) d.set(K(0,-1), pickWeapon(stage));
   // later stages fit enemies with the player's systems: shields, generators (buried inside) and carrier bays (on the rim)
   if (d.size >= 8){
     const nbs = (k: Key) => NB.filter(o => d.has(k+o)).length;
@@ -107,6 +147,25 @@ export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
     guns = guns.filter(g => ewOf(d.get(g)!));
   }
   return d;
+}
+/** Facings for an enemy design's guns: of the eight turret facings with a clear line out of the hull, the one nearest
+ *  "outward and a little forward" from the core. */
+export function gunDirs(d: Map<Key, Cell>){
+  const dirs = new Map<Key, Facing>();
+  for (const [k,t] of d){
+    if (!ewOf(t)) continue;
+    const i = KI(k), j = KJ(k), out = Math.atan2(j - 2, i);
+    let best = 0, bd = 9, clearSeen = false;
+    for (let o = 0; o < 8; o++){
+      const a = FA[o], dx = Math.cos(a), dy = Math.sin(a);
+      let clear = true;
+      for (let s = .7; s < 40 && clear; s += .45){ const ci = Math.round(i + dx*s), cj = Math.round(j + dy*s); if ((ci!==i || cj!==j) && d.has(K(ci,cj))) clear = false; }
+      const off = Math.abs(angDiff(a, out));
+      if ((clear && !clearSeen) || (clear===clearSeen && off < bd)){ best = o; bd = off; clearSeen ||= clear; }
+    }
+    dirs.set(k, best as Facing);
+  }
+  return dirs;
 }
 /** World position of a block on a ship. */
 export function wpos(s: Ship, b: {i: number; j: number}): [number, number] { const lx=b.i*BS, ly=b.j*BS; return [s.x + lx*s.c - ly*s.sn, s.y + lx*s.sn + ly*s.c]; }

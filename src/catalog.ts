@@ -74,13 +74,12 @@ export const ET = {core:{hp:45}, engine:{hp:12}, hull:{hp:18}, armor:{hp:55}, ca
 // Enemy turrets: the player's weapons, slowed down to enemy scale. They unlock on the same stages as the player's.
 // cd is per gun; gatlings fire bursts of `burst` shots `gap` apart; rails show a sight line for the last `aim` seconds.
 // Enemy rounds are fast enough that a ship can't simply outrun them; dodging means changing direction as they come.
-// Each gun only fires into a cone around its ship's nose (arc, either side), so a quick ship can sit behind a slow one.
 export const EW = {
-  cannon: {unlock:1, w:3, range:480, cd:3.8, spd:290, dmg:14, r:1.5, kind:'eoval', spread:.04, arc:1.2},
-  gatling:{unlock:2, w:3, range:320, cd:3.2, burst:3, gap:.12, spd:400, dmg:5, r:.8, kind:'egat', spread:.07, arc:1.4},
-  missile:{unlock:3, w:1.5, range:1000, cd:8, spd:112, dmg:22, r:1.2, kind:'emiss', spread:.5, arc:1.6},
-  flak:   {unlock:4, w:2, range:560, cd:4.4, spd:240, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4, arc:1.6},
-  rail:   {unlock:7, w:1, range:1100, cd:6.5, spd:460, dmg:36, r:1.5, kind:'snipe', aim:.9, arc:.45},
+  cannon: {unlock:1, w:3, range:480, cd:3.8, spd:290, dmg:14, r:1.5, kind:'eoval', spread:.04},
+  gatling:{unlock:2, w:3, range:320, cd:3.2, burst:3, gap:.12, spd:400, dmg:5, r:.8, kind:'egat', spread:.07},
+  missile:{unlock:3, w:1.5, range:1000, cd:8, spd:112, dmg:22, r:1.2, kind:'emiss', spread:.5},
+  flak:   {unlock:4, w:2, range:560, cd:4.4, spd:240, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4},
+  rail:   {unlock:7, w:1, range:1100, cd:6.5, spd:460, dmg:36, r:1.5, kind:'snipe', aim:.9},
 } satisfies Record<string, EnemyGunDef>;
 /** An enemy turret's stats, if the cell is one. */
 export const ewOf = (t: Cell): EnemyGunDef | undefined => (EW as Record<string, EnemyGunDef>)[t];
