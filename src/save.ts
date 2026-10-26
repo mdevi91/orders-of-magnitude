@@ -4,7 +4,9 @@ import { undoStack } from './input';
 import { curNode, toMap } from './starmap';
 import { G } from './state';
 import { toast } from './ui';
-import { cpUnlocked, type CockpitId } from './catalog';
+import { HEAD_OF, cpUnlocked, type CockpitId } from './catalog';
+import { cellsFor } from './editor';
+import { K } from './grid';
 import type { BlockType, Facing, Key, RunStats, StarMap } from './types';
 import { $ } from './view';
 
@@ -26,10 +28,17 @@ export function load(from?: SaveData){
     const d: SaveData | null = from || JSON.parse(localStorage.getItem(RUN) || 'null');
     if (!d || d.v !== 3 || !Array.isArray(d.design) || !d.map || !d.stats) return false;
     G.stage = d.stage; G.credits = d.credits; G.design = new Map(d.design); G.dirs = new Map(d.dirs); G.lv = d.lv || {};
+    pruneParts();
     G.mir = d.mir ?? 1; G.spanT = d.spanT || 0; G.span0 = d.span0 || 0; G.spanStage = d.spanStage;
     G.inv = d.inv || {}; G.dmg = d.dmg || {}; G.grp = d.grp || {}; G.auto = d.auto || [false,false,false,true,false]; G.broken = new Set(d.broken || []); G.map = d.map; G.stats = d.stats; G.cockpit = d.cockpit && cpUnlocked(d.cockpit) ? d.cockpit : 'std'; G.paint = d.paint || 'steel'; G.outfit = false; G.node = curNode();
     return true;
   } catch { return false; }
+}
+// Body cells no part head covers any more (a part's footprint shrank since the save) come off the design.
+function pruneParts(){
+  const own = new Set<Key>();
+  for (const [k,t] of G.design) if (!HEAD_OF[t]) for (const [i,j] of cellsFor(Math.floor(k/1024) - 512, k%1024 - 512, t, G.dirs.get(k) || 0)) own.add(K(i,j));
+  for (const [k,t] of [...G.design]) if (HEAD_OF[t] && t!=='cockpit' && !own.has(k)){ G.design.delete(k); G.dirs.delete(k); G.broken.delete(k); }
 }
 export const saveData = (): SaveData => ({v:3, stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, mir:G.mir, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage,
   inv:G.inv, dmg:G.dmg, grp:G.grp, auto:G.auto, broken:[...G.broken], map:G.map!, stats:G.stats!, cockpit:G.cockpit, paint:G.paint});
