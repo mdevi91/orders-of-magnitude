@@ -4,7 +4,7 @@ import { undoStack } from './input';
 import { curNode, toMap } from './starmap';
 import { G } from './state';
 import { toast } from './ui';
-import type { CockpitId } from './catalog';
+import { cpUnlocked, type CockpitId } from './catalog';
 import type { BlockType, Facing, Key, RunStats, StarMap } from './types';
 import { $ } from './view';
 
@@ -27,7 +27,7 @@ export function load(from?: SaveData){
     if (!d || d.v !== 3 || !Array.isArray(d.design) || !d.map || !d.stats) return false;
     G.stage = d.stage; G.credits = d.credits; G.design = new Map(d.design); G.dirs = new Map(d.dirs); G.lv = d.lv || {};
     G.mir = d.mir ?? 1; G.spanT = d.spanT || 0; G.span0 = d.span0 || 0; G.spanStage = d.spanStage;
-    G.inv = d.inv || {}; G.dmg = d.dmg || {}; G.grp = d.grp || {}; G.auto = d.auto || [false,false,false,true,false]; G.broken = new Set(d.broken || []); G.map = d.map; G.stats = d.stats; G.cockpit = d.cockpit || 'std'; G.outfit = false; G.node = curNode();
+    G.inv = d.inv || {}; G.dmg = d.dmg || {}; G.grp = d.grp || {}; G.auto = d.auto || [false,false,false,true,false]; G.broken = new Set(d.broken || []); G.map = d.map; G.stats = d.stats; G.cockpit = d.cockpit && cpUnlocked(d.cockpit) ? d.cockpit : 'std'; G.outfit = false; G.node = curNode();
     return true;
   } catch { return false; }
 }

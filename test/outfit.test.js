@@ -31,6 +31,6 @@ const turn0 = designStats().turn;
 G.cockpit = 'fighter';
 ok('interceptor turns 40% faster', Math.abs(designStats().turn/turn0 - 1.4) < 1e-6, `${designStats().turn/turn0}`);
 $('launch').click(); newRun();
-ok('the cockpit carries into the run', G.cockpit === 'fighter' && G.meta.start.c === 'fighter');
+ok('the cockpit is saved with the design, but a switched-off one flies as standard', G.meta.start.c === 'fighter' && G.cockpit === (COCKPITS.fighter.off ? 'std' : 'fighter'));
 G.cockpit = 'battle';
 ok('command bridge reaches 10% further', Math.abs(cockpit().range - 1.1) < 1e-9);

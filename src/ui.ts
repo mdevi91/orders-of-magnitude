@@ -114,7 +114,7 @@ export function syncUI(){
   syncSelCard(S);
   // Engineering picks the cockpit; in a run it is fixed
   const cps = $('cockpits'); cps.hidden = !G.outfit;
-  if (G.outfit) cps.innerHTML = '<h3 class="palh">Cockpit</h3>' + (Object.keys(COCKPITS) as CockpitId[]).map(id =>
+  if (G.outfit) cps.innerHTML = '<h3 class="palh">Cockpit</h3>' + (Object.keys(COCKPITS) as CockpitId[]).filter(id => !COCKPITS[id].off).map(id =>
     `<button type="button" class="pal cp" data-cp="${id}" aria-pressed="${G.cockpit===id}"${cpUnlocked(id) ? '' : ' disabled'}><span><span class="nm">${COCKPITS[id].name}</span><span class="ct">${cpUnlocked(id) ? COCKPITS[id].desc : `Locked. Reach sector ${COCKPITS[id].unlock} to unlock it.`}</span></span></button>`).join('');
   GROUPS.forEach((_, n) => { $('palh-'+n).hidden = !PAL.some(t => groupOf(t)===n && owned(t)); });
   const rb = $<HTMLButtonElement>('repair');
