@@ -71,6 +71,8 @@ export interface Block {
   t: Cell; i: number; j: number; o: Facing; hp: number; max: number;
   /** railgun: charging until chg (game time), aimed off its facing by off */
   chg?: number; off?: number;
+  /** ripple-fire launcher: warheads still to launch, seconds to the next one, and the volley's target */
+  rip?: number; ripT?: number; ripTg?: Ship | null;
   /** weapon cooldown */
   cd: number;
   /** time it was last hit, for the white flash */

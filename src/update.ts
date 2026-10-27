@@ -252,6 +252,14 @@ export function update(dt: number){
       const ms = missileGun(g), self = salvo && ms;
       // reloads run all the time, firing or not
       if (g.cd > 0) g.cd -= dt*RATE*(ms ? cockpit().mrl || 1 : 1);
+      // a ripple-fire pod launches its volley one warhead every 0.1 s, each in a random direction
+      if (g.rip){
+        g.ripT = (g.ripT || 0) - dt;
+        while (g.rip > 0 && g.ripT <= 0){
+          const [rx,ry] = wpos(p,g); pBullet(rx, ry, rand(0,TAU), def(g.t)!.gun!, g.ripTg?.alive ? g.ripTg : tgtM, LV(g.t)*HM.dmg());
+          sfx('missile', .5); g.rip--; g.ripT += .1;
+        }
+      }
       if ((!may(g) && !self) || g.cd > 0) continue;
       const gun = def(g.t)!.gun!, arc = cpArc(gun.arc || 0), [wx,wy] = wpos(p,g);
       // missiles launched by hand home on the lock, if there is one
@@ -270,6 +278,7 @@ export function update(dt: number){
       if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
       const n = gun.pellets || 1;
+      if (gun.weave){ g.rip = n; g.ripT = 0; g.ripTg = tg; continue; }
       for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t)*HM.dmg());
       sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='slug' ? 'goliath' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
       if (gun.fx==='slug'){

@@ -32,10 +32,12 @@ export function missileBlast(b: Bullet, e: Ship, k: Key){
     const [wx,wy] = wpos(e,bb), d = Math.hypot(wx-x, wy-y);
     if (d < rad + BS*.5) damage(e, kk, b.dmg*.6*(1 - .5*d/(rad + BS*.5)));
   }
-  boomAt(x, y, 20*SC, .4); sfx('boom', .8);
-  sparks(x, y, Math.atan2(-b.vy,-b.vx), 14, 260*SC, ['#ffffff','#ffe08a','#ff8a4a']);
-  for (let n=0; n<4; n++) G.fx.push({k:'smoke', x:x + rand(-6,6)*SC, y:y + rand(-6,6)*SC, vx:rand(-14,14)*SC, vy:rand(-14,14)*SC, r:rand(6,11)*SC, life:rand(.7,1.2), max:1.2});
-  if (!REDUCE) G.shake = Math.min(4, G.shake + 1.4);
+  // a swarm micro-missile's burst looks half the size: same damage, but twelve of them land at once
+  const h = b.wf ? .5 : 1;
+  boomAt(x, y, 20*SC*h, .4); sfx('boom', .8*h);
+  sparks(x, y, Math.atan2(-b.vy,-b.vx), Math.round(14*h), 260*SC*h, ['#ffffff','#ffe08a','#ff8a4a']);
+  for (let n=0; n<4*h; n++) G.fx.push({k:'smoke', x:x + rand(-6,6)*SC*h, y:y + rand(-6,6)*SC*h, vx:rand(-14,14)*SC*h, vy:rand(-14,14)*SC*h, r:rand(6,11)*SC*h, life:rand(.7,1.2), max:1.2});
+  if (!REDUCE) G.shake = Math.min(4, G.shake + 1.4*h);
 }
 // MIRV carrier: splits into homing warheads fanned out wide around its heading, spread over the nearest enemies.
 export function mirvSplit(b: Bullet, enemies: Ship[]){
