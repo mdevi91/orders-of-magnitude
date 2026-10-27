@@ -26,6 +26,8 @@ export const scaleOf = (_s: number) => 1;
 export const blockCount = () => { let n = 0; for (const t of G.design.values()) if (!HEAD_OF[t]) n++; return n; };
 // World units across the short side of the screen: the camera backs off as the player's hull grows.
 export const spanFor = (r: number, S: number) => Math.max(360 + 9.5*r, 360*Math.pow(S,.6));
+// the closest the combat camera gets: the ship with a little space round it
+export const closeSpan = (r: number) => 3*r + 60;
 export const speedOf = (thrust: number, mass: number) => 60 + 260*Math.min(1.3, Math.sqrt(thrust/Math.max(1,mass)));
 export const turnOf = (torque: number, inertia: number, mass: number) => Math.min(3.5, 2.2*Math.sqrt(torque/Math.max(1,inertia))/Math.sqrt(1 + mass/60));
 

@@ -30,6 +30,8 @@ export interface GunDef {
   /** turret swing either side of the facing, radians */
   arc?: number;
   fx?: BulletKind; homing?: boolean; mirv?: number; pellets?: number; fan?: number; ion?: boolean;
+  /** missile massacre: each warhead launches at its own speed, speeds up and corkscrews in on a long white smoke trail */
+  weave?: boolean;
   life?: number; fuse?: number; blast?: number; lob?: boolean; nofall?: boolean;
   /** anti-craft: picks fighters and bombers first and does double damage to them */
   aa?: boolean;
@@ -129,6 +131,8 @@ export interface Bullet {
   dead?: boolean; fuse?: number; blast?: number; fall?: boolean; ion?: boolean; homing?: boolean; mirv?: number; aa?: boolean;
   /** missile exhaust trail as x,y pairs */
   tr?: number[] | null;
+  /** a weaving missile's corkscrew: phase and turns per second */
+  wv?: number; wf?: number;
   /** what the player's missile homes on */
   target?: Ship | null;
   /** what an enemy missile homes on */
@@ -139,7 +143,7 @@ export type Fx =
   | { k: 'deb'; x: number; y: number; vx: number; vy: number; a: number; va: number; life: number; max: number; col: string;
       /** the block it was, drawn tumbling; whether it pops in a small blast before it fades */ t?: Cell; team?: Team; pop?: boolean }
   | { k: 'spk'; x: number; y: number; vx: number; vy: number; life: number; max: number; col: string }
-  | { k: 'smoke'; x: number; y: number; vx: number; vy: number; r: number; life: number; max: number }
+  | { k: 'smoke'; x: number; y: number; vx: number; vy: number; r: number; life: number; max: number; col?: string }
   | { k: 'boom'; x: number; y: number; r: number; life: number; max: number; /** seconds before it goes off */ d?: number }
   | { k: 'ring'; x: number; y: number; r: number; life: number; max: number; col: string }
   | { k: 'star'; x: number; y: number; a: number; r: number; life: number; max: number }

@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { ESH, T, cockpit, def, shRad } from './catalog';
-import { BS, clamp, rand } from './grid';
+import { BS, TAU, clamp, rand } from './grid';
 import { boomAt, damage, sparks, wpos } from './ships';
 import { G } from './state';
 import { tut } from './tutorial';
@@ -55,9 +55,11 @@ export const rangeOf = (t: BlockType) => { const d = def(t); return !d ? 0 : d.g
 export function pBullet(x: number, y: number, ang: number, gun: GunDef, target: Ship | null, mul=1){
   // missiles fly 15% under their listed speed; guided ones steer for 4 s, then fly straight for 3 s and burn out
   const sp = gun.spd*G.SC*(gun.homing || gun.mirv ? .85 : 1), life = gun.homing ? 7 : gun.life || (gun.range ? gun.range*cockpit().range/gun.spd : 3);
-  G.pb.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC,
+  // weaving warheads leave the pod at a quarter to half speed, so a volley ripples out instead of flying as one
+  const v0 = gun.weave ? sp*rand(.25,.5) : sp;
+  G.pb.push({x, y, vx:Math.cos(ang)*v0, vy:Math.sin(ang)*v0, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC,
     life, life0:life, fall:!!gun.range && !gun.homing && !gun.lob && !gun.nofall, homing:!!gun.homing, aa:!!gun.aa, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0,
-    kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot'});
+    kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot', ...(gun.weave ? {wv:rand(0,TAU), wf:rand(1.4,2.4)*(Math.random() < .5 ? -1 : 1)} : {})});
 }
 // every enemy shot flies this much faster than its base speed
 export const EB_SPD = 1.2;

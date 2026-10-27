@@ -3,7 +3,7 @@ import { GCOL, T, grpOf, isWeapon } from './catalog';
 import { headOf } from './editor';
 import { K, clamp } from './grid';
 import { save } from './save';
-import { G } from './state';
+import { G, closeSpan } from './state';
 import { syncUI, toast } from './ui';
 import type { Key } from './types';
 import { $ } from './view';
@@ -13,8 +13,10 @@ export function setAuto(v: boolean, save=true){
   G.aimAuto = v; if (save) try { localStorage.setItem('oom-auto', v ? '1' : '0'); } catch {}
   const b = $('aimBtn'); b.textContent = v ? 'Auto on' : 'Auto off'; b.setAttribute('aria-pressed', String(v));
 }
-// combat camera: the player's zoom multiplies the automatic framing and is remembered
-export function camZoom(f: number){ G.camMul = clamp(G.camMul*f, .45, 3); try { localStorage.setItem('oom-cam', String(G.camMul)); } catch {} }
+// combat camera: the player's zoom multiplies the automatic framing and is remembered;
+// zooming in always reaches a close-up of the ship, however far out the sector's framing sits
+const camLo = () => { const p = G.player, s = G.fit || G.span; return p && s ? Math.min(.45, closeSpan(p.r)/s) : .45; };
+export function camZoom(f: number){ G.camMul = clamp(G.camMul*f, camLo(), 3); try { localStorage.setItem('oom-cam', String(G.camMul)); } catch {} }
 // weapon groups: the drydock assigns types to groups, and combat toggles each group's auto fire (keys 1-5)
 export function toggleGroup(n: number){ G.auto[n-1] = !G.auto[n-1]; toast(`Group ${n}: ${G.auto[n-1] ? 'auto fire' : 'fires with you'}`); renderGroups(); save(); }
 export const shipWeapons = () => [...G.design].filter(([k,t]) => isWeapon(t));
@@ -47,7 +49,7 @@ export function renderGroups(){
 // wiring that runs once at start-up
 export function init(){
   $('aimBtn').addEventListener('click', () => setAuto(!G.aimAuto));
-  try { G.camMul = clamp(Number(localStorage.getItem('oom-cam')) || 1, .45, 3); } catch {}
+  try { G.camMul = clamp(Number(localStorage.getItem('oom-cam')) || 1, .02, 3); } catch {}
   $('zoomIn').addEventListener('click', () => camZoom(.8));
   $('zoomOut').addEventListener('click', () => camZoom(1.25));
 }

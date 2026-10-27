@@ -4,9 +4,10 @@ import { undoStack } from './input';
 import { curNode, toMap } from './starmap';
 import { G } from './state';
 import { toast } from './ui';
-import { HEAD_OF, cpUnlocked, type CockpitId } from './catalog';
+import { HEAD_OF, PARTS, cpUnlocked, type CockpitId } from './catalog';
 import { cellsFor } from './editor';
 import { K } from './grid';
+import { partComplete } from './physics';
 import type { BlockType, Facing, Key, RunStats, StarMap } from './types';
 import { $ } from './view';
 
@@ -39,6 +40,14 @@ function pruneParts(){
   const own = new Set<Key>();
   for (const [k,t] of G.design) if (!HEAD_OF[t]) for (const [i,j] of cellsFor(Math.floor(k/1024) - 512, k%1024 - 512, t, G.dirs.get(k) || 0)) own.add(K(i,j));
   for (const [k,t] of [...G.design]) if (HEAD_OF[t] && t!=='cockpit' && !own.has(k)){ G.design.delete(k); G.dirs.delete(k); G.broken.delete(k); }
+  // a head whose part grew since the save (its body cells are missing) goes back into cargo
+  for (const [k,t] of [...G.design]){
+    const P = PARTS[t];
+    if (P && !partComplete(kk => G.design.get(kk), Math.floor(k/1024) - 512, k%1024 - 512, t, G.dirs.get(k) || 0)){
+      for (const [i,j] of cellsFor(Math.floor(k/1024) - 512, k%1024 - 512, t, G.dirs.get(k) || 0)){ const c = K(i,j); if (G.design.get(c)===P.body){ G.design.delete(c); G.dirs.delete(c); G.broken.delete(c); } }
+      G.design.delete(k); G.dirs.delete(k); G.broken.delete(k); G.inv[t as BlockType] = (G.inv[t as BlockType] || 0) + 1;
+    }
+  }
 }
 export const saveData = (): SaveData => ({v:3, stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, mir:G.mir, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage,
   inv:G.inv, dmg:G.dmg, grp:G.grp, auto:G.auto, broken:[...G.broken], map:G.map!, stats:G.stats!, cockpit:G.cockpit, paint:G.paint});

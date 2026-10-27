@@ -233,7 +233,7 @@ export const icon = (t: BlockType) => `<img class="bi" src="${iconURL(t)}" alt="
 export const pips = (lv: number, max: number) => `<span class="pips" aria-label="level ${lv} of ${max}">${Array.from({length:max}, (_, i) => `<i${i < lv ? ' class="on"' : ''}></i>`).join('')}</span>`;
 export function hideOverlay(){ $('overlay').hidden = true; }
 export let toastTimer = 0;
-export function toast(msg: string){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1600); }
+export function toast(msg: string){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = window.setTimeout(() => { t.hidden = true; }, 1600); }
 
 // wiring that runs once at start-up
 export function init(){

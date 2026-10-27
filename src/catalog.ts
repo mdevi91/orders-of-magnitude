@@ -19,7 +19,7 @@ export const BLOCKS = {
   missile:{name:'Viper Missile', make:'Orion Dynamics', key:'5', unlock:2, rar:1, cost:72, hp:16, mass:2, gun:{range:1100, cd:4.1, en:8, spd:172, dmg:20, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 4 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
   mirv:   {name:'Hydra MIRV', make:'Orion Dynamics', key:'v', unlock:6, rar:3, cost:180, hp:18, mass:2.5, gun:{range:1000, cd:7, en:22, spd:142, dmg:6, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:3}, desc:'2×2 launcher. A slow carrier missile that splits into 3 homing warheads shortly after launch (sooner near a target), fanning out wide, each with its own blast. Enemy point defense can shoot them down.'},
   plasma: {name:'Helios Plasma Cannon', make:'Teller Heavy Industries', key:'p', unlock:9, rar:3, cost:210, hp:30, mass:3, rot:true, gun:{range:580, cd:2.2, en:16, spd:300, dmg:40, spread:.02, r:4, arc:.8, fx:'plasma', fuse:26, blast:52, nofall:true}, desc:'Turret. A slow plasma bolt that bursts beside a hull in a huge blast, about 18 damage per second before the splash. Covers 46° either side of its facing.'},
-  swarm:  {name:'Swarm Pod', make:'Orion Dynamics', key:'e', unlock:11, rar:4, cost:190, hp:22, mass:2, gun:{range:900, cd:3.6, en:14, spd:200, dmg:7, spread:.1, r:2, homing:true, arc:Math.PI, pellets:6, fan:1.4}, desc:'Fans out six micro-missiles that each home on their own target. Launch in any direction and fly over your own hull.'},
+  swarm:  {name:'Swarm Pod', make:'Orion Dynamics', key:'e', unlock:11, rar:4, cost:190, hp:22, mass:2, gun:{range:900, cd:3.6, en:14, spd:200, dmg:3.5, spread:.25, r:1.6, homing:true, arc:Math.PI, pellets:12, fan:2.6, weave:true}, desc:'2×3 pod. Unleashes a storm of twelve micro-missiles that corkscrew in on long white smoke trails. Launch in any direction and fly over your own hull.'},
   flak:   {name:'Bloom Flak', make:'Ashgrove Defense', key:'f', unlock:2, rar:1, cost:45, hp:18, mass:1.5, rot:true, gun:{range:460, cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', fuse:22, blast:26, nofall:true}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
   scatter:{name:'Shrike Scattergun', make:'Ruiz Ordnance', key:'c', unlock:1, rar:0, cost:40, hp:18, mass:1.5, rot:true, gun:{range:213, cd:1.1, en:4, spd:520, dmg:2.9, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32, over:true}, desc:'Turret. Blasts 7 pellets in a wide cone over your own hull: about 18 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
   ion:    {name:'VH-9 Ion Lance', make:'Varga-Holt', key:'i', unlock:3, rar:2, cost:85, hp:18, mass:1.5, rot:true, gun:{range:380, cd:1.4, en:9, spd:420, dmg:6, spread:.03, r:2.6, arc:.8, fx:'ion', ion:true}, desc:'Turret. Ion bolts do 5× damage to shield bubbles and jam the enemy weapons within 2 cells of the hit for 1.5 s. Weak against hull. Covers 46° either side of its facing.'},
@@ -47,14 +47,15 @@ export const BLOCKS = {
   mirv_b: {name:'Hydra MIRV', cost:0, hp:18, mass:2.5},
   torpedo_b:{name:'Leviathan Torpedo', cost:0, hp:22, mass:1.5, rot:true},
   aegis_b:{name:'Aegis Array', cost:0, hp:40, mass:2},
+  swarm_b:{name:'Swarm Pod', cost:0, hp:20, mass:1.5},
 } satisfies Record<string, BlockDef>;
 export const T: Record<BlockType, BlockDef> = BLOCKS;
 /** The catalogue entry for a cell, if the player can build it (enemy-only cells such as carrier bays have none). */
 export const def = (t: Cell): BlockDef | undefined => T[t as BlockType];
 // multi-cell parts: len cells trailing behind the head along its facing, w columns wide extending to the head's starboard,
 // or an explicit shape: cells as [cells behind the head, cells to its starboard]
-export const PARTS: Partial<Record<Cell, PartDef>> = {bigcannon:{len:3, cells:[[1,0],[2,0],[2,-1],[2,1]], body:'bigcannon_b'}, hgatling:{len:2, body:'hgatling_b'}, rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}, torpedo:{len:2, body:'torpedo_b'}, aegis:{len:3, w:2, body:'aegis_b'}};
-export const HEAD_OF: Partial<Record<Cell, BlockType>> = {cockpit:'core', bigcannon_b:'bigcannon', hgatling_b:'hgatling', rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv', torpedo_b:'torpedo', aegis_b:'aegis'};
+export const PARTS: Partial<Record<Cell, PartDef>> = {bigcannon:{len:3, cells:[[1,0],[2,0],[2,-1],[2,1]], body:'bigcannon_b'}, hgatling:{len:2, body:'hgatling_b'}, rail:{len:3, body:'rail_b'}, laser:{len:2, body:'laser_b'}, fbay:{len:4, body:'fbay_b'}, bbay:{len:6, w:2, body:'bbay_b'}, mirv:{len:2, w:2, body:'mirv_b'}, torpedo:{len:2, body:'torpedo_b'}, aegis:{len:3, w:2, body:'aegis_b'}, swarm:{len:3, w:2, body:'swarm_b'}};
+export const HEAD_OF: Partial<Record<Cell, BlockType>> = {cockpit:'core', bigcannon_b:'bigcannon', hgatling_b:'hgatling', rail_b:'rail', laser_b:'laser', fbay_b:'fbay', bbay_b:'bbay', mirv_b:'mirv', torpedo_b:'torpedo', aegis_b:'aegis', swarm_b:'swarm'};
 /** Every cell of a part as [behind, starboard] from its head, the head first. */
 export const partOffsets = (P: PartDef): [number, number][] => {
   if (P.cells) return [[0,0], ...P.cells];
@@ -103,7 +104,7 @@ export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigca
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
-     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', tesla:'#c8b0ff', torpedo:'#ffe08a', torpedo_b:'#c0a050', aegis:'#c9adff', aegis_b:'#8a70c0', mine:'#ffb27a'},
+     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', tesla:'#c8b0ff', torpedo:'#ffe08a', torpedo_b:'#c0a050', aegis:'#c9adff', aegis_b:'#8a70c0', swarm_b:'#a8a070', mine:'#ffb27a'},
   e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
   a:{},
 }; // hangar craft

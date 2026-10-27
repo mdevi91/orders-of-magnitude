@@ -5,7 +5,7 @@ import { WARP } from './fights';
 import { BS, CORE, FA, FACE, K, KI, KJ, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { laneFwd } from './physics';
 import { wpos } from './ships';
-import { G, buildR, spanFor } from './state';
+import { G, buildR, closeSpan, spanFor } from './state';
 import { JOY_R, RAIL_CHARGE, keys } from './update';
 import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship, Stick, Team } from './types';
 import { drawTargeting } from './targeting';
@@ -153,6 +153,11 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       // a pod of six little tubes
       X.fillStyle = '#20242c'; X.fillRect(x-4,y-4,8,8);
       for (let q=0; q<6; q++){ const tx = x - 2.6 + (q % 3)*2.6, ty = y - 1.6 + Math.floor(q/3)*3.2; X.fillStyle = '#d8dde6'; X.fillRect(tx-.8,ty-1.1,1.6,2.2); X.fillStyle = '#ffb030'; X.fillRect(tx-.8,ty-1.1,1.6,.8); }
+      break;
+    case 'swarm_b':
+      // more of the pod: a grid of capped launch tubes
+      X.fillStyle = '#20242c'; X.fillRect(x-4,y-4,8,8);
+      for (let q=0; q<4; q++){ const tx = x - 1.8 + (q % 2)*3.6, ty = y - 1.8 + Math.floor(q/2)*3.6; X.fillStyle = '#5a6270'; X.fillRect(tx-1.2,ty-1.2,2.4,2.4); X.fillStyle = '#ffb030'; X.fillRect(tx-.6,ty-.6,1.2,1.2); }
       break;
     case 'missile':
       X.fillStyle = '#20242c'; X.fillRect(x-3.5,y-3.5,7,7);
@@ -418,7 +423,7 @@ export function drawSpace(cx: number, cy: number, z: number){
 export function renderCombat(){
   const S = G.S, p = G.player!;
   // never so far out that a block shrinks under two pixels; off-screen hostiles get edge arrows
-  G.zoom = Math.max(.2, Math.min(W,H)/((G.fit || G.span || spanFor(p.r, S))*G.camMul));
+  G.zoom = Math.max(.2, Math.min(W,H)/Math.max(closeSpan(p.r), (G.fit || G.span || spanFor(p.r, S))*G.camMul));
   const z = G.zoom, hw = W/2/z, hh = H/2/z;
   let cx = G.camX, cy = G.camY;
   cx = G.AW < 2*hw ? G.AW/2 : clamp(cx, hw, G.AW-hw);
@@ -492,7 +497,7 @@ export function renderCombat(){
       else { ctx.fillStyle = '#2a2e36'; ctx.fillRect(-h,-h,2*h,2*h); ctx.fillStyle = f.col; ctx.fillRect(-h,-h,2*h-1,2*h-1); }
       ctx.restore(); ctx.globalAlpha = 1;
     } else if (f.k==='smoke'){
-      ctx.globalAlpha = a*.35; ctx.fillStyle = '#5a6488';
+      ctx.globalAlpha = a*(f.col ? .3 : .35); ctx.fillStyle = f.col || '#5a6488';
       ctx.beginPath(); ctx.arc(Math.round(sx(f.x)), Math.round(sy(f.y)), Math.max(1, f.r*z*(1.6-a*.6)), 0, TAU); ctx.fill();
     }
   }
@@ -625,10 +630,10 @@ export function renderCombat(){
       if (X < -s*4 || Y < -s*4 || X > W+s*4 || Y > H+s*4) continue;
       if (k!=='line' && k!=='shot'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3; ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.arc(X, Y, s*2.6+1, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
       if (b.tr && b.tr.length > 2){
-        // exhaust trail: fades from hot yellow at the missile to dim orange at the tail
+        // exhaust trail: fades from hot yellow at the missile to dim orange at the tail; a weaving warhead's is white smoke behind a hot tip
         const n = b.tr.length/2; ctx.lineWidth = 1;
         for (let q=1; q<n; q++){
-          ctx.globalAlpha = q/n*.9; ctx.strokeStyle = q > n*.6 ? '#ffe08a' : '#ff8a4a';
+          ctx.globalAlpha = q/n*.9; ctx.strokeStyle = b.wf ? (q > n*.85 ? '#ffe08a' : '#dfe4ee') : q > n*.6 ? '#ffe08a' : '#ff8a4a';
           ctx.beginPath(); ctx.moveTo(Math.round(sx(b.tr[2*q-2]))+.5, Math.round(sy(b.tr[2*q-1]))+.5); ctx.lineTo(Math.round(sx(b.tr[2*q]))+.5, Math.round(sy(b.tr[2*q+1]))+.5); ctx.stroke();
         }
         ctx.globalAlpha = 1;

@@ -4,7 +4,7 @@ import { BCOL, CRAFT, ESH, HM, LV, T, bayKind, cockpit, cpArc, cpSpeed, cpTurn, 
 import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx, updateSlugs } from './craft';
 import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
-import { BS, FA, K, NB, SWING, angDiff, clamp, rand } from './grid';
+import { BS, FA, K, NB, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { dirSpeed } from './physics';
 import { boomAt, broadside, damage, hitShip, impact, killShip, laneClear, rayHits, sparks, wpos } from './ships';
 import { G, turnOf } from './state';
@@ -433,14 +433,19 @@ export function update(dt: number){
       if (lock && b.target !== lock) b.target = lock;
       if (!b.target || !b.target.alive){ let bd = 1e18; b.target = null; for (const e of enemies){ const d = (e.x-b.x)**2 + (e.y-b.y)**2; if (d < bd){ bd = d; b.target = e; } } }
       // guidance burns out after 4 s; after that the warhead flies straight until it burns out 3 s later
+      // weaving warheads speed up to full, steer harder and corkscrew about the line to the target, tightening as they close in
+      const v = b.wf ? Math.min(b.sp, Math.hypot(b.vx,b.vy) + b.sp*1.2*dt) : b.sp;
       if (b.target && b.life > 3){
-        const cur = Math.atan2(b.vy,b.vx), want = Math.atan2(b.target.y-b.y, b.target.x-b.x);
-        const na = cur + clamp(angDiff(want,cur), -1.35*dt, 1.35*dt);
-        b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp;
-      }
-      if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > 36) b.tr.splice(0, 2); }
+        const cur = Math.atan2(b.vy,b.vx), d = Math.hypot(b.target.x-b.x, b.target.y-b.y);
+        let want = Math.atan2(b.target.y-b.y, b.target.x-b.x);
+        if (b.wf) want += Math.sin((b.life0! - b.life)*b.wf*TAU + b.wv!)*1.1*clamp((d - b.target.r)/(160*SC), 0, 1);
+        const turn = b.wf ? 3.2 : 1.35, na = cur + clamp(angDiff(want,cur), -turn*dt, turn*dt);
+        b.vx = Math.cos(na)*v; b.vy = Math.sin(na)*v;
+      } else if (b.wf){ const k = v/(Math.hypot(b.vx,b.vy) || 1); b.vx *= k; b.vy *= k; }
+      if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > (b.wf ? 60 : 36)) b.tr.splice(0, 2); }
       if (b.mirv && ((b.life0 || 0) - b.life > .8 || (b.target && Math.hypot(b.target.x-b.x, b.target.y-b.y) < b.target.r + 90*SC))){ mirvSplit(b, enemies); continue; }
-      if (Math.random() < .18) G.fx.push({k:'smoke', x:b.x, y:b.y, vx:rand(-6,6)*SC, vy:rand(-6,6)*SC, r:2.2*SC, life:rand(.5,.9), max:.9});
+      if (b.wf){ if (Math.random() < .5 && G.fx.length < 1600) G.fx.push({k:'smoke', x:b.x, y:b.y, vx:rand(-3,3)*SC, vy:rand(-3,3)*SC, r:1.8*SC, life:rand(1.2,1.8), max:1.8, col:'#e8ecf4'}); }
+      else if (Math.random() < .18) G.fx.push({k:'smoke', x:b.x, y:b.y, vx:rand(-6,6)*SC, vy:rand(-6,6)*SC, r:2.2*SC, life:rand(.5,.9), max:.9});
     }
     const steps = Math.min(3, Math.ceil(b.sp*dt/(BS*.8)));
     for (let s=0; s<steps && !b.dead; s++){
