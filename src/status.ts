@@ -39,7 +39,7 @@ function sections(p: Ship): Sect[] {
     const chg = !!b.chg && G.time < b.chg, rdy = b.cd <= 0 && !chg;
     arm.push({lab:`RAIL ${num('rail')}`, sub:chg ? 'CHARGE' : rdy ? 'RDY' : b.cd.toFixed(1), fill:chg ? 1 : 1 - clamp(b.cd/RG.cd, 0, 1), state:chg ? 'live' : rdy ? 'ok' : 'wait', gc:gc(b), hurt:hurt(b)});
   }
-  for (const b of p.lasers) arm.push({lab:`LASER ${num('laser')}`, sub:b.beam ? 'BEAM' : b.lane ? 'RDY' : 'BLOCKED', fill:1, state:b.beam ? 'live' : b.lane ? 'ok' : 'out', gc:gc(b), hurt:hurt(b)});
+  for (const b of p.lasers){ const ok = b.lane || b.t==='glimmer'; arm.push({lab:b.t==='glimmer' ? `GLIMMER ${num('glimmer')}` : `LASER ${num('laser')}`, sub:b.beam ? 'BEAM' : ok ? 'RDY' : 'BLOCKED', fill:1, state:b.beam ? 'live' : ok ? 'ok' : 'out', gc:gc(b), hurt:hurt(b)}); }
   const TS = T.tesla.tesla!;
   for (const b of p.teslas){ const rdy = b.cd <= 0; arm.push({lab:`STORMCOIL ${num('tesla')}`, sub:rdy ? 'RDY' : b.cd.toFixed(1), fill:1 - clamp(b.cd/TS.cd, 0, 1), state:rdy ? 'ok' : 'wait', gc:gc(b), hurt:hurt(b)}); }
   if (arm.length) out.push({name:'Armament', tiles:arm});

@@ -52,12 +52,13 @@ export function recalc(s: Ship){
     if (d.gun && !(PARTS[b.t] && !partComplete(typeAt, b.i, b.j, b.t, b.o))) s.guns.push(b);
     if (d.pd && !(PARTS[b.t] && !partComplete(typeAt, b.i, b.j, b.t, b.o))) s.pds.push(b);
     if (d.tesla) s.teslas.push(b);
+    if (d.laser?.arc) s.lasers.push(b);
     if (b.t==='shield') s.shields.push(b);
     if (s.team==='p' && b.t==='core' && cockpit().deck){ s.bays.push(b); if (b.bt == null) b.bt = 1.5; } // the Carrier deck launches its own fighter
     if (PARTS[b.t] && !d.gun && partComplete(typeAt, b.i, b.j, b.t, b.o)){
       if (isCraft(b.t)){ s.bays.push(b); if (b.bt == null) b.bt = 1.5; continue; }
       b.lane = laneFwd(typeAt, b.i, b.j, b.o);
-      (b.t==='rail' ? s.rails : s.lasers).push(b);
+      if (d.rail) s.rails.push(b); else if (d.laser) s.lasers.push(b);
     }
   }
   // energy: the core gives a little; generators add recharge, batteries add storage

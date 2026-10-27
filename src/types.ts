@@ -44,7 +44,8 @@ export interface BlockDef {
   /** unlock: the sector a run must reach for the block to join loot and shops; rar: rarity 0 (common) to 4 (legendary) */
   key?: string; unlock?: number; rar?: number; hp?: number; mass?: number; rot?: boolean; thrust?: number; torque?: number;
   gun?: GunDef;
-  laser?: { dps: number; range: number; en: number };
+  /** arc: a turret beam's swing either side of its facing (fixed beams swing SWING); fall: share of damage lost at full range (default .75) */
+  laser?: { dps: number; range: number; en: number; arc?: number; fall?: number };
   rail?: { cd: number; pool: number; en: number; range: number };
   tesla?: { cd: number; range: number; dmg: number; jumps: number; en: number };
   sh?: { hp: number; regen: number; delay: number; down: number; en: number };

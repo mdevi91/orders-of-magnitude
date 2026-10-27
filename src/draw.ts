@@ -192,6 +192,10 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.fillStyle = '#7a5aff'; for (let q=-4; q<5; q+=3) X.fillRect(x-1.4,y+q,2.8,1);
       if (t==='rail'){ X.fillStyle = '#ffffff'; X.fillRect(x-1,y-5,2,1.6); }
       break;
+    case 'glimmer':
+      // a slim emitter rod over a pale green lens
+      barrel(X,x,y,ca,sa,7,1.4,['#eaffe4','#8ac888','#1e3a1e']); orb(X,x,y,2.8, ['#1e3a1e','#9ad890','#eaffe4']);
+      X.fillStyle = '#ffffff'; X.fillRect(x-.5,y-.5,1,1); break;
     case 'laser':
       barrel(X,x,y,0,-1,5.2,2.2,['#c8ffc0','#3a8a3a','#143a14']); orb(X,x,y,2.8, ['#0a3a0a','#2ac83a','#b8ffb0']); break;
     case 'laser_b':
@@ -496,8 +500,12 @@ export function renderCombat(){
       if (f.t && f.team){ ctx.scale(z*.9, z*.9); drawBlock(ctx, f.t, 0, f.team, 0, 0, -Math.PI/2, false, .3); }
       else { ctx.fillStyle = '#2a2e36'; ctx.fillRect(-h,-h,2*h,2*h); ctx.fillStyle = f.col; ctx.fillRect(-h,-h,2*h-1,2*h-1); }
       ctx.restore(); ctx.globalAlpha = 1;
+    } else if (f.k==='smoke' && f.col){
+      // missile-trail smoke: a 1-2 pixel speck that fades where it hangs
+      const q = f.r*z > 1.5 ? 2 : 1;
+      ctx.globalAlpha = a*.55; ctx.fillStyle = f.col; ctx.fillRect(Math.round(sx(f.x)), Math.round(sy(f.y)), q, q);
     } else if (f.k==='smoke'){
-      ctx.globalAlpha = a*(f.col ? .3 : .35); ctx.fillStyle = f.col || '#5a6488';
+      ctx.globalAlpha = a*.35; ctx.fillStyle = '#5a6488';
       ctx.beginPath(); ctx.arc(Math.round(sx(f.x)), Math.round(sy(f.y)), Math.max(1, f.r*z*(1.6-a*.6)), 0, TAU); ctx.fill();
     }
   }
@@ -511,7 +519,7 @@ export function renderCombat(){
     for (const b of [...p.guns, ...p.rails, ...p.lasers, ...p.teslas, ...p.pds]){
       const d = def(b.t)!, r = (d.pd ? d.pd.range*Math.sqrt(G.S) : rangeOf(b.t as BlockType)*G.SC)*cockpit().range; if (!r) continue;
       const col = b.t==='core' ? '#ffffff' : d.pd ? '#c9adff' : GCOL[grpOf(K(b.i,b.j), b.t)-1], rr = r*z;
-      const arc = d.gun ? cpArc(d.gun.arc ?? Math.PI) : d.rail || d.laser ? SWING : Math.PI;
+      const arc = d.gun ? cpArc(d.gun.arc ?? Math.PI) : d.laser?.arc ? cpArc(d.laser.arc) : d.rail || d.laser ? SWING : Math.PI;
       ctx.strokeStyle = ctx.fillStyle = col;
       if (arc >= Math.PI - .01){
         if (seen.has(b.t)) continue; seen.add(b.t);
@@ -568,8 +576,10 @@ export function renderCombat(){
       const X1 = sx(a1), Y1 = sy(b1), X2 = sx(a2), Y2 = sy(b2), fade = (rgb: string, a: number) => {
         const gr = ctx.createLinearGradient(X1, Y1, X2, Y2); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},${a*.08})`); return gr; };
       ctx.beginPath(); ctx.moveTo(X1, Y1); ctx.lineTo(X2, Y2);
-      ctx.strokeStyle = fade('157,255,138', .35); ctx.lineWidth = 3; ctx.stroke();
-      ctx.strokeStyle = fade('234,255,228', .7 + .3*Math.random()); ctx.lineWidth = 1; ctx.stroke();
+      // the Glimmer's beam is thinner and paler than the Sunspear's
+      const glm = h.t==='glimmer';
+      ctx.strokeStyle = fade(glm ? '205,245,195' : '157,255,138', glm ? .22 : .35); ctx.lineWidth = glm ? 2 : 3; ctx.stroke();
+      ctx.strokeStyle = fade(glm ? '240,255,236' : '234,255,228', (glm ? .45 : .7) + .3*Math.random()); ctx.lineWidth = 1; ctx.stroke();
     }
     for (const s of p.shields){
       const B = s.bub!; if (B.down > 0 || B.hp <= 0) continue;
@@ -628,7 +638,7 @@ export function renderCombat(){
       const k = SHAPE[b.kind] || b.kind;
       const X = Math.round(sx(b.x)), Y = Math.round(sy(b.y)), s = Math.max(1, Math.round(b.r*z));
       if (X < -s*4 || Y < -s*4 || X > W+s*4 || Y > H+s*4) continue;
-      if (k!=='line' && k!=='shot'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3; ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.arc(X, Y, s*2.6+1, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+      if (k!=='line' && k!=='shot'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3; ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.arc(X, Y, b.wf ? s*1.4+1 : s*2.6+1, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
       if (b.tr && b.tr.length > 2){
         // exhaust trail: fades from hot yellow at the missile to dim orange at the tail; a weaving warhead's is white smoke behind a hot tip
         const n = b.tr.length/2; ctx.lineWidth = 1;
@@ -640,7 +650,7 @@ export function renderCombat(){
       }
       if (k==='miss' || k==='mirv' || k==='torp'){
         const ang = Math.atan2(b.vy,b.vx), w = k==='mirv' || k==='torp' ? .75 : .5;
-        ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, s*2.2, Math.max(.6, s*w), ang, 0, TAU); ctx.fill();
+        ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, b.wf ? s*1.5 : s*2.2, Math.max(.6, s*w), ang, 0, TAU); ctx.fill();
         ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(X + Math.cos(ang)*s*1.6), Math.round(Y + Math.sin(ang)*s*1.6), 1, 1);
         continue;
       }
@@ -776,7 +786,7 @@ export function layoutBuild(){
 }
 export const designType = (k: Key) => G.design.get(k);
 // Share of a design turret's firing arc that has a clear line out of the hull (same ray walk as laneClear).
-export const aimsOut = (t: Cell) => { const g = def(t)?.gun; return !!g && !g.homing && !g.lob && t!=='core'; };
+export const aimsOut = (t: Cell) => { const g = def(t)?.gun; return (!!g && !g.homing && !g.lob && t!=='core') || !!def(t)?.laser?.arc; };
 export const designR = () => { let R = 0; for (const k of G.design.keys()) R = Math.max(R, Math.hypot(KI(k),KJ(k))); return R; };
 // Cells a ray from (i,j) travels before meeting another design block, or Infinity if it gets out.
 export function rayOut(i: number, j: number, a: number, R: number){
@@ -788,7 +798,7 @@ export function rayOut(i: number, j: number, a: number, R: number){
   return Infinity;
 }
 /** The turret's arc swing, for a block that has a gun. */
-const arcOf = (t: Cell) => cpArc(def(t)?.gun?.arc || 0);
+const arcOf = (t: Cell) => cpArc(def(t)?.gun?.arc || def(t)?.laser?.arc || 0);
 export const ARC_N = 16, arcRays = (o: Facing, t: Cell) => Array.from({length:ARC_N}, (_,n) => FA[o] - arcOf(t) + 2*arcOf(t)*n/(ARC_N-1));
 export function arcClear(i: number, j: number, o: Facing, t: Cell){
   if (def(t)?.gun?.over) return 1;

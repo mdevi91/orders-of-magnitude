@@ -298,20 +298,22 @@ export function update(dt: number){
     }
   }
   updateSlugs(dt);
-  // lasers: continuous beam on whatever is first along their line within range
+  // lasers: continuous beam on whatever is first along their line within range; turret beams swing through their arc
   if (p.alive) for (const h of p.lasers){
-    h.beam = null; if (!h.lane || !may(h)) continue;
-    const L = T.laser.laser!, [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
-    const P = isAuto(h) ? pick(wx, wy, base, SWING, L.range*SC*RM, 0, true, false, wseed(h)) : null;
+    const L = def(h.t)!.laser!, arc = L.arc ? cpArc(L.arc) : SWING;
+    h.beam = null; if ((!L.arc && !h.lane) || !may(h)) continue;
+    const [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
+    const P = isAuto(h) ? pick(wx, wy, base, arc, L.range*SC*RM, 0, true, false, wseed(h)) : null;
     if (isAuto(h) && !P) continue;
-    const face = base + clamp(angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), base), -SWING, SWING), dx = Math.cos(face), dy = Math.sin(face);
+    const face = base + clamp(angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), base), -arc, arc), dx = Math.cos(face), dy = Math.sin(face);
+    if (L.arc && !laneClear(p,h,face)) continue;
     const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC*RM;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
     if (hit && spend(L.en*dt)){
       sfx('laser');
-      damage(hit.e, hit.k, L.dps*LV('laser')*HM.dmg()*(1 - .75*hit.t/range)*dt);
+      damage(hit.e, hit.k, L.dps*LV(h.t)*HM.dmg()*(1 - (L.fall ?? .75)*hit.t/range)*dt);
       h.beam = [ox, oy, ox + dx*hit.t, oy + dy*hit.t];
-      if (Math.random() < .35) sparks(ox + dx*hit.t, oy + dy*hit.t, face+Math.PI, 1, 140*SC, ['#9dff8a','#ffffff']);
+      if (Math.random() < .35) sparks(ox + dx*hit.t, oy + dy*hit.t, face+Math.PI, 1, 140*SC, L.arc ? ['#d0f5c8','#ffffff'] : ['#9dff8a','#ffffff']);
     } else if (!hit && held && spend(L.en*dt)){ sfx('laser'); h.beam = [ox, oy, ox + dx*range, oy + dy*range]; }
   }
   // tesla coils: lightning to the nearest enemy block in reach, then on to blocks close by; an enemy missile if no hull is in reach
@@ -439,12 +441,13 @@ export function update(dt: number){
         const cur = Math.atan2(b.vy,b.vx), d = Math.hypot(b.target.x-b.x, b.target.y-b.y);
         let want = Math.atan2(b.target.y-b.y, b.target.x-b.x);
         if (b.wf) want += Math.sin((b.life0! - b.life)*b.wf*TAU + b.wv!)*1.1*clamp((d - b.target.r)/(160*SC), 0, 1);
-        const turn = b.wf ? 3.2 : 1.35, na = cur + clamp(angDiff(want,cur), -turn*dt, turn*dt);
+        const turn = b.wf ? 1.9 : 1.35, na = cur + clamp(angDiff(want,cur), -turn*dt, turn*dt);
         b.vx = Math.cos(na)*v; b.vy = Math.sin(na)*v;
       } else if (b.wf){ const k = v/(Math.hypot(b.vx,b.vy) || 1); b.vx *= k; b.vy *= k; }
       if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > (b.wf ? 60 : 36)) b.tr.splice(0, 2); }
       if (b.mirv && ((b.life0 || 0) - b.life > .8 || (b.target && Math.hypot(b.target.x-b.x, b.target.y-b.y) < b.target.r + 90*SC))){ mirvSplit(b, enemies); continue; }
-      if (b.wf){ if (Math.random() < .5 && G.fx.length < 1600) G.fx.push({k:'smoke', x:b.x, y:b.y, vx:rand(-3,3)*SC, vy:rand(-3,3)*SC, r:1.8*SC, life:rand(1.2,1.8), max:1.8, col:'#e8ecf4'}); }
+      // a weaving warhead lays a thin white smoke trail that hangs in the air
+      if (b.wf){ if (G.fx.length < 2400) G.fx.push({k:'smoke', x:b.x + rand(-.4,.4)*SC, y:b.y + rand(-.4,.4)*SC, vx:rand(-1.5,1.5)*SC, vy:rand(-1.5,1.5)*SC, r:rand(.6,1.2)*SC, life:rand(1.8,2.6), max:2.6, col:'#e8ecf4'}); }
       else if (Math.random() < .18) G.fx.push({k:'smoke', x:b.x, y:b.y, vx:rand(-6,6)*SC, vy:rand(-6,6)*SC, r:2.2*SC, life:rand(.5,.9), max:.9});
     }
     const steps = Math.min(3, Math.ceil(b.sp*dt/(BS*.8)));

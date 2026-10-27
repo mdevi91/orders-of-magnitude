@@ -81,7 +81,7 @@ export function designStats(){
     if (d.gun) dps += d.gun.dmg*(d.gun.mirv || 1)*(d.gun.pellets || 1)*m/d.gun.cd;
     if (d.tesla){ dps += d.tesla.dmg*d.tesla.jumps*m/d.tesla.cd; eUse += d.tesla.en/d.tesla.cd; }
     if (d.gun && d.gun.en) eUse += d.gun.en/d.gun.cd;
-    if (d.laser) eUse += d.laser.en; if (d.rail) eUse += d.rail.en/d.rail.cd; if (d.pd) eUse += d.pd.en/d.pd.cd*m;
+    if (d.laser) eUse += d.laser.en; if (d.laser?.arc) dps += d.laser.dps*.6*m; if (d.rail) eUse += d.rail.en/d.rail.cd; if (d.pd) eUse += d.pd.en/d.pd.cd*m;
     if (d.en?.regen) eGen += d.en.regen*m; if (d.en?.cap) eCap += d.en.cap*m;
     if (d.pd) pd++;
     if (c.t==='shield') sh++;

@@ -1,5 +1,5 @@
 // Every weapon hits a target inside its range and holds fire at one beyond it; shots fade with distance.
-const W = ['cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','swarm','ion','missile','mirv','torpedo','mine','laser','rail','tesla'];
+const W = ['cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','swarm','ion','missile','mirv','torpedo','mine','laser','glimmer','rail','tesla'];
 function armed(t){
   // the weapon straight ahead of the core (multi-cell parts trail back to it), two generators and a battery for energy
   const len = PARTS[t] ? PARTS[t].len : 1, d = new Map([[CORE,'core'],[K(-1,0),'gen'],[K(1,0),'gen'],[K(0,1),'battery']]);
