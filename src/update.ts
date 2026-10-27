@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { PD_KINDS, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
+import { PD_KINDS, aimPoint, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
 import { BCOL, CRAFT, ESH, HM, LV, T, bayKind, cockpit, cpArc, cpSpeed, cpTurn, def, grpOf, isCraft } from './catalog';
 import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx, updateSlugs } from './craft';
 import { cellsFor } from './editor';
@@ -449,13 +449,15 @@ export function update(dt: number){
       // weaving warheads speed up to full and corkscrew all the way, target or not: their heading swings up to about
       // 34° either side, easing off only in the last stretch to a target so they still connect
       const v = b.wf ? Math.min(b.sp, Math.hypot(b.vx,b.vy) + b.sp*1.2*dt) : b.sp;
+      // every guided warhead homes on a random block of its target, not on the middle of the ship
       let na = Math.atan2(b.vy,b.vx);
+      const [tx, ty] = b.target ? aimPoint(b, b.target) : [b.x, b.y];
       if (b.target && b.life > 3){
         const turn = b.wf ? 1.9 : 1.35;
-        na += clamp(angDiff(Math.atan2(b.target.y-b.y, b.target.x-b.x), na), -turn*dt, turn*dt);
+        na += clamp(angDiff(Math.atan2(ty-b.y, tx-b.x), na), -turn*dt, turn*dt);
       }
       if (b.wf){
-        const k = b.target ? clamp((Math.hypot(b.target.x-b.x, b.target.y-b.y) - b.target.r)/(120*SC), .15, 1) : 1;
+        const k = b.target ? clamp(Math.hypot(tx-b.x, ty-b.y)/(120*SC), .15, 1) : 1;
         na += Math.cos((b.life0! - b.life)*b.wf*TAU + b.wv!)*.6*b.wf*TAU*k*dt;
       }
       if (b.wf || (b.target && b.life > 3)){ b.vx = Math.cos(na)*v; b.vy = Math.sin(na)*v; }
@@ -493,9 +495,9 @@ export function update(dt: number){
     if (b.dead) continue;
     if (b.kind==='emiss'){
       // enemy missiles steer for 4 s like the player's, then fly straight for 3 s and burn out
-      const t = b.tgt && b.tgt.alive ? b.tgt : p;
+      const t = b.tgt && b.tgt.alive ? b.tgt : p, [tx, ty] = aimPoint(b, t);
       if (b.life > 3){
-        const cur = Math.atan2(b.vy,b.vx), na = cur + clamp(angDiff(Math.atan2(t.y-b.y, t.x-b.x), cur), -1.35*dt, 1.35*dt);
+        const cur = Math.atan2(b.vy,b.vx), na = cur + clamp(angDiff(Math.atan2(ty-b.y, tx-b.x), cur), -1.35*dt, 1.35*dt);
         b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp;
       }
       if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > 24) b.tr.splice(0, 2); }

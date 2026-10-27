@@ -63,6 +63,12 @@ export function pBullet(x: number, y: number, ang: number, gun: GunDef, target: 
     life, life0:life, fall:!!gun.range && !gun.homing && !gun.lob && !gun.nofall, homing:!!gun.homing, aa:!!gun.aa, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0,
     kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot', ...(gun.weave ? {wv:rand(0,TAU), wf:rand(1.4,2.4)*(Math.random() < .5 ? -1 : 1), prox:Math.random() < .5 ? rand(1.2,2.2)*BS*G.SC : 0} : {})});
 }
+/** Where a guided missile steers: a random block of its target, kept until that block is gone or the target changes. */
+export function aimPoint(b: Bullet, s: Ship): [number, number] {
+  if (b.tk == null || b.tShip !== s || !s.blocks.has(b.tk)){ const ks = [...s.blocks.keys()]; b.tk = ks[(Math.random()*ks.length)|0]; b.tShip = s; }
+  const bb = b.tk == null ? undefined : s.blocks.get(b.tk);
+  return bb ? wpos(s, bb) : [s.x, s.y];
+}
 // every enemy shot flies this much faster than its base speed
 export const EB_SPD = 1.2;
 // what point defense can shoot down: light or guided rounds only
