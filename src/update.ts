@@ -10,6 +10,7 @@ import { boomAt, broadside, damage, hitShip, impact, killShip, laneClear, rayHit
 import { G, turnOf } from './state';
 import { tut, tutTick } from './tutorial';
 import type { Block, Key, Ship } from './types';
+import { simOver } from './sim';
 import { locked } from './targeting';
 import { H, REDUCE, W } from './view';
 
@@ -540,18 +541,19 @@ export function update(dt: number){
   G.camX = p.x; G.camY = p.y;
 
   // at gates and flagships a swarm keeps coming between and during waves; it never holds up a win
-  if (p.alive && (G.fight==='gate' || G.fight==='boss' || G.fight==='station') && G.waveIdx > 0){
+  if (p.alive && !G.sim && (G.fight==='gate' || G.fight==='boss' || G.fight==='station') && G.waveIdx > 0){
     G.swarmT -= dt;
     if (G.swarmT <= 0){ G.swarmT = 12; if (enemies.filter(e => e.alive && e.fodder).length < fodderCap()) spawnSwarm(); }
   }
 
   // waves
-  if (!p.alive){ G.deadT -= dt; if (G.deadT <= 0) playerDied(); }
-  else if (!arriving && !enemies.some(e => e.alive && !e.fodder)){
+  // a test simulation ends on its own terms, and its fighters count toward clearing it
+  if (!p.alive){ G.deadT -= dt; if (G.deadT <= 0){ if (G.sim) simOver(false); else playerDied(); } }
+  else if (!arriving && !enemies.some(e => e.alive && (!e.fodder || G.sim))){
     G.waveGap -= dt;
     if (G.waveGap <= 0){
       if (G.waveIdx < G.waves.length){ G.waveIdx++; spawnWave(G.waves[G.waveIdx-1]); G.waveGap = 1.6; }
-      else fightWon();
+      else if (G.sim) simOver(true); else fightWon();
     }
   }
 }

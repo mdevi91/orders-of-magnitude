@@ -268,6 +268,8 @@ button,.pal,label{touch-action:manipulation}
 /* test mode: one button per starting sector */
 .tsec{display:flex;gap:3px;flex:none!important}
 .tsec .rot{padding:2px 8px;font-family:var(--display);font-weight:400;font-size:16px}
+.tsec .rot[aria-pressed="true"]{background:var(--line);color:var(--ink)}
+.simn{min-width:24px;text-align:center;align-self:center;font-family:var(--display);font-weight:400;font-size:18px;color:var(--paper)}
 .bi{width:28px;height:28px;flex:none;image-rendering:pixelated}
 /* segmented level bar */
 .pips{display:inline-flex;gap:2px;vertical-align:middle}

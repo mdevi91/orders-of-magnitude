@@ -13,6 +13,8 @@ export const LIFE = .6, ARMOR_DR = .3;
 const NO_PHYSICS: Physics = {mass:0, inertia:0, torque:0, coreT:0, jetCW:0, jetCCW:0, F:{px:0, nx:0, py:0, ny:0}, engines:[]};
 
 // ---------- ships ----------
+// every block of every ship, player and enemy, is this much tougher than its listed hit points
+export const HP_ALL = 1.22;
 export function makeShip(design: Map<Key, Cell>, team: Team, x: number, y: number, hpMul=1, dirs: Map<Key, Facing> | null = null): Ship {
   const s: Ship = {team, x, y, vx:0, vy:0, a:0, c:1, sn:0, blocks:new Map(), alive:true, hpMul, r:0,
     guns:[], pds:[], rails:[], lasers:[], shields:[], bays:[], epd:[], teslas:[],
@@ -21,7 +23,7 @@ export function makeShip(design: Map<Key, Cell>, team: Team, x: number, y: numbe
     fireMul:1, ft:0, phase:0, spin:1, orb:0, orbSpd:0, pref:0, vmax:0, turn:0, value:0, tgt:null, sights:null,
     kind:null, bay:null, sortie:0, aimA:0, cd:0, pick:0, life:0, lifeMax:0};
   for (const [k,t] of design){
-    const hp = (team==='e' ? ET[t as EnemyCell].hp : def(t)!.hp!*LV(t)*HM.hp()*(team==='p' && t==='core' ? (1 + .25*metaLv('core'))*cockpit().coreHp : 1)) * hpMul;
+    const hp = HP_ALL*(team==='e' ? ET[t as EnemyCell].hp : def(t)!.hp!*LV(t)*HM.hp()*(team==='p' && t==='core' ? (1 + .25*metaLv('core'))*cockpit().coreHp : 1)) * hpMul;
     s.lifeMax += hp*LIFE;
     const b: Block = {t, i:KI(k), j:KJ(k), o:dirs ? dirs.get(k)||0 : 0, hp, max:hp, cd:Math.random()*.4, hit:-1};
     s.blocks.set(k, b);

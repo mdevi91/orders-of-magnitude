@@ -10,6 +10,7 @@ import { init as init_options } from './options';
 import { frame } from './loop';
 import { showTitle, station } from './runs';
 import { init as init_save, load, loadMeta } from './save';
+import { init as init_sim } from './sim';
 import { init as init_state } from './state';
 import { init as init_tutorial } from './tutorial';
 import { buildPalette, init as init_ui } from './ui';
@@ -27,6 +28,7 @@ init_controls();
 init_groups();
 init_tutorial();
 init_options();
+init_sim();
 initBase(station);
 
 const splash = $('splash');

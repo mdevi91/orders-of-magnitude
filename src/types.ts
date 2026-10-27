@@ -198,6 +198,8 @@ export interface GameState {
   broken: Set<Key>; lost: Set<Key>; fresh: Set<BlockType>;
   map: StarMap | null; node: MapNode | null; pendingNode: MapNode | null; shopNode: MapNode | null; mapHover: MapNode | null;
   stats: RunStats | null; meta: Meta; bounty: number;
+  /** in a drydock test simulation: nothing that happens counts toward the run */
+  sim: boolean;
   /** outfitting the starting ship: blocks can be bought straight from the palette until the first launch */
   outfit: boolean;
   pick: ((t: BlockType | null) => void) | null;

@@ -21,7 +21,7 @@ export interface SaveData {
   broken?: Key[]; map: StarMap; stats: RunStats; cockpit?: CockpitId; paint?: string;
 }
 export function save(){
-  if (!G.stats) return;
+  if (!G.stats || G.sim) return;
   try { localStorage.setItem(RUN, JSON.stringify(saveData())); } catch {}
 }
 export function load(from?: SaveData){

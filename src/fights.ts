@@ -7,6 +7,7 @@ import { chooseLoot, inc, lootText } from './loot';
 import { runOver } from './runs';
 import { save } from './save';
 import { showOptions } from './options';
+import { endSim } from './sim';
 import { genDesign, gunDirs, makeShip } from './ships';
 import { NODE, goOn, nextSector, toMap } from './starmap';
 import { G, blockCount, scaleOf, spanFor } from './state';
@@ -34,8 +35,10 @@ export const eReach = () => 1 + 1.5*(Math.min(G.stage, LAST_SECTOR) - 1)/(LAST_S
 export const eDmg = () => 1.25 + .3*(G.stage-1);
 // Waves for one fight: few ships, but big and tough ones. Gun caps keep it readable. Turrets face outward and only some bear
 // on any one target, so a ship carries more guns than it can fire at once.
+/** Guns on a line ship in sector s. */
+export const lineGuns = (s: number) => Math.min(4 + s, 2 + 2*s) + Math.max(0, 2*(s - 9));
 export function planFight(kind: FightKind, s: number, col: number): WavePlan {
-  const waves: WavePlan = [], g = Math.min(4 + s, 2 + 2*s) + Math.max(0, 2*(s - 9)), ship = (m=1, x: Partial<ShipSpec> = {}): ShipSpec => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
+  const waves: WavePlan = [], g = lineGuns(s), ship = (m=1, x: Partial<ShipSpec> = {}): ShipSpec => ({n:Math.round(shipSize(s,col)*m), guns:g, ...x});
   if (kind==='fight'){
     // a random encounter: a patrol, a lone cruiser, a carrier, or a pack of light raiders
     const r = Math.random();
@@ -246,6 +249,7 @@ export function togglePause(){
   if (G.paused) pauseMenu(); else hideOverlay();
 }
 export function pauseMenu(){
+  if (G.sim){ showOverlay('Paused', 'Test simulation: nothing in it counts toward the run.', [['Resume', togglePause], ['Options', () => showOptions(pauseMenu), 'ghost'], ['End simulation', endSim, 'ghost']], false, {eye:'Paused'}); return; }
   showOverlay('Paused', `${NODE[G.fight].name}, wave ${G.waveIdx} of ${G.waves.length}. Fleeing keeps the damage you took and gives no reward.`,
     [['Resume', togglePause], ['Options', () => showOptions(pauseMenu), 'ghost'], ['Flee', flee, 'ghost'], ['Abandon run', abandon, 'ghost reset']], false, {eye:'Paused'});
 }
