@@ -1,4 +1,5 @@
-import { LAST_SECTOR, bossSize, lineGuns, makeFighter, shipSize, spawnWave, startFight } from './fights';
+import { bossSize, eReach, lineGuns, makeFighter, shipSize, spawnWave, startFight } from './fights';
+import { clamp } from './grid';
 import { ACT } from './shop';
 import { toDrydock } from './starmap';
 import { G } from './state';
@@ -8,7 +9,8 @@ import { $ } from './view';
 
 // ---------- test simulation ----------
 // A mock fight from the drydock against enemies picked by hand, flown with the whole design (damage ignored).
-// Nothing in it counts: credits, run stats, damage and the sector are put back when it ends, and losing ends only the test.
+// The enemies are the current sector's. Nothing in it counts: credits, run stats and damage are put back when it ends,
+// and losing ends only the test.
 type MockId = 'fighter' | 'raider' | 'line' | 'cruiser' | 'carrier' | 'elite' | 'dread' | 'capital' | 'station';
 const MOCK: {id: MockId; name: string; sub: string; max: number; spec?: (s: number) => ShipSpec}[] = [
   {id:'fighter', name:'Fighter', sub:'a small, quick escort', max:8},
@@ -22,16 +24,13 @@ const MOCK: {id: MockId; name: string; sub: string; max: number; spec?: (s: numb
   {id:'station', name:'Starbase', sub:'holds still, very big', max:1, spec:s => ({n:Math.min(1300, Math.round(bossSize(s)*1.8)), boss:true, flag:true, station:true, guns:s >= 6 ? 12 : 8, bays:4})},
 ];
 const count: Record<MockId, number> = {fighter:0, raider:2, line:0, cruiser:0, carrier:0, elite:0, dread:0, capital:0, station:0};
-let sector = 0;
 // what the run had before the test, put back when it ends
 let snap: {credits: number; stats: string | null; stage: number; spanT: number; span0: number; spanStage: number | null; bounty: number; broken: Set<number>; t0: number} | null = null;
 
 export function simSetup(){
-  if (!sector) sector = G.stage;
   const any = MOCK.some(m => count[m.id] > 0);
   showOverlay('Test simulation', `<p>Fly your current design, whole and repaired, against mock enemies. Nothing carries over: no credits, no loot, no damage, and losing ends only the test.</p>` +
-    `<div class="rows"><div class="row"><span>Enemy strength<small>as in sector ${sector}</small></span><span class="tsec">` +
-    Array.from({length:LAST_SECTOR}, (_, i) => `<button class="rot${i+1===sector ? ' on' : ''}" type="button" data-act="sim:s${i+1}" aria-pressed="${i+1===sector}">${i+1}</button>`).join('') + '</span></div>' +
+    `<div class="rows"><h3>Sector ${G.stage} enemies</h3>` +
     MOCK.map(m => `<div class="row"><span>${m.name}<small>${m.sub}</small></span><span class="tsec">` +
       `<button class="rot" type="button" data-act="sim:-${m.id}"${count[m.id] ? '' : ' disabled'} aria-label="Fewer">−</button><b class="simn">${count[m.id]}</b>` +
       `<button class="rot" type="button" data-act="sim:+${m.id}"${count[m.id] < m.max ? '' : ' disabled'} aria-label="More">+</button></span></div>`).join('') + '</div>',
@@ -39,7 +38,8 @@ export function simSetup(){
 }
 export function startSim(){
   snap = {credits:G.credits, stats:G.stats ? JSON.stringify(G.stats) : null, stage:G.stage, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage, bounty:G.bounty, broken:new Set(G.broken), t0:G.time};
-  G.sim = true; G.stage = sector; G.broken = new Set();
+  G.sim = true; G.broken = new Set();
+  const sector = G.stage;
   startFight(count.station ? 'station' : 'fight');
   const wave: ShipSpec[] = [];
   for (const m of MOCK) if (m.spec) for (let n=0; n<count[m.id]; n++) wave.push(m.spec(sector));
@@ -47,6 +47,10 @@ export function startSim(){
   // fighters come straight in; the rest arrive as one wave on the first frame
   for (let n=0; n<count.fighter; n++){ const a = Math.random()*Math.PI*2, p = G.player!, d = 300*G.SC + p.r; makeFighter(p.x + Math.cos(a)*d, p.y + Math.sin(a)*d, sector); }
   if (wave.length){ G.waveIdx = 1; spawnWave(wave); }
+  // enemy guns reach further in later sectors, so the test starts that much further apart, with the view pulled back to match
+  const k = eReach(), p = G.player!;
+  for (const e of G.ships) if (e.team==='e' && !e.station){ e.x = clamp(p.x + (e.x - p.x)*k, e.r, G.AW - e.r); e.y = clamp(p.y + (e.y - p.y)*k, e.r, G.AH - e.r); }
+  G.span = G.span0 *= k; G.spanT *= k;
   G.banner = {text:'Test simulation', sub:`Sector ${sector} mock enemies`, t:2};
 }
 /** Puts the run back the way it was before the test. */
@@ -69,8 +73,7 @@ export function endSim(){ G.mode = 'clear'; restore(); toDrydock(); }
 export function init(){
   $('simBtn').addEventListener('click', simSetup);
   ACT.sim = v => {
-    if (v[0]==='s') sector = +v.slice(1);
-    else { const m = MOCK.find(x => x.id === v.slice(1)); if (m) count[m.id] = Math.max(0, Math.min(m.max, count[m.id] + (v[0]==='+' ? 1 : -1))); }
+    const m = MOCK.find(x => x.id === v.slice(1)); if (m) count[m.id] = Math.max(0, Math.min(m.max, count[m.id] + (v[0]==='+' ? 1 : -1)));
     simSetup(); return true;
   };
 }

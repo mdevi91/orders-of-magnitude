@@ -3,9 +3,9 @@ fresh(); newRun();
 G.design = new Map([[CORE,'core'],[K(0,-1),'cannon'],[K(-1,0),'gen'],[K(1,0),'battery']]); G.dirs = new Map(); G.broken = new Set([K(1,0)]);
 G.credits = 123; G.stage = 2; G.mode = 'build';
 const stats0 = JSON.stringify(G.stats);
-ACT.sim('s7'); ACT.sim('+line');
+ACT.sim('+line');
 startSim();
-ok('the test flies in the chosen sector, whole', G.sim && G.stage === 7 && G.mode === 'combat' && G.player.blocks.has(K(1,0)));
+ok('the test flies in the current sector, whole', G.sim && G.stage === 2 && G.mode === 'combat' && G.player.blocks.has(K(1,0)));
 ok('mock enemies are out', G.ships.filter(s => s.team==='e').length === 3, `${G.ships.filter(s => s.team==='e').length} hostiles`);
 // losing ends only the test
 killShip(G.player);
