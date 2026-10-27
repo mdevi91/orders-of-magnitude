@@ -445,15 +445,19 @@ export function update(dt: number){
       if (lock && b.target !== lock) b.target = lock;
       if (!b.target || !b.target.alive){ let bd = 1e18; b.target = null; for (const e of enemies){ const d = (e.x-b.x)**2 + (e.y-b.y)**2; if (d < bd){ bd = d; b.target = e; } } }
       // guidance burns out after 4 s; after that the warhead flies straight until it burns out 3 s later
-      // weaving warheads speed up to full, steer harder and corkscrew about the line to the target, tightening as they close in
+      // weaving warheads speed up to full and corkscrew all the way, target or not: their heading swings up to about
+      // 50° either side, easing off only in the last stretch to a target so they still connect
       const v = b.wf ? Math.min(b.sp, Math.hypot(b.vx,b.vy) + b.sp*1.2*dt) : b.sp;
+      let na = Math.atan2(b.vy,b.vx);
       if (b.target && b.life > 3){
-        const cur = Math.atan2(b.vy,b.vx), d = Math.hypot(b.target.x-b.x, b.target.y-b.y);
-        let want = Math.atan2(b.target.y-b.y, b.target.x-b.x);
-        if (b.wf) want += Math.sin((b.life0! - b.life)*b.wf*TAU + b.wv!)*1.1*clamp((d - b.target.r)/(160*SC), 0, 1);
-        const turn = b.wf ? 1.9 : 1.35, na = cur + clamp(angDiff(want,cur), -turn*dt, turn*dt);
-        b.vx = Math.cos(na)*v; b.vy = Math.sin(na)*v;
-      } else if (b.wf){ const k = v/(Math.hypot(b.vx,b.vy) || 1); b.vx *= k; b.vy *= k; }
+        const turn = b.wf ? 1.9 : 1.35;
+        na += clamp(angDiff(Math.atan2(b.target.y-b.y, b.target.x-b.x), na), -turn*dt, turn*dt);
+      }
+      if (b.wf){
+        const k = b.target ? clamp((Math.hypot(b.target.x-b.x, b.target.y-b.y) - b.target.r)/(120*SC), .15, 1) : 1;
+        na += Math.cos((b.life0! - b.life)*b.wf*TAU + b.wv!)*.9*b.wf*TAU*k*dt;
+      }
+      if (b.wf || (b.target && b.life > 3)){ b.vx = Math.cos(na)*v; b.vy = Math.sin(na)*v; }
       if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > (b.wf ? 24 : 36)) b.tr.splice(0, 2); }
       if (b.mirv && ((b.life0 || 0) - b.life > .8 || (b.target && Math.hypot(b.target.x-b.x, b.target.y-b.y) < b.target.r + 90*SC))){ mirvSplit(b, enemies); continue; }
       // a weaving warhead lays a thin white smoke trail that hangs in the air
