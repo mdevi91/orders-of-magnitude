@@ -252,12 +252,13 @@ export function update(dt: number){
       const ms = missileGun(g), self = salvo && ms;
       // reloads run all the time, firing or not
       if (g.cd > 0) g.cd -= dt*RATE*(ms ? cockpit().mrl || 1 : 1);
-      // a ripple-fire pod launches its volley one warhead every 0.1 s, each in a random direction
+      // a ripple-fire pod launches its whole volley in 0.6 s, each warhead at random within 115° either side of the target
       if (g.rip){
         g.ripT = (g.ripT || 0) - dt;
         while (g.rip > 0 && g.ripT <= 0){
-          const [rx,ry] = wpos(p,g); pBullet(rx, ry, rand(0,TAU), def(g.t)!.gun!, g.ripTg?.alive ? g.ripTg : tgtM, LV(g.t)*HM.dmg());
-          sfx('missile', .5); g.rip--; g.ripT += .1;
+          const [rx,ry] = wpos(p,g), tg = g.ripTg?.alive ? g.ripTg : tgtM, a = tg ? Math.atan2(tg.y-ry, tg.x-rx) : g.ripA || 0;
+          pBullet(rx, ry, a + rand(-1,1)*115*Math.PI/180, def(g.t)!.gun!, tg, LV(g.t)*HM.dmg());
+          sfx('missile', .5); g.rip--; g.ripT += .6/12;
         }
       }
       if ((!may(g) && !self) || g.cd > 0) continue;
@@ -278,7 +279,7 @@ export function update(dt: number){
       if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
       const n = gun.pellets || 1;
-      if (gun.weave){ g.rip = n; g.ripT = 0; g.ripTg = tg; continue; }
+      if (gun.weave){ g.rip = n; g.ripT = 0; g.ripTg = tg; g.ripA = ang; continue; }
       for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t)*HM.dmg());
       sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='slug' ? 'goliath' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
       if (gun.fx==='slug'){
@@ -453,10 +454,10 @@ export function update(dt: number){
         const turn = b.wf ? 1.9 : 1.35, na = cur + clamp(angDiff(want,cur), -turn*dt, turn*dt);
         b.vx = Math.cos(na)*v; b.vy = Math.sin(na)*v;
       } else if (b.wf){ const k = v/(Math.hypot(b.vx,b.vy) || 1); b.vx *= k; b.vy *= k; }
-      if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > (b.wf ? 60 : 36)) b.tr.splice(0, 2); }
+      if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > (b.wf ? 24 : 36)) b.tr.splice(0, 2); }
       if (b.mirv && ((b.life0 || 0) - b.life > .8 || (b.target && Math.hypot(b.target.x-b.x, b.target.y-b.y) < b.target.r + 90*SC))){ mirvSplit(b, enemies); continue; }
       // a weaving warhead lays a thin white smoke trail that hangs in the air
-      if (b.wf){ if (G.fx.length < 2400) G.fx.push({k:'smoke', x:b.x + rand(-.4,.4)*SC, y:b.y + rand(-.4,.4)*SC, vx:rand(-1.5,1.5)*SC, vy:rand(-1.5,1.5)*SC, r:rand(.6,1.2)*SC, life:rand(1.8,2.6), max:2.6, col:'#e8ecf4'}); }
+      if (b.wf){ if (Math.random() < 20*dt && G.fx.length < 1600) G.fx.push({k:'smoke', x:b.x + rand(-.4,.4)*SC, y:b.y + rand(-.4,.4)*SC, vx:rand(-1.5,1.5)*SC, vy:rand(-1.5,1.5)*SC, r:rand(.6,1.2)*SC, life:rand(1,1.4), max:1.4, col:'#e8ecf4'}); }
       else if (Math.random() < .18) G.fx.push({k:'smoke', x:b.x, y:b.y, vx:rand(-6,6)*SC, vy:rand(-6,6)*SC, r:2.2*SC, life:rand(.5,.9), max:.9});
     }
     const steps = Math.min(3, Math.ceil(b.sp*dt/(BS*.8)));

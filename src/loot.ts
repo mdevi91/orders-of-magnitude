@@ -12,16 +12,19 @@ import { icon, showOverlay } from './ui';
 
 // ---------- loot ----------
 export const lootPool = () => PAL.filter(t => t!=='sell' && !PLATE(t) && unlocked(t));
-// Odds by rarity. Each step up is rarer, but deeper sectors, better sources (boost) and the hangar's prototype access
-// multiply every step, up to a cap per rarity, so an epic or legendary block never gets as common as a plain one.
-const RW = [100, 45, 20, 8, 3], RCAP = [100, 90, 60, 45, 25];
+// Odds by rarity: the rarity is rolled first, then a block of that rarity, evenly, so a rarity with many blocks
+// is no likelier than one with few. Each step up is rarer, but deeper sectors, better sources (boost) and the hangar's
+// prototype access multiply every step, up to a cap per rarity: at the caps it is 55% common, 28% uncommon,
+// 12% rare, 4% epic and 1% legendary.
+const RW = [100, 40, 12, 3, .8], RCAP = [100, 50, 22, 7, 2];
 // epic and up: at most one of these in any pick of three
 const TOP = 3;
 export function rollBlock(boost=1, pool=lootPool()): BlockType {
   const f = (1 + .1*(G.stage-1))*(1 + .3*(boost-1))*(1 + .12*metaLv('proto'));
-  const w = pool.map(t => Math.min(RW[rarOf(t)]*Math.pow(f, rarOf(t)), RCAP[rarOf(t)]));
-  let r = Math.random()*w.reduce((a,b) => a+b, 0);
-  for (let n=0; n<pool.length; n++) if ((r -= w[n]) < 0) return pool[n];
+  const tiers = RW.map((_, r) => pool.filter(t => rarOf(t)===r));
+  const w = tiers.map((ts, r) => ts.length ? Math.min(RW[r]*Math.pow(f, r), RCAP[r]) : 0);
+  let x = Math.random()*w.reduce((a,b) => a+b, 0);
+  for (let r=0; r<w.length; r++) if (w[r] && (x -= w[r]) < 0) return tiers[r][Math.floor(Math.random()*tiers[r].length)];
   return pool[0];
 }
 // G.dmg[t] of the G.inv[t] blocks in cargo are damaged. Taking one uses an intact block first (or a damaged one first, for selling); returns whether it was damaged.

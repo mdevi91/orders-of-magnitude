@@ -502,7 +502,7 @@ export function renderCombat(){
       ctx.restore(); ctx.globalAlpha = 1;
     } else if (f.k==='smoke' && f.col){
       // missile-trail smoke: a 1-2 pixel speck that fades where it hangs
-      const q = f.r*z > 1.5 ? 2 : 1;
+      const q = 1;
       ctx.globalAlpha = a*.55; ctx.fillStyle = f.col; ctx.fillRect(Math.round(sx(f.x)), Math.round(sy(f.y)), q, q);
     } else if (f.k==='smoke'){
       ctx.globalAlpha = a*.35; ctx.fillStyle = '#5a6488';
@@ -642,8 +642,16 @@ export function renderCombat(){
       if (b.tr && b.tr.length > 2){
         // exhaust trail: fades from hot yellow at the missile to dim orange at the tail; a weaving warhead's is white smoke behind a hot tip
         const n = b.tr.length/2; ctx.lineWidth = 1;
-        for (let q=1; q<n; q++){
-          ctx.globalAlpha = q/n*.9; ctx.strokeStyle = b.wf ? (q > n*.85 ? '#ffe08a' : '#dfe4ee') : q > n*.6 ? '#ffe08a' : '#ff8a4a';
+        if (b.wf){
+          // swarm warheads fly in dozens: their trail goes out as four strokes, fading toward the tail, not one per segment
+          for (let g=0; g<4; g++){
+            const q0 = Math.floor(g*(n-1)/4), q1 = Math.floor((g+1)*(n-1)/4); if (q1 <= q0) continue;
+            ctx.globalAlpha = (g+1)*.2; ctx.strokeStyle = g===3 ? '#ffe08a' : '#dfe4ee'; ctx.beginPath();
+            for (let q=q0; q<=q1; q++){ const X = Math.round(sx(b.tr[2*q]))+.5, Y = Math.round(sy(b.tr[2*q+1]))+.5; if (q===q0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y); }
+            ctx.stroke();
+          }
+        } else for (let q=1; q<n; q++){
+          ctx.globalAlpha = q/n*.9; ctx.strokeStyle = q > n*.6 ? '#ffe08a' : '#ff8a4a';
           ctx.beginPath(); ctx.moveTo(Math.round(sx(b.tr[2*q-2]))+.5, Math.round(sy(b.tr[2*q-1]))+.5); ctx.lineTo(Math.round(sx(b.tr[2*q]))+.5, Math.round(sy(b.tr[2*q+1]))+.5); ctx.stroke();
         }
         ctx.globalAlpha = 1;

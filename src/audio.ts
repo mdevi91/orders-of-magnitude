@@ -55,7 +55,7 @@ export const SFX: Record<string, (v: number) => void> = {
   clear:   v => [523,659,784,1046].forEach((f,n) => tone('square', f, f*1.01, .16, .08, n*.12)),
   die:     v => { tone('sawtooth', 420, 40, 1.2, .2); noise(1.2, .3, 1500, 60); },
 };
-export const GAP: Record<string, number> = {gatling:.05, laser:.08, eshot:.07, hit:.04, shield:.05, boom:.05, lowEn:.7, place:.03, pd:.05, shot:.03};
+export const GAP: Record<string, number> = {missile:.06, gatling:.05, laser:.08, eshot:.07, hit:.04, shield:.05, boom:.05, lowEn:.7, place:.03, pd:.05, shot:.03};
 export const lastSfx: Record<string, number> = {};
 export function sfx(n: string, v=1){
   if (muted || !AC || AC.state !== 'running') return;
