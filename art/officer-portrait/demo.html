@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pilot Portrait Demo</title>
+<style>
+  body { background: #0a0306; color: #ffd246; font: 14px monospace; display: grid; place-items: center; min-height: 100vh; margin: 0; }
+  .comm { display: flex; gap: 12px; align-items: flex-start; background: #120406; border: 2px solid #e8461e; padding: 8px; width: 560px; }
+  .screen { position: relative; width: 192px; height: 192px; flex: none; border: 2px solid #5a1a14; }
+  .screen canvas { display: block; }
+  .screen::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 2px, transparent 2px 4px); }
+  #text { white-space: pre-wrap; min-height: 128px; color: #fff1c4; }
+  .name { color: #ff8a1f; margin-bottom: 6px; }
+  .buttons { margin-top: 12px; display: flex; gap: 8px; }
+  button { background: #2a0a0a; color: #ffd246; border: 1px solid #e8461e; padding: 4px 10px; font: inherit; cursor: pointer; }
+  button.on { background: #e8461e; color: #120406; }
+</style>
+</head>
+<body>
+<div>
+  <div class="comm">
+    <div class="screen"><canvas id="c" width="192" height="192"></canvas></div>
+    <div><div class="name">LT. AOI // COMMS</div><div id="text"></div></div>
+  </div>
+  <div class="buttons">
+    <button data-mood="normal">Normal</button>
+    <button data-mood="determined">Determined</button>
+    <button data-mood="alarmed">Alarmed</button>
+    <button id="next">Next line</button>
+  </div>
+</div>
+<script type="module">
+import { Portrait } from "./portrait.js";
+import { drawShipBackground, drawMoodOverlay } from "./background.js";
+
+const LINES = {
+  normal: [
+    "Captain, salvage in range. Bolt it on and let's go.",
+    "New cockpit installed. She handles like a dream.",
+  ],
+  determined: [
+    "Shields at forty percent. Hold the line, we're not done yet.",
+    "All batteries on that cruiser. Fire on my mark.",
+  ],
+  alarmed: [
+    "HULL BREACH ON DECK TWO! SEAL IT, NOW!",
+    "REACTOR CRITICAL! ALL HANDS BRACE FOR IMPACT!",
+  ],
+};
+
+const params = new URLSearchParams(location.search);
+const size = Number(params.get("size") || 64);
+const img = new Image();
+img.src = params.get("sheet") || "officer64_sheet_transparent.png";
+await img.decode();
+
+// draw at sprite resolution, then scale up crisp
+const off = document.createElement("canvas");
+off.width = off.height = size;
+const octx = off.getContext("2d");
+const ctx = document.getElementById("c").getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+const portrait = new Portrait(img, { size });
+const textEl = document.getElementById("text");
+let mood = "normal", lineIdx = 0, shown = 0, typeTimer = 0, t = 0;
+
+function startLine() {
+  shown = 0;
+  textEl.textContent = "";
+  portrait.setTalking(true);
+}
+function setMood(m) {
+  mood = m;
+  portrait.setMood(m);
+  document.querySelectorAll("[data-mood]").forEach(b => b.classList.toggle("on", b.dataset.mood === m));
+  lineIdx = 0;
+  startLine();
+}
+document.querySelectorAll("[data-mood]").forEach(b => b.onclick = () => setMood(b.dataset.mood));
+document.getElementById("next").onclick = () => { lineIdx = (lineIdx + 1) % LINES[mood].length; startLine(); };
+
+let last = performance.now();
+function loop(now) {
+  const dt = (now - last) / 1000;
+  last = now;
+  t += dt;
+  const line = LINES[mood][lineIdx];
+  if (shown < line.length) {
+    typeTimer -= dt;
+    if (typeTimer <= 0) {
+      shown++;
+      textEl.textContent = line.slice(0, shown);
+      typeTimer = mood === "normal" ? 0.035 : 0.022;
+    }
+  } else if (portrait.talking) {
+    portrait.setTalking(false);
+  }
+  portrait.update(dt);
+  drawShipBackground(octx, t, mood, size);
+  portrait.draw(octx, 0, 0, 1);
+  drawMoodOverlay(octx, t, mood, size);
+  ctx.drawImage(off, 0, 0, 192, 192);
+  requestAnimationFrame(loop);
+}
+setMood("normal");
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
