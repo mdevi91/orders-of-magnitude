@@ -61,7 +61,7 @@ export function pBullet(x: number, y: number, ang: number, gun: GunDef, target: 
   const v0 = gun.weave ? sp*rand(.25,.5) : sp;
   G.pb.push({x, y, vx:Math.cos(ang)*v0, vy:Math.sin(ang)*v0, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC,
     life, life0:life, fall:!!gun.range && !gun.homing && !gun.lob && !gun.nofall, homing:!!gun.homing, aa:!!gun.aa, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0,
-    kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot', ...(gun.weave ? {wv:rand(0,TAU), wf:rand(1.4,2.4)*(Math.random() < .5 ? -1 : 1)} : {})});
+    kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot', ...(gun.weave ? {wv:rand(0,TAU), wf:rand(1.4,2.4)*(Math.random() < .5 ? -1 : 1), prox:Math.random() < .5 ? rand(1.2,2.2)*BS*G.SC : 0} : {})});
 }
 // every enemy shot flies this much faster than its base speed
 export const EB_SPD = 1.2;

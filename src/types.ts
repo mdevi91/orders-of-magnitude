@@ -136,6 +136,8 @@ export interface Bullet {
   tr?: number[] | null;
   /** a weaving missile's corkscrew: phase and turns per second */
   wv?: number; wf?: number;
+  /** proximity fuse: bursts this close to a block of its target (0 or missing: contact only) */
+  prox?: number;
   /** what the player's missile homes on */
   target?: Ship | null;
   /** what an enemy missile homes on */

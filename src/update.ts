@@ -446,7 +446,7 @@ export function update(dt: number){
       if (!b.target || !b.target.alive){ let bd = 1e18; b.target = null; for (const e of enemies){ const d = (e.x-b.x)**2 + (e.y-b.y)**2; if (d < bd){ bd = d; b.target = e; } } }
       // guidance burns out after 4 s; after that the warhead flies straight until it burns out 3 s later
       // weaving warheads speed up to full and corkscrew all the way, target or not: their heading swings up to about
-      // 50° either side, easing off only in the last stretch to a target so they still connect
+      // 34° either side, easing off only in the last stretch to a target so they still connect
       const v = b.wf ? Math.min(b.sp, Math.hypot(b.vx,b.vy) + b.sp*1.2*dt) : b.sp;
       let na = Math.atan2(b.vy,b.vx);
       if (b.target && b.life > 3){
@@ -455,9 +455,15 @@ export function update(dt: number){
       }
       if (b.wf){
         const k = b.target ? clamp((Math.hypot(b.target.x-b.x, b.target.y-b.y) - b.target.r)/(120*SC), .15, 1) : 1;
-        na += Math.cos((b.life0! - b.life)*b.wf*TAU + b.wv!)*.9*b.wf*TAU*k*dt;
+        na += Math.cos((b.life0! - b.life)*b.wf*TAU + b.wv!)*.6*b.wf*TAU*k*dt;
       }
       if (b.wf || (b.target && b.life > 3)){ b.vx = Math.cos(na)*v; b.vy = Math.sin(na)*v; }
+      // a proximity-fused warhead bursts as soon as it comes close to a block of its target, without needing a direct hit
+      if (b.prox && b.target?.alive && Math.hypot(b.target.x-b.x, b.target.y-b.y) < b.target.r + b.prox){
+        const e = b.target; let bk: Key | null = null, bd = b.prox*b.prox;
+        for (const [k,bb] of e.blocks){ const [wx,wy] = wpos(e,bb), q = (wx-b.x)**2 + (wy-b.y)**2; if (q < bd){ bd = q; bk = k; } }
+        if (bk != null){ damage(e, bk, b.dmg*.6); missileBlast(b, e, bk); b.dead = true; continue; }
+      }
       if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > (b.wf ? 24 : 36)) b.tr.splice(0, 2); }
       if (b.mirv && ((b.life0 || 0) - b.life > .8 || (b.target && Math.hypot(b.target.x-b.x, b.target.y-b.y) < b.target.r + 90*SC))){ mirvSplit(b, enemies); continue; }
       // a weaving warhead lays a thin white smoke trail that hangs in the air
