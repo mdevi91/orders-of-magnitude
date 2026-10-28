@@ -8,6 +8,7 @@ import { init as init_groups } from './groups';
 import { init as init_input } from './input';
 import { init as init_options } from './options';
 import { frame } from './loop';
+import { init as init_mods } from './mods';
 import { showTitle, station } from './runs';
 import { init as init_save, load, loadMeta } from './save';
 import { init as init_sim } from './sim';
@@ -16,6 +17,7 @@ import { init as init_tutorial } from './tutorial';
 import { buildPalette, init as init_ui } from './ui';
 import { $, init as init_view } from './view';
 
+init_mods();
 init_view();
 init_catalog();
 init_state();

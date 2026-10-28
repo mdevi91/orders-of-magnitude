@@ -19,7 +19,7 @@ export function makeShip(design: Map<Key, Cell>, team: Team, x: number, y: numbe
   const s: Ship = {team, x, y, vx:0, vy:0, a:0, c:1, sn:0, blocks:new Map(), alive:true, hpMul, r:0,
     guns:[], pds:[], rails:[], lasers:[], shields:[], bays:[], epd:[], teslas:[],
     ph:NO_PHYSICS, en:0, enMax:0, enRegen:0, w:0,
-    boss:false, elite:false, flag:false, station:false, fodder:false, craft:false, n0:design.size, phaseN:1, sc:G.SC,
+    boss:false, elite:false, flag:false, station:false, fodder:false, craft:false, n0:design.size, sc:G.SC,
     fireMul:1, ft:0, phase:0, spin:1, orb:0, orbSpd:0, pref:0, vmax:0, turn:0, value:0, tgt:null, sights:null,
     kind:null, bay:null, sortie:0, aimA:0, cd:0, pick:0, life:0, lifeMax:0};
   for (const [k,t] of design){
@@ -112,7 +112,8 @@ function hullShape(n: number, big = false){
   cells.add(CORE);
   return cells;
 }
-export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
+/** stage is the size tier (see tierOf); sector picks which weapons it may carry (see enemyFrom). */
+export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99, sector=G.stage){
   const cells = hullShape(n, boss || n >= 110 || G.stage >= 10), d = new Map<Key, EnemyCell>();
   const pa = Math.min(.6, .2 + .05*stage), pg = boss ? .18 : .24;
   const open = (k: Key, o: number) => !cells.has(k+o), edge = (k: Key) => NB.some(o => open(k,o));
@@ -132,10 +133,10 @@ export function genDesign(n: number, boss: boolean, stage: number, maxGuns=99){
   // guns on the outer edge, bow and flanks before the stern
   const rim = [...cells].filter(k => KI(k) >= 0 && edge(k) && free(k)).map(k => ({k, w:-KJ(k)*.5 + KI(k) + rand(0,2.5)})).sort((a,b) => b.w - a.w);
   let ng = Math.max(1, Math.min(maxGuns, Math.round(cells.size*pg)));
-  for (const {k} of rim){ if (ng <= 0) break; if (!free(k)) continue; set(k, pickWeapon(stage)); ng -= KI(k) ? 2 : 1; }
+  for (const {k} of rim){ if (ng <= 0) break; if (!free(k)) continue; set(k, pickWeapon(sector)); ng -= KI(k) ? 2 : 1; }
   // armour plates the rest of the rim, mostly toward the bow
   for (const k of cells) if (KI(k) >= 0 && edge(k) && free(k) && Math.random() < pa*(KJ(k) < 0 ? 1.4 : .8)) set(k, 'armor');
-  if (![...d.values()].some(t => ewOf(t))) d.set(K(0,-1), pickWeapon(stage));
+  if (![...d.values()].some(t => ewOf(t))) d.set(K(0,-1), pickWeapon(sector));
   // later stages fit enemies with the player's systems: shields, generators (buried inside) and carrier bays (on the rim)
   if (d.size >= 8){
     const nbs = (k: Key) => NB.filter(o => d.has(k+o)).length;
@@ -221,10 +222,11 @@ export function laneClear(s: Ship, b: Block, worldAng: number){
 }
 export interface RayHit { e: Ship; k: Key; t: number }
 // Enemy blocks along a ray, nearest first. With first=true only the nearest block per ship is kept.
-export function rayHits(ox: number, oy: number, dx: number, dy: number, len: number, first: boolean){
+/** Blocks along a ray, nearest first: enemy blocks, or with foes 'p' the player's side (their ship, allies and craft). */
+export function rayHits(ox: number, oy: number, dx: number, dy: number, len: number, first: boolean, foes: 'e' | 'p' = 'e'){
   const out: RayHit[] = [];
   for (const e of G.ships){
-    if (!e.alive || e.team!=='e' || (e.warp || 0) > 0) continue;
+    if (!e.alive || (e.team==='e') !== (foes==='e') || (e.warp || 0) > 0) continue;
     const rx = e.x-ox, ry = e.y-oy, t = rx*dx + ry*dy;
     if (t < -e.r || t - e.r > len) continue;
     if (Math.abs(rx*dy - ry*dx) > e.r) continue;

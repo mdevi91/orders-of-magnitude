@@ -11,6 +11,7 @@ import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship,
 import { drawTargeting } from './targeting';
 import { drawStatus } from './status';
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
+import { BAKE, blit, hasSpr, spr } from './mods';
 
 // ---------- drawing ----------
 // Cel-shaded metal sprites, 90s mecha anime style: each block is an inked plate with a flat face, a hard shadow band and a
@@ -31,6 +32,17 @@ export const PAINTS: Record<string, {name: string; hull: Pal3; armor: Pal3; dark
   olive: {name:'Olive', hull:['#d0d8a6','#7c8652','#3a4020'], armor:['#a6ae7c','#565e36','#262a14'], dark:MET.p.dark},
   violet:{name:'Violet', hull:['#dcc6f2','#7c5caa','#3a2858'], armor:['#b49ad2','#503c76','#22183a'], dark:MET.p.dark},
 };
+// Sprites the mod editor can replace (see mods.ts), by id: plate/<hull|armor|dark>/<v>, part/<cell>/<v>, block/<wedge>/<v>,
+// cockpit/<id>/<paint>, craft/<kind>/<p|e>, bullet/<kind>. v is 'e' for enemies; the player's is 'p', or the paint scheme
+// for anything painted, where a modded steel sprite stands in for a paint that has none of its own. Sprites face up.
+export const paintOf = (team: Team) => team==='e' ? 'e' : PAINTS[G.paint] ? G.paint : 'steel';
+export const PAINTED = (t: Cell) => t==='hull' || t==='armor' || WEDGE(t);
+export function modId(base: string, v: string){
+  if (hasSpr(base + '/' + v)) return base + '/' + v;
+  return v !== 'e' && v !== 'p' && hasSpr(base + '/steel') ? base + '/steel' : '';
+}
+// parts whose barrel swings to the aim point; their sprite is drawn turned that way
+export const TURRET = new Set<string>(['cannon', 'gun', 'bigcannon', 'hgatling', 'scatter', 'ion', 'torpedo', 'flak', 'gatling', 'plasma', 'glimmer']);
 export function plate(X: Ctx, x: number, y: number, m: Pal3){
   X.fillStyle = '#0b0d12'; X.fillRect(x-5,y-5,10,10);
   X.fillStyle = m[1]; X.fillRect(x-4.4,y-4.4,8.8,8.8);
@@ -55,7 +67,7 @@ export function barrel(X: Ctx, x: number, y: number, ca: number, sa: number, len
   X.fillStyle = m[0]; X.beginPath(); X.moveTo(x+px*.3,y+py*.3); X.lineTo(x+px*.3+ca*len,y+py*.3+sa*len); X.lineTo(x-px*.4+ca*len,y-py*.4+sa*len); X.lineTo(x-px*.4,y-py*.4); X.closePath(); X.fill();
 }
 export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: number, aim: number, hit: boolean, ratio: number, firing?: boolean){
-  const M = team==='e' ? MET.e : PAINTS[G.paint] || MET.p, bx = x, by = y;
+  const M = team==='e' ? MET.e : PAINTS[G.paint] || MET.p, bx = x, by = y, pv = paintOf(team), tv = team==='e' ? 'e' : 'p';
   if (t==='sell'){
     X.fillStyle = '#ff3d2a'; X.save(); X.translate(x,y); X.rotate(Math.PI/4); X.fillRect(-5,-1.2,10,2.4); X.fillRect(-1.2,-5,2.4,10); X.restore(); return;
   }
@@ -63,18 +75,22 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     // corner plating: the solid half-cell is bottom-left in its own frame, the cut faces up-right; turned to its diagonal
     const m = t==='armorc' ? M.armor : M.hull, tri = (pts: number[]) => { X.beginPath(); X.moveTo(pts[0], pts[1]); for (let n=2; n<pts.length; n+=2) X.lineTo(pts[n], pts[n+1]); X.closePath(); X.fill(); };
     X.save(); X.translate(x,y); X.rotate((((o || 1) - 1)/2)*Math.PI/2);
-    X.fillStyle = '#0b0d12'; tri([-5,-5.6, -5,5, 5.6,5]);
-    X.fillStyle = m[1]; tri([-4.4,-3.2, -4.4,4.4, 3.2,4.4]);
-    X.fillStyle = m[2]; tri([-4.4,1.2, 0,1.2, 3.2,4.4, -4.4,4.4]);
-    X.fillStyle = m[0]; X.fillRect(-4.4,-3.2,1,4.4);
-    if (t==='armorc'){ X.fillStyle = m[2]; tri([-2.8,.2, -2.8,2.8, -.2,2.8]); }
-    else { X.fillStyle = m[0]; X.fillRect(-3.4,2.6,.8,.8); }
+    const id = modId('block/'+t, pv);
+    if (id) blit(X, id, 0, 0);
+    else {
+      X.fillStyle = '#0b0d12'; tri([-5,-5.6, -5,5, 5.6,5]);
+      X.fillStyle = m[1]; tri([-4.4,-3.2, -4.4,4.4, 3.2,4.4]);
+      X.fillStyle = m[2]; tri([-4.4,1.2, 0,1.2, 3.2,4.4, -4.4,4.4]);
+      X.fillStyle = m[0]; X.fillRect(-4.4,-3.2,1,4.4);
+      if (t==='armorc'){ X.fillStyle = m[2]; tri([-2.8,.2, -2.8,2.8, -.2,2.8]); }
+      else { X.fillStyle = m[0]; X.fillRect(-3.4,2.6,.8,.8); }
+    }
     if (hit){ X.fillStyle = '#ffffff'; X.globalAlpha = .85; tri([-5,-5.6, -5,5, 5.6,5]); X.globalAlpha = 1; }
     else if (ratio < .7){ X.fillStyle = '#000000'; X.globalAlpha = (1-ratio)*.45; tri([-5,-5.6, -5,5, 5.6,5]); X.globalAlpha = 1; }
     X.restore(); return;
   }
-  const base = t==='armor' ? M.armor : t==='hull' ? M.hull : M.dark;
-  plate(X,x,y,base);
+  const base = t==='armor' ? M.armor : t==='hull' ? M.hull : M.dark, mat = t==='armor' || t==='hull' ? t : 'dark';
+  if (!BAKE.noPlate){ const id = modId('plate/'+mat, mat==='dark' ? tv : pv); if (id) blit(X, id, x, y); else plate(X,x,y,base); }
   if (hit){ X.fillStyle = '#ffffff'; X.globalAlpha = .85; X.fillRect(x-5,y-5,10,10); X.globalAlpha = 1; return; }
   const d = def(t), rot = o ? o*Math.PI/4 : 0;
   if (rot){ X.save(); X.translate(x,y); X.rotate(rot); x = 0; y = 0; }
@@ -82,7 +98,9 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
   const arc = d && d.gun ? (team==='p' ? cpArc(d.gun.arc || 0) : d.gun.arc || 0) : 0;
   if (arc) ang = -Math.PI/2 + clamp(angDiff(ang,-Math.PI/2), -arc, arc);
   const ca = Math.cos(ang), sa = Math.sin(ang), gun: Pal3 = team!=='e' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
-  switch (t as string){
+  const pid = modId('part/'+t, PAINTED(t) ? pv : tv);
+  if (pid) blit(X, pid, x, y, TURRET.has(t) ? ang + Math.PI/2 : 0);
+  else switch (t as string){
     case 'cockpit':
       // cockpit plating, seen only when its cockpit sprite can't be drawn whole
       X.fillStyle = '#3a4a5c'; X.fillRect(x-3,y-3,6,6); X.fillStyle = '#5fd8ff'; X.fillRect(x-1.5,y-.5,3,1); break;
@@ -95,12 +113,7 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.fillStyle = base[0]; for (const [a,b] of [[-3.4,-3.4],[2.6,-3.4],[-3.4,2.6],[2.6,2.6]]) X.fillRect(x+a,y+b,.9,.9); break;
     case 'core':
       // the core: a glowing orb with a pulsing halo; bigger cockpits are drawn over their whole footprint by drawCockpit
-      orb(X,x,y,4.2, team!=='p' ? ['#5a1008','#c0301a','#ff8a5a','#fff0d0'] : ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff']);
-      X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill();
-      // the halo ring, except under a bigger cockpit, whose sprite covers the core
-      if (team!=='p' || !cockpit().cells.length){ X.globalAlpha = .55 + .35*Math.sin(G.time*4); X.strokeStyle = team!=='p' ? '#ffb08a' : '#7fe8ff'; X.lineWidth = .9;
-        X.beginPath(); X.arc(x,y,5.6 + .5*Math.sin(G.time*4),0,TAU); X.stroke(); }
-      X.globalAlpha = 1; break;
+      orb(X,x,y,4.2, team!=='p' ? ['#5a1008','#c0301a','#ff8a5a','#fff0d0'] : ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff']); break;
     case 'cannon': case 'gun':
       // a long slim barrel through a cooling shroud
       barrel(X,x,y,ca,sa,9,1.8,gun); barrel(X,x,y,ca,sa,5,3.2,gun); orb(X,x,y,3, [gun[2],gun[1],gun[0]]); break;
@@ -173,14 +186,7 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.fillStyle = '#ff7ad8'; X.fillRect(x-3,y-3,2.4,1); X.fillRect(x+.6,y-3,2.4,1); break;
     case 'engine':
       X.fillStyle = '#20242c'; X.fillRect(x-3.6,y-1,7.2,5.2); X.fillStyle = '#5a6270'; X.fillRect(x-3.6,y-1,7.2,1.2);
-      X.fillStyle = '#ff7a2a'; X.fillRect(x-2.4,y+3,4.8,1.4);
-      if (firing){
-        const L = rand(5,10);
-        X.fillStyle = '#ff4a1a'; X.beginPath(); X.moveTo(x-3,y+4.6); X.lineTo(x+3,y+4.6); X.lineTo(x,y+4.6+L); X.closePath(); X.fill();
-        X.fillStyle = '#ffd04a'; X.beginPath(); X.moveTo(x-1.9,y+4.6); X.lineTo(x+1.9,y+4.6); X.lineTo(x,y+4.6+L*.65); X.closePath(); X.fill();
-        X.fillStyle = '#ffffff'; X.beginPath(); X.moveTo(x-.9,y+4.6); X.lineTo(x+.9,y+4.6); X.lineTo(x,y+4.6+L*.3); X.closePath(); X.fill();
-      }
-      break;
+      X.fillStyle = '#ff7a2a'; X.fillRect(x-2.4,y+3,4.8,1.4); break;
     case 'gyro': {
       orb(X,x,y,3.6, ['#4a3a10','#a8822a','#e8c860']);
       const r = G.time*5, c = Math.cos(r)*3, s = Math.sin(r)*3;
@@ -243,6 +249,20 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.fillStyle = '#20242c'; X.fillRect(x-4,y-4,8,8); X.fillStyle = '#4a3a6a'; for (let q=-3; q<4; q+=2) X.fillRect(x-3,y+q-.4,6,.8);
       orb(X,x,y,1.6, ['#2a1a4a','#9a6af0','#e8dcff']); break;
   }
+  // a modded sprite replaces the drawing whole, glow included; the engine's exhaust is thrust, not part of the sprite
+  if (!BAKE.on && !pid && t==='core'){
+    X.globalAlpha = .25 + .2*Math.sin(G.time*6); X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x,y,4.6,0,TAU); X.fill();
+    // the halo ring, except under a bigger cockpit, whose sprite covers the core
+    if (team!=='p' || !cockpit().cells.length){ X.globalAlpha = .55 + .35*Math.sin(G.time*4); X.strokeStyle = team!=='p' ? '#ffb08a' : '#7fe8ff'; X.lineWidth = .9;
+      X.beginPath(); X.arc(x,y,5.6 + .5*Math.sin(G.time*4),0,TAU); X.stroke(); }
+    X.globalAlpha = 1;
+  }
+  if (!BAKE.on && t==='engine' && firing){
+    const L = rand(5,10);
+    X.fillStyle = '#ff4a1a'; X.beginPath(); X.moveTo(x-3,y+4.6); X.lineTo(x+3,y+4.6); X.lineTo(x,y+4.6+L); X.closePath(); X.fill();
+    X.fillStyle = '#ffd04a'; X.beginPath(); X.moveTo(x-1.9,y+4.6); X.lineTo(x+1.9,y+4.6); X.lineTo(x,y+4.6+L*.65); X.closePath(); X.fill();
+    X.fillStyle = '#ffffff'; X.beginPath(); X.moveTo(x-.9,y+4.6); X.lineTo(x+.9,y+4.6); X.lineTo(x,y+4.6+L*.3); X.closePath(); X.fill();
+  }
   if (rot) X.restore();
   // battle damage: scorched, cracked plating with the hot internals glowing through
   if (ratio < .7){
@@ -252,7 +272,7 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     X.strokeStyle = `rgba(255,${(120 + 90*f)|0},40,${.4 + .6*f})`; X.lineWidth = .55; crack();
   }
   // level pips: one gold chevron per level above 1, plus a gold trim at max level
-  if (team==='p' && d){
+  if (team==='p' && d && !BAKE.on){
     const L = lvOf(t);
     X.fillStyle = '#ffc46b'; for (let q=1; q<L; q++) X.fillRect(bx-4+(q-1)*2.1, by+1.8, 1.6, 1.4);
     if (L >= MAXLV){ X.globalAlpha = .7; X.fillRect(bx-5,by-5,10,.8); X.globalAlpha = 1; }
@@ -262,6 +282,9 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
 // has() says whether a cell is still there; a cockpit missing a cell falls back to plain plating.
 export function drawCockpit(X: Ctx, id: string, has: (k: Key) => boolean){
   const C = COCKPITS[id as keyof typeof COCKPITS]; if (!C || !C.cells.length || !C.cells.every(([i,j]) => has(K(i,j))) || !has(CORE)) return;
+  const cid = modId('cockpit/'+id, paintOf('p')); if (cid){ blit(X, cid, 0, 0); return; }
+  // a modded cockpit or core cell beats the stock cockpit picture: leave the cells to show their own sprites
+  if (modId('part/cockpit', 'p') || modId('part/core', 'p')) return;
   const P = PAINTS[G.paint] || MET.p, ink = '#0b0d12', glass = ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff'];
   const poly = (pts: number[], col: string) => { X.fillStyle = col; X.beginPath(); X.moveTo(pts[0], pts[1]); for (let n=2; n<pts.length; n+=2) X.lineTo(pts[n], pts[n+1]); X.closePath(); X.fill(); };
   const rect = (x0: number, y0: number, x1: number, y1: number, col: string) => { X.fillStyle = col; X.fillRect(x0, y0, x1-x0, y1-y0); };
@@ -311,7 +334,7 @@ export function drawCockpit(X: Ctx, id: string, has: (k: Key) => boolean){
 // Hangar craft (fighters and bombers, on either side) are tiny pixel-art sprites, not block grids; their single block still
 // takes the hits, so they flash when struck and darken as they wear. The nose points to local -y; one sprite pixel is one world unit.
 // o outline, h hull, d shade, c cockpit glass, e engine
-const CRAFT_PIX: Record<CraftKind, string[]> = {
+export const CRAFT_PIX: Record<CraftKind, string[]> = {
   fbay:[
     '...o...',
     '..oho..',
@@ -331,9 +354,16 @@ const CRAFT_PIX: Record<CraftKind, string[]> = {
   ],
 };
 const craftSprites = new Map<string, HTMLCanvasElement>();
-function craftSprite(k: CraftKind, foe: boolean, mode: 'n' | 'hit' | 'dark', flame: number){
-  const key = `${k}${foe}${mode}${flame}`;
+export function craftSprite(k: CraftKind, foe: boolean, mode: 'n' | 'hit' | 'dark', flame: number){
+  const mod = spr(`craft/${k}/${foe ? 'e' : 'p'}`), key = `${k}${foe}${mode}${flame}${!!mod}`;
   let c = craftSprites.get(key); if (c) return c;
+  if (mod){
+    // a modded craft: struck it flashes white, worn it darkens, keeping its outline
+    c = document.createElement('canvas'); c.width = mod.width; c.height = mod.height;
+    const g = c.getContext('2d')!; g.drawImage(mod, 0, 0);
+    if (mode !== 'n'){ g.globalCompositeOperation = 'source-in'; g.fillStyle = mode==='hit' ? '#ffffff' : '#000000'; g.fillRect(0, 0, c.width, c.height); }
+    craftSprites.set(key, c); return c;
+  }
   const P = CRAFT_PIX[k], w = P[0].length, h = P.length;
   c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d')!;
@@ -424,6 +454,52 @@ export function drawSpace(cx: number, cy: number, z: number){
     if (st.f > .2 && Math.sin(G.time*2 + st.tw) > .7){ ctx.globalAlpha = .5; ctx.fillRect(X-1,Y,3,1); ctx.fillRect(X,Y-1,1,3); ctx.globalAlpha = 1; }
   }
 }
+// enemy rounds share the shape of the player's matching weapon, only the hue differs
+export const SHAPE: Partial<Record<BulletKind, BulletKind>> = {eoval:'oval', egat:'line', emiss:'miss', eflak:'flak', snipe:'oval'};
+// A round in flight with its glow (all but the hairline tracers), at x, y heading along ang; s is its size in pixels,
+// small draws a light cannon shell a little under its hit size, len is a core-gun tracer's length.
+export function bulletHead(X: Ctx, kind: BulletKind, x: number, y: number, s: number, ang: number, wf = 0, small = false, len = 5){
+  const k = SHAPE[kind] || kind, ca = Math.cos(ang), sa = Math.sin(ang);
+  if (k!=='shot'){ X.globalCompositeOperation = 'lighter'; X.globalAlpha = .3; X.fillStyle = BCOL[kind]; X.beginPath(); X.arc(x, y, wf ? s*1.4+1 : s*2.6+1, 0, TAU); X.fill(); X.globalAlpha = 1; X.globalCompositeOperation = 'source-over'; }
+  if (k==='miss' || k==='mirv' || k==='torp'){
+    const w = k==='mirv' || k==='torp' ? .75 : .5;
+    X.fillStyle = BCOL[kind]; X.beginPath(); X.ellipse(x, y, wf ? s*1.5 : s*2.2, Math.max(.6, s*w), ang, 0, TAU); X.fill();
+    X.fillStyle = '#ffffff'; X.fillRect(Math.round(x + ca*s*1.6), Math.round(y + sa*s*1.6), 1, 1);
+  } else if (k==='ion'){
+    // ion bolt: a flickering violet-white orb wrapped in crackling sparks, nothing like a cannon slug
+    const R = s*1.6 + 1;
+    X.fillStyle = BCOL.ion; X.beginPath(); X.arc(x, y, R, 0, TAU); X.fill();
+    X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x, y, R*.5, 0, TAU); X.fill();
+    X.strokeStyle = '#e8dcff'; X.lineWidth = 1; X.beginPath();
+    for (let q=0; q<3; q++){ const a = rand(0,TAU), r2 = R*rand(1.6,2.6); X.moveTo(x + Math.cos(a)*R, y + Math.sin(a)*R); X.lineTo(x + Math.cos(a+rand(-.5,.5))*r2*.7, y + Math.sin(a+rand(-.5,.5))*r2*.7); X.lineTo(x + Math.cos(a)*r2, y + Math.sin(a)*r2); }
+    X.stroke();
+  } else if (k==='slug'){
+    // Goliath slug: a blunt, fat nose tapering to a narrow tail, a white-hot face and three heavy speed lines behind
+    const q = s;
+    X.strokeStyle = BCOL.slug; X.globalAlpha = .5; X.lineWidth = .8;
+    for (const side of [-1, 0, 1]){ const ox = -sa*side*q*.6, oy = ca*side*q*.6; X.beginPath(); X.moveTo(x - ca*q*2.6 + ox, y - sa*q*2.6 + oy); X.lineTo(x - ca*q*(side ? 8 : 11) + ox, y - sa*q*(side ? 8 : 11) + oy); X.stroke(); }
+    X.globalAlpha = 1;
+    X.save(); X.translate(x, y); X.rotate(ang);
+    X.fillStyle = BCOL.slug; X.beginPath(); X.moveTo(-q*2.5, -q*.3); X.lineTo(q*.5, -q*.85); X.arc(q*.5, 0, q*.85, -Math.PI/2, Math.PI/2); X.lineTo(-q*2.5, q*.3); X.closePath(); X.fill();
+    X.fillStyle = '#ffffff'; X.beginPath(); X.arc(q*.75, 0, q*.55, -Math.PI/2, Math.PI/2); X.lineTo(q*.2, q*.4); X.lineTo(q*.2, -q*.4); X.closePath(); X.fill();
+    X.restore();
+  } else if (k==='oval'){
+    // cannon shells are drawn a little under their hit size; Goliath shells at full size; two speed lines trail each
+    const q = small ? s*.82 : s;
+    X.strokeStyle = BCOL[kind]; X.globalAlpha = .55; X.lineWidth = .6;
+    for (const side of [-1, 1]){ const ox = -sa*side*q*.7, oy = ca*side*q*.7; X.beginPath(); X.moveTo(x - ca*q*2.2 + ox, y - sa*q*2.2 + oy); X.lineTo(x - ca*q*7 + ox, y - sa*q*7 + oy); X.stroke(); }
+    X.globalAlpha = 1;
+    X.fillStyle = BCOL[kind]; X.beginPath(); X.ellipse(x, y, q*2.2, q*1.1, ang, 0, TAU); X.fill();
+    X.fillStyle = '#ffffff'; X.beginPath(); X.ellipse(x + ca*q*.5, y + sa*q*.5, q*1.1, q*.5, ang, 0, TAU); X.fill();
+  } else if (k==='shot'){
+    // the core gun's round: a gatling-style tracer, but a whole game pixel thick with a white-hot tip
+    X.strokeStyle = BCOL.shot; X.lineWidth = 1.4; X.beginPath(); X.moveTo(x - ca*len, y - sa*len); X.lineTo(x, y); X.stroke();
+    X.fillStyle = '#ffffff'; X.fillRect(x, y, 1, 1);
+  } else {
+    X.fillStyle = BCOL[kind]; X.fillRect(x-s, y-s+1, 2*s, 2*s-2); X.fillRect(x-s+1, y-s, 2*s-2, 2*s);
+    if (s > 1){ X.fillStyle = '#ffffff'; const c = Math.max(1, s>>1); X.fillRect(x-c, y-c, 2*c, 2*c); }
+  }
+}
 export function renderCombat(){
   const S = G.S, p = G.player!;
   // never so far out that a block shrinks under two pixels; off-screen hostiles get edge arrows
@@ -483,6 +559,12 @@ export function renderCombat(){
       ctx.globalAlpha = a; ctx.strokeStyle = '#e8dcff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x1,y1);
       for (let q=1; q<6; q++){ const f = q/6, j = rand(-1,1)*Math.min(8, len*.12); ctx.lineTo(x1 + (x2-x1)*f + nx*j, y1 + (y2-y1)*f + ny*j); }
       ctx.lineTo(x2,y2); ctx.stroke();
+    } else if (b.kind==='elaser' || b.kind==='eglim'){
+      // enemy beams: a hot red Sunspear with a white core, a pale amber Glimmer
+      const w = b.kind==='elaser' ? Math.max(2, 2.6*z) : Math.max(1, 1.4*z);
+      ctx.globalAlpha = .85; ctx.strokeStyle = b.kind==='elaser' ? '#ff4a2a' : '#ffd890'; ctx.lineWidth = w;
+      ctx.beginPath(); ctx.moveTo(sx(b.x1),sy(b.y1)); ctx.lineTo(sx(b.x2),sy(b.y2)); ctx.stroke();
+      if (b.kind==='elaser'){ ctx.strokeStyle = '#fff0e0'; ctx.lineWidth = Math.max(1, w*.35); ctx.stroke(); }
     } else {
       ctx.globalAlpha = a; ctx.strokeStyle = b.kind==='epd' ? '#ff7a66' : '#c9adff'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(sx(b.x1),sy(b.y1)); ctx.lineTo(sx(b.x2),sy(b.y2)); ctx.stroke();
@@ -631,14 +713,11 @@ export function renderCombat(){
   // sparks and bullets on top, snapped to whole pixels: coloured block with a white hot centre
   for (const f of G.fx) if (f.k==='spk'){ ctx.globalAlpha = f.life/f.max; ctx.fillStyle = f.col; ctx.fillRect(Math.round(sx(f.x)), Math.round(sy(f.y)), 1, 1); }
   ctx.globalAlpha = 1;
-  // enemy rounds share the shape of the player's matching weapon, only the hue differs
-  const SHAPE: Partial<Record<BulletKind, BulletKind>> = {eoval:'oval', egat:'line', emiss:'miss', eflak:'flak', snipe:'oval'};
   const drawB = (arr: Bullet[]) => {
     for (const b of arr){
       const k = SHAPE[b.kind] || b.kind;
       const X = Math.round(sx(b.x)), Y = Math.round(sy(b.y)), s = Math.max(1, Math.round(b.r*z));
       if (X < -s*4 || Y < -s*4 || X > W+s*4 || Y > H+s*4) continue;
-      if (k!=='line' && k!=='shot'){ ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .3; ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.arc(X, Y, b.wf ? s*1.4+1 : s*2.6+1, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
       if (b.tr && b.tr.length > 2){
         // exhaust trail: fades from hot yellow at the missile to dim orange at the tail; a weaving warhead's is white smoke behind a hot tip
         const n = b.tr.length/2; ctx.lineWidth = 1;
@@ -656,60 +735,15 @@ export function renderCombat(){
         }
         ctx.globalAlpha = 1;
       }
-      if (k==='miss' || k==='mirv' || k==='torp'){
-        const ang = Math.atan2(b.vy,b.vx), w = k==='mirv' || k==='torp' ? .75 : .5;
-        ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, b.wf ? s*1.5 : s*2.2, Math.max(.6, s*w), ang, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(X + Math.cos(ang)*s*1.6), Math.round(Y + Math.sin(ang)*s*1.6), 1, 1);
+      const ang = Math.atan2(b.vy,b.vx);
+      if (k==='line'){
+        // hairline tracer on the full-resolution layer, one screen pixel wide
+        const len = Math.max(5, b.sp*z*.019)*PX, hx = sx(b.x)*PX, hy = sy(b.y)*PX;
+        hctx.moveTo(hx - Math.cos(ang)*len, hy - Math.sin(ang)*len); hctx.lineTo(hx, hy);
         continue;
       }
-      if (k==='ion'){
-        // ion bolt: a flickering violet-white orb wrapped in crackling sparks, nothing like a cannon slug
-        const R = s*1.6 + 1;
-        ctx.fillStyle = BCOL.ion; ctx.beginPath(); ctx.arc(X, Y, R, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(X, Y, R*.5, 0, TAU); ctx.fill();
-        ctx.strokeStyle = '#e8dcff'; ctx.lineWidth = 1; ctx.beginPath();
-        for (let q=0; q<3; q++){ const a = rand(0,TAU), r2 = R*rand(1.6,2.6); ctx.moveTo(X + Math.cos(a)*R, Y + Math.sin(a)*R); ctx.lineTo(X + Math.cos(a+rand(-.5,.5))*r2*.7, Y + Math.sin(a+rand(-.5,.5))*r2*.7); ctx.lineTo(X + Math.cos(a)*r2, Y + Math.sin(a)*r2); }
-        ctx.stroke();
-        continue;
-      }
-      if (k==='slug'){
-        // Goliath slug: a blunt, fat nose tapering to a narrow tail, a white-hot face and three heavy speed lines behind
-        const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang), q = s;
-        ctx.strokeStyle = BCOL.slug; ctx.globalAlpha = .5; ctx.lineWidth = .8;
-        for (const side of [-1, 0, 1]){ const ox = -sa*side*q*.6, oy = ca*side*q*.6; ctx.beginPath(); ctx.moveTo(X - ca*q*2.6 + ox, Y - sa*q*2.6 + oy); ctx.lineTo(X - ca*q*(side ? 8 : 11) + ox, Y - sa*q*(side ? 8 : 11) + oy); ctx.stroke(); }
-        ctx.globalAlpha = 1;
-        ctx.save(); ctx.translate(X, Y); ctx.rotate(ang);
-        ctx.fillStyle = BCOL.slug; ctx.beginPath(); ctx.moveTo(-q*2.5, -q*.3); ctx.lineTo(q*.5, -q*.85); ctx.arc(q*.5, 0, q*.85, -Math.PI/2, Math.PI/2); ctx.lineTo(-q*2.5, q*.3); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(q*.75, 0, q*.55, -Math.PI/2, Math.PI/2); ctx.lineTo(q*.2, q*.4); ctx.lineTo(q*.2, -q*.4); ctx.closePath(); ctx.fill();
-        ctx.restore();
-        continue;
-      }
-      if (k==='line' || k==='oval'){
-        const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang);
-        if (k==='line'){
-          // hairline tracer on the full-resolution layer, one screen pixel wide
-          const len = Math.max(5, b.sp*z*.019)*PX, hx = sx(b.x)*PX, hy = sy(b.y)*PX;
-          hctx.moveTo(hx - ca*len, hy - sa*len); hctx.lineTo(hx, hy);
-        } else {
-          // cannon shells are drawn a little under their hit size; Goliath shells at full size; two speed lines trail each
-          const q = b.kind==='oval' && b.r < 3.5*G.SC ? s*.82 : s;
-          ctx.strokeStyle = BCOL[b.kind]; ctx.globalAlpha = .55; ctx.lineWidth = .6;
-          for (const side of [-1, 1]){ const ox = -sa*side*q*.7, oy = ca*side*q*.7; ctx.beginPath(); ctx.moveTo(X - ca*q*2.2 + ox, Y - sa*q*2.2 + oy); ctx.lineTo(X - ca*q*7 + ox, Y - sa*q*7 + oy); ctx.stroke(); }
-          ctx.globalAlpha = 1;
-          ctx.fillStyle = BCOL[b.kind]; ctx.beginPath(); ctx.ellipse(X, Y, q*2.2, q*1.1, ang, 0, TAU); ctx.fill();
-          ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(X + ca*q*.5, Y + sa*q*.5, q*1.1, q*.5, ang, 0, TAU); ctx.fill();
-        }
-        continue;
-      }
-      if (k==='shot'){
-        // the core gun's round: a gatling-style tracer, but a whole game pixel thick with a white-hot tip
-        const ang = Math.atan2(b.vy,b.vx), ca = Math.cos(ang), sa = Math.sin(ang), len = Math.max(5, b.sp*z*.019);
-        ctx.strokeStyle = BCOL.shot; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(X - ca*len, Y - sa*len); ctx.lineTo(X, Y); ctx.stroke();
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(X, Y, 1, 1);
-        continue;
-      }
-      ctx.fillStyle = BCOL[b.kind]; ctx.fillRect(X-s, Y-s+1, 2*s, 2*s-2); ctx.fillRect(X-s+1, Y-s, 2*s-2, 2*s);
-      if (s > 1){ ctx.fillStyle = '#ffffff'; const c = Math.max(1, s>>1); ctx.fillRect(X-c, Y-c, 2*c, 2*c); }
+      if (hasSpr('bullet/'+b.kind)) blit(ctx, 'bullet/'+b.kind, X, Y, ang + Math.PI/2, s);
+      else bulletHead(ctx, b.kind, X, Y, s, ang, b.wf, b.kind==='oval' && b.r < 3.5*G.SC, Math.max(5, b.sp*z*.019));
     }
   };
   hctx.setTransform(DPR,0,0,DPR,0,0); hctx.clearRect(0,0,innerWidth,innerHeight);

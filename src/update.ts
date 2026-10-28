@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { PD_KINDS, aimPoint, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
+import { EB_SPD, PD_KINDS, aimPoint, eBullet, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
 import { BCOL, CRAFT, ESH, HM, LV, T, bayKind, cockpit, cpArc, cpSpeed, cpTurn, def, grpOf, isCraft } from './catalog';
 import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx, updateSlugs } from './craft';
 import { cellsFor } from './editor';
@@ -18,6 +18,8 @@ import { H, REDUCE, W } from './view';
 /** Keys held down, by KeyboardEvent.code. */
 export const keys: Record<string, boolean> = {};
 export const JOY_R = 26;
+/** the capital ship whose fall last raised the "clear the field" banner */
+let mopFor: Ship | null = null;
 // Auto fire picks a drifting spot somewhere on the target's hull (and a little past its edge further out), not its centre.
 // Each weapon (seed) drifts on its own phase and pace, so guns on one target don't sweep in step.
 export function wobble(e: Ship, d: number, seed = 0): [number, number] {
@@ -26,10 +28,10 @@ export function wobble(e: Ship, d: number, seed = 0): [number, number] {
 }
 /** A weapon's own wobble seed, from where it sits on the hull. */
 const wseed = (b: Block) => 1 + Math.abs(b.i*31 + b.j*17 + b.o*7) % 97;
-// An ion bolt jams the enemy weapons near the block it hits (turrets, point defense, carrier bays) for ION_T seconds.
+// An ion bolt jams the weapons near the block it hits (turrets, point defense, carrier bays) for ION_T seconds.
 export const ION_R = 2.5, ION_T = 1.5;
 export function ionJam(e: Ship, hit: Block){
-  for (const g of [...e.guns, ...e.epd, ...e.bays]) if (Math.hypot(g.i-hit.i, g.j-hit.j) <= ION_R) g.jam = G.time + ION_T;
+  for (const g of [...e.guns, ...e.epd, ...e.bays, ...e.pds, ...e.rails, ...e.lasers, ...e.teslas]) if (Math.hypot(g.i-hit.i, g.j-hit.j) <= ION_R) g.jam = G.time + ION_T;
 }
 /** Fires the cockpit's right-click ability toward the aim point (ax, ay); (ux, uy) is the way the player is steering, if any. */
 /** Missile, MIRV and torpedo launchers: the guns a Salvo fires and a Cruiser reloads faster. */
@@ -155,7 +157,7 @@ export function update(dt: number){
   const held = G.fireHeld || keys.Space, fire = held || ((G.aimAuto || !G.mouse.has) && enemies.length > 0);
   // per weapon type: may it fire now, and where does it aim
   const isAuto = (b: Block) => !!G.auto[grpOf(K(b.i,b.j), b.t)-1];
-  const may = (b: Block) => fire || isAuto(b), aimX = (b: Block) => isAuto(b) ? px : ax!, aimY = (b: Block) => isAuto(b) ? py : ay;
+  const may = (b: Block) => (b.jam || 0) <= G.time && (fire || isAuto(b)), aimX = (b: Block) => isAuto(b) ? px : ax!, aimY = (b: Block) => isAuto(b) ? py : ay;
 
   const spend = (c: number) => { if (p.en < c) return false; p.en -= c; return true; };
   if (p.alive){
@@ -501,6 +503,16 @@ export function update(dt: number){
         b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp;
       }
       if (b.tr){ b.tr.push(b.x, b.y); if (b.tr.length > 24) b.tr.splice(0, 2); }
+      // an enemy MIRV splits into its warheads shortly after launch, or sooner near its target
+      if (b.mirv && ((b.life0 || 0) - b.life > .8 || Math.hypot(t.x-b.x, t.y-b.y) < t.r + 90*SC)){
+        b.dead = true; boomAt(b.x, b.y, 6*SC, .15); sfx('missile', .5);
+        const head = Math.atan2(b.vy, b.vx);
+        for (let q=0; q<b.mirv; q++){
+          const ang = head + (q - (b.mirv-1)/2)*.8, sub = eBullet(b.x, b.y, ang, b.sp*1.4/(110*EB_SPD*SC), 'emiss', b.dmg, b.r/(3.4*SC)*.8);
+          if (sub){ sub.tgt = t; sub.tr = []; sub.life = sub.life0 = 6; }
+        }
+        continue;
+      }
     }
     if (b.kind==='eflak'){
       // flak bursts when it comes near a hull or runs out of fuse
@@ -519,6 +531,7 @@ export function update(dt: number){
           if (b.kind==='snipe') boomAt(b.x,b.y,8*SC,.2);
           if (b.kind==='eoval'){ if (p.alive) for (const d of NB) if (p.blocks.has(k+d)) damage(p, k+d, b.dmg*.4); boomAt(b.x,b.y,9*SC,.2); }
           if (b.kind==='emiss'){ blastShip(p, b.x, b.y, 1.6*BS, b.dmg*.6); boomAt(b.x,b.y,16*SC,.35); sfx('boom', .6); }
+          if (b.ion && p.alive){ const hb = p.blocks.get(k); if (hb) ionJam(p, hb); sparks(b.x, b.y, 0, 8, 140*SC, ['#a070ff','#e8dcff','#ffffff']); }
           break;
         }
       }
@@ -542,8 +555,17 @@ export function update(dt: number){
   G.fit = G.span;
   G.camX = p.x; G.camY = p.y;
 
-  // at gates and flagships a swarm keeps coming between and during waves; it never holds up a win
-  if (p.alive && !G.sim && (G.fight==='gate' || G.fight==='boss' || G.fight==='station') && G.waveIdx > 0){
+  // Capital fights (flagship, starbase) are won only once every hostile is gone, fighters and craft included: when the
+  // capital ship falls, the swarm stops coming and whatever is left has to be shot down.
+  const capital = G.fight==='boss' || G.fight==='station', mains = G.ships.some(e => e.alive && e.team==='e' && !e.fodder);
+  const mopUp = capital && !mains && G.waveIdx >= G.waves.length;
+  if (mopUp && p.alive && mopFor !== G.boss){
+    // fighters still warping in count too
+    const n = G.ships.filter(e => e.alive && e.team==='e').length;
+    if (n){ mopFor = G.boss; G.banner = {text:'Clear the field', sub:`${n} hostile${n > 1 ? 's' : ''} left`, red:true, t:2.4}; }
+  }
+  // at gates and flagships a swarm keeps coming between and during waves; outside capital fights it never holds up a win
+  if (p.alive && !G.sim && !mopUp && (G.fight==='gate' || capital) && G.waveIdx > 0){
     G.swarmT -= dt;
     if (G.swarmT <= 0){ G.swarmT = 12; if (enemies.filter(e => e.alive && e.fodder).length < fodderCap()) spawnSwarm(); }
   }
@@ -551,7 +573,7 @@ export function update(dt: number){
   // waves
   // a test simulation ends on its own terms, and its fighters count toward clearing it
   if (!p.alive){ G.deadT -= dt; if (G.deadT <= 0){ if (G.sim) simOver(false); else playerDied(); } }
-  else if (!arriving && !enemies.some(e => e.alive && (!e.fodder || G.sim))){
+  else if (!arriving && !enemies.some(e => e.alive && (!e.fodder || G.sim || capital))){
     G.waveGap -= dt;
     if (G.waveGap <= 0){
       if (G.waveIdx < G.waves.length){ G.waveIdx++; spawnWave(G.waves[G.waveIdx-1]); G.waveGap = 1.6; }

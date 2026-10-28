@@ -91,7 +91,7 @@ export function genStation(n: number, stage: number, guns: number, bays: number)
       for (const [a,b] of [[i,j],[-j,i],[-i,-j],[j,-i]]){ const kk = K(a,b); if (d.get(kk)==='hull' || d.get(kk)==='armor') d.set(kk, typeof t==='function' ? t() : t); }
     }
   };
-  conv(() => pickWeapon(stage), Math.ceil(guns/4), false);
+  conv(() => pickWeapon(G.stage), Math.ceil(guns/4), false);
   conv('bay', Math.ceil(bays/4), false);
   if (stage >= 3) conv('shield', 1 + Math.floor(d.size/400), false);
   if (stage >= 4) conv('gen', 1 + Math.floor(d.size/500), true);
@@ -118,7 +118,7 @@ export function spawnWave(list: Wave){
     if (spec.bays && !spec.station) addBays(d, spec.bays);
     // a starbase has so many blocks that each one is lighter
     const e = makeShip(d,'e',pos.x,pos.y,hpMul*(spec.elite ? 1.3 : spec.station ? .5 : 1), gunDirs(d));
-    e.boss = !!spec.boss; e.elite = !!spec.elite; e.flag = !!spec.flag; e.station = !!spec.station; e.n0 = d.size; e.phaseN = 1;
+    e.boss = !!spec.boss; e.elite = !!spec.elite; e.flag = !!spec.flag; e.station = !!spec.station; e.n0 = d.size;
     if (e.boss) boss = e;
     e.sc = G.SC; e.ft = 3; e.phase = rand(0,TAU); e.spin = Math.random()<.5 ? 1 : -1;
     e.orb = rand(0,TAU); e.orbSpd = rand(.12,.35)*(Math.random()<.5 ? 1 : -1);
@@ -155,7 +155,7 @@ export function spawnSwarm(){
 export function makeFighter(x: number, y: number, tier: number){
   const p = G.player!, tS = Math.pow(scaleOf(tier),.8);
   {
-    const d = genDesign(Math.round((4 + 2*Math.pow(tier,1.2))*rand(.85,1.1)), false, tierOf(tier), 2);
+    const d = genDesign(Math.round((4 + 2*Math.pow(tier,1.2))*rand(.85,1.1)), false, tierOf(tier), 2, tier);
     const e = makeShip(d,'e', clamp(x, 0, G.AW), clamp(y, 0, G.AH), 1, gunDirs(d));
     e.fodder = true; e.sc = tS;
     e.orb = rand(0,TAU); e.orbSpd = rand(.3,.6)*(Math.random()<.5 ? 1 : -1);

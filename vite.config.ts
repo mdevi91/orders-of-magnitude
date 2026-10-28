@@ -1,4 +1,6 @@
 import JavaScriptObfuscator from 'javascript-obfuscator';
+import fs from 'node:fs';
+import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 
 // Release builds run the minified bundle through an obfuscator so it is hard to read back in devtools:
@@ -17,9 +19,30 @@ const obfuscate = (): Plugin => ({
   },
 });
 
-// The built page lands in public/, which Firebase Hosting serves as-is.
+// The dev server's end of the mod editor (mod-editor.html): its Save writes the sprites and labels to src/mods.json.
+const modSave = (): Plugin => ({
+  name: 'mod-save',
+  apply: 'serve',
+  configureServer(server){
+    server.middlewares.use('/__mods', (req, res) => {
+      if (req.method !== 'POST'){ res.statusCode = 405; res.end(); return; }
+      let body = '';
+      req.on('data', c => { body += c; });
+      req.on('end', () => {
+        try {
+          const d = JSON.parse(body);
+          if (typeof d.sprites !== 'object' || typeof d.labels !== 'object') throw new Error('expected {sprites, labels}');
+          fs.writeFileSync(path.join(server.config.root, 'src', 'mods.json'), body.endsWith('\n') ? body : body + '\n');
+          res.end('saved');
+        } catch (e){ res.statusCode = 400; res.end(String(e)); }
+      });
+    });
+  },
+});
+
+// The built page lands in public/, which Firebase Hosting serves as-is; the mod editor page stays a dev-only tool.
 export default defineConfig(({ mode }) => ({
   publicDir: false,
-  plugins: mode === 'test' ? [] : [obfuscate()],
+  plugins: mode === 'test' ? [modSave()] : [obfuscate(), modSave()],
   build: { outDir: 'public', emptyOutDir: true, target: 'es2022', minify: mode !== 'test', sourcemap: false },
 }));

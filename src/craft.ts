@@ -1,7 +1,7 @@
 import { sfx } from './audio';
 import { EB_SPD, eBullet, leadAngle, pBullet } from './bullets';
-import { CRAFT, HM, LV, T, bayKind, cockpit, ewOf, isCraft } from './catalog';
-import { craftCap, eDmg, eReach } from './fights';
+import { CRAFT, HM, LV, T, bayKind, cockpit, ewOf, isCraft, shRad } from './catalog';
+import { eDmg, eReach } from './fights';
 import { BS, FA, K, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { boomAt, damage, laneClear, makeShip, rayHits, sparks, wpos } from './ships';
 import { G } from './state';
@@ -118,25 +118,11 @@ export function updateSlugs(dt: number){
 export function enemyFire(e: Ship, dt: number){
   const p = G.player!;
   if (e.boss){
-    // flagships fight in three phases as they lose blocks or life: spiral, then fighters, then ring bursts
-    if (e.flag){
-      const f = Math.min(e.blocks.size/e.n0, e.life/e.lifeMax), ph = f > .66 ? 1 : f > .33 ? 2 : 3;
-      const nm = e.station ? 'starbase' : 'flagship';
-      if (ph > e.phaseN){ e.phaseN = ph; G.banner = {text:`Phase ${ph}`, sub: ph===2 ? `The ${nm} scrambles its hangars` : `The ${nm} fires ring bursts`, red:true, t:2.4}; sfx('pop'); }
-      if (ph >= 2 && (e.flT = (e.flT ?? 1) - dt) <= 0){
-        e.flT = 10;
-        for (let q=0; q<2; q++) if (G.ships.filter(x => x.alive && x.craft).length < craftCap() + 2) launchECraft(e, {i:Math.round(rand(-.3,.3)*e.r/BS), j:Math.round(rand(-.3,.3)*e.r/BS)});
-      }
-      if (ph >= 3 && (e.rbT = (e.rbT ?? 1.5) - dt) <= 0){
-        e.rbT = 4.5;
-        for (let q=0; q<12; q++) eBullet(e.x, e.y, e.phase + q*TAU/12, .55, 'ring', 8*eDmg());
-      }
-    }
-    // capital ships also sweep a slow spiral of rings
+    // capital ships sweep a slow spiral of rings
     e.ft -= dt;
     if (e.ft <= 0){
       e.ft = e.flag ? 1 : 1.1;
-      const arms = e.flag ? Math.min(2, e.phaseN) : 1 + (G.stage >= 6 ? 1 : 0);
+      const arms = e.flag ? 1 : 1 + (G.stage >= 6 ? 1 : 0);
       for (let q=0; q<arms; q++) eBullet(e.x, e.y, e.phase + q*TAU/arms, .7, 'ring', 8*eDmg());
       e.phase += .3*e.spin;
     }
@@ -150,8 +136,10 @@ export function enemyFire(e: Ship, dt: number){
     if ((g.jam || 0) > G.time) continue;
     const w = ewOf(g.t)!, [wx,wy] = wpos(e,g), R = eReach(), sp = w.spd*e.sc*R;
     // turrets follow the player's rules: they fire within their arc around their facing, and not through their own hull
-    const pg = T[g.t as BlockType].gun, arc = pg ? pg.arc ?? Math.PI : SWING, la = leadAngle(wx,wy,sp,.95,tgt);
-    const clear = Math.abs(angDiff(la, e.a + FA[g.o])) <= arc && (!!pg?.over || !!pg?.homing || laneClear(e, g, la));
+    const pg = T[g.t as BlockType].gun, arc = w.arc ?? (pg ? pg.arc ?? Math.PI : SWING), la = sp ? leadAngle(wx,wy,sp,.95,tgt) : Math.atan2(tgt.y-wy, tgt.x-wx);
+    const clear = Math.abs(angDiff(la, e.a + FA[g.o])) <= arc && (!!w.over || !!pg?.over || !!pg?.homing || laneClear(e, g, la));
+    // a beam keeps burning once lit, swinging after its target within its arc
+    if (w.beam && (g.burnT || 0) > G.time){ eBeam(e, g, w.beam, w.range*e.sc*R, e.a + FA[g.o] + clamp(angDiff(la, e.a + FA[g.o]), -arc, arc), g.t==='glimmer', dt); continue; }
     g.cd -= dt;
     if (w.aim && g.cd < w.aim && clear) (e.sights ||= []).push([wx, wy, leadAngle(wx,wy,sp,.6,tgt)]);
     if (g.cd > 0) continue;
@@ -159,15 +147,62 @@ export function enemyFire(e: Ship, dt: number){
     if (!clear){ g.cd = .2; g.shots = 0; continue; }
     if (w.burst && (g.shots = (g.shots || 0) + 1) < w.burst) g.cd = w.gap!;
     else { g.shots = 0; g.cd = w.cd*rand(.85,1.15); }
+    if (w.beam){ g.burnT = G.time + w.beam.dur; sfx('laser', .6); continue; }
+    if (w.zap){ if (!eZap(e, wx, wy, tgt, w.range*e.sc*R, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.zap)) g.cd = .3; continue; }
     // a fast target is harder to lead: extra scatter grows with its speed, up to ±7° at 700 units/s
     const jit = tgt.craft ? 0 : .12*Math.min(1, Math.hypot(tgt.vx, tgt.vy)/(700*G.SC));
-    const ang = leadAngle(wx,wy,sp,.95,tgt) + (Math.random()-.5)*2*((w.spread || 0) + jit);
-    const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC*R, w.kind, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.r*e.sc/G.SC);
-    if (!b) continue;
-    if (w.range && !w.fuse && w.kind!=='emiss'){ b.life = b.life0 = w.range/(w.spd*EB_SPD); b.fall = true; }
-    if (w.kind==='emiss'){ b.tgt = tgt; b.tr = []; b.life = 7; }
-    if (w.fuse){ b.fuse = w.fuse*e.sc; b.blast = w.blast!*e.sc; b.life = w.life!; }
+    const n = w.pellets || 1, a0 = leadAngle(wx,wy,sp,.95,tgt) + (Math.random()-.5)*2*((w.spread || 0) + jit);
+    for (let q=0; q<n; q++){
+      const ang = a0 + (n > 1 ? (q/(n-1) - .5)*(w.fan || 0) + rand(-.03,.03) : 0);
+      const b = eBullet(wx, wy, ang, w.spd/110*e.sc/G.SC*R*(n > 1 ? rand(.9,1.1) : 1), w.kind, w.dmg*(e.fodder ? .5 : 1)*eDmg(), w.r*e.sc/G.SC);
+      if (!b) break;
+      if (w.range && !w.fuse && w.kind!=='emiss'){ b.life = b.life0 = w.range/(w.spd*EB_SPD); b.fall = true; }
+      if (w.kind==='emiss'){ b.tgt = tgt; b.tr = []; b.life = b.life0 = 7; b.mirv = w.split || 0; }
+      if (w.fuse){ b.fuse = w.fuse*e.sc; b.blast = w.blast!*e.sc; b.life = w.life!; }
+      if (w.ion) b.ion = true;
+    }
   }
+}
+/** One frame of an enemy beam from gun g along angle a: burns the first block of the player's side in reach, or the
+ *  player's shield bubble if that comes first. */
+function eBeam(e: Ship, g: Block, B: {dps: number; fall?: number}, range: number, a: number, pale: boolean, dt: number){
+  const [wx,wy] = wpos(e,g), dx = Math.cos(a), dy = Math.sin(a), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5;
+  const hit = rayHits(ox, oy, dx, dy, range, true, 'p')[0], dps = B.dps*(e.fodder ? .5 : 1)*eDmg();
+  let t = hit ? hit.t : range;
+  const p = G.player;
+  if (p?.alive) for (const s of p.shields){
+    const bub = s.bub; if (!bub || bub.down > 0 || bub.hp <= 0) continue;
+    // where the beam enters the bubble, if it does before its end
+    const [cx,cy] = wpos(p,s), rx = cx-ox, ry = cy-oy, along = rx*dx + ry*dy, off = Math.abs(rx*dy - ry*dx), rad = shRad();
+    if (off > rad || Math.hypot(rx, ry) < rad) continue;
+    const enter = along - Math.sqrt(rad*rad - off*off); if (enter < 0 || enter > t) continue;
+    t = enter; bub.hp -= dps*dt; bub.last = bub.flash = G.time; bub.ha = Math.atan2(-dy, -dx);
+    if (bub.hp <= 0){ sfx('pop'); bub.hp = 0; bub.down = T.shield.sh!.down; G.fx.push({k:'ring', x:cx, y:cy, r:rad*1.1, life:.5, max:.5, col:'#5fd3ff'}); }
+    G.beams.push({x1:ox, y1:oy, x2:ox + dx*t, y2:oy + dy*t, life:.06, max:.06, kind: pale ? 'eglim' : 'elaser'});
+    return;
+  }
+  if (hit) damage(hit.e, hit.k, dps*(1 - (B.fall ?? .75)*hit.t/range)*dt);
+  if (hit && Math.random() < .35) sparks(ox + dx*t, oy + dy*t, a + Math.PI, 1, 140*G.SC, pale ? ['#ffe0a0','#ffffff'] : ['#ff7a3a','#ffffff']);
+  G.beams.push({x1:ox, y1:oy, x2:ox + dx*t, y2:oy + dy*t, life:.06, max:.06, kind: pale ? 'eglim' : 'elaser'});
+}
+/** An enemy Stormcoil: lightning to the target's nearest block in reach, then on to jumps-1 blocks close by. */
+function eZap(e: Ship, wx: number, wy: number, tgt: Ship, range: number, dmg: number, jumps: number){
+  let best: Key = -1, bd = range;
+  for (const [k,b] of tgt.blocks){ const [bx,by] = wpos(tgt,b), d = Math.hypot(bx-wx, by-wy); if (d < bd){ bd = d; best = k; } }
+  if (best < 0) return false;
+  sfx('laser', .5);
+  let lx = wx, ly = wy, k = best; const done = new Set<Key>();
+  for (let q=0; q<jumps && k >= 0 && tgt.alive; q++){
+    const b = tgt.blocks.get(k); if (!b) break;
+    const [bx,by] = wpos(tgt,b);
+    G.beams.push({x1:lx, y1:ly, x2:bx, y2:by, life:.15, max:.15, kind:'tesla'});
+    damage(tgt, k, dmg); done.add(k); lx = bx; ly = by;
+    // the next jump: the nearest untouched block within two cells
+    let nk: Key = -1, nd = 2.2*BS;
+    for (const [kk,bb] of tgt.blocks){ if (done.has(kk)) continue; const [x2,y2] = wpos(tgt,bb), d = Math.hypot(x2-lx, y2-ly); if (d < nd){ nd = d; nk = kk; } }
+    k = nk;
+  }
+  return true;
 }
 // Enemy warhead or flak burst on a ship: every block within rad takes damage falling off from the centre.
 export function blastShip(s: Ship, x: number, y: number, rad: number, dmg: number){

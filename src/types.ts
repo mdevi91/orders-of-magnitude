@@ -54,8 +54,11 @@ export interface BlockDef {
   en?: { regen?: number; cap?: number };
 }
 export interface EnemyGunDef {
-  unlock: number; w: number; range: number; cd: number; spd: number; dmg: number; r: number; kind: BulletKind; spread?: number;
+  w: number; range: number; cd: number; spd: number; dmg: number; r: number; kind: BulletKind; spread?: number;
   burst?: number; gap?: number; fuse?: number; blast?: number; life?: number; aim?: number;
+  pellets?: number; fan?: number; split?: number; ion?: boolean; arc?: number; over?: boolean;
+  /** a beam that burns for dur seconds at dps, losing fall of it at full reach */ beam?: {dur: number; dps: number; fall?: number};
+  /** lightning: hits the nearest block in reach, then jumps on to zap-1 more */ zap?: number;
 }
 export interface PartDef { len: number; w?: number; cells?: [number, number][]; body: BlockType }
 export interface CraftDef {
@@ -86,7 +89,9 @@ export interface Block {
   bt?: number;
   ally?: Ship | null;
   craft?: Ship;
-  /** enemy weapons: jammed by an ion hit until this time */
+  /** enemy beams: burning until this time */
+  burnT?: number;
+  /** weapons: jammed by an ion hit until this time */
   jam?: number;
   /** enemy gatlings: shots so far in the current burst */
   shots?: number;
@@ -112,7 +117,7 @@ export interface Ship {
   // enemies
   boss: boolean; elite: boolean; flag: boolean; station: boolean; fodder: boolean; craft: boolean;
   /** blocks at spawn, for phases and the boss bar */
-  n0: number; phaseN: number;
+  n0: number;
   /** enemy scale: bullet speed and reach */
   sc: number;
   fireMul: number; ft: number; phase: number; spin: number; orb: number; orbSpd: number; pref: number; vmax: number; turn: number; value: number;
@@ -120,7 +125,7 @@ export interface Ship {
   /** player: untouchable until this time (the corvette's roll) */
   ghost?: number;
   /** enemy: the local bearing (0 = +x, -PI/2 = nose) it turns toward its target, and when it next re-checks */
-  bside?: number; bsT?: number; flT?: number; rbT?: number;
+  bside?: number; bsT?: number;
   // hangar craft (either side)
   kind: CraftKind | null; bay: Block | null; sortie: number; aimA: number; cd: number; pick: number;
   /** shared life pool: every block adds to it, damage to any block takes from it, and the ship explodes at 0 */
@@ -156,7 +161,7 @@ export type Fx =
   | { k: 'star'; x: number; y: number; a: number; r: number; life: number; max: number }
   | { k: 'txt'; x: number; y: number; vy: number; text: string; life: number; max: number };
 
-export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; max: number; kind?: 'rail' | 'tesla' | 'epd' }
+export interface Beam { x1: number; y1: number; x2: number; y2: number; life: number; max: number; kind?: 'rail' | 'tesla' | 'epd' | 'elaser' | 'eglim' }
 
 /** One ship in a wave plan. */
 export interface ShipSpec { n: number; guns: number; bays?: number; boss?: boolean; elite?: boolean; flag?: boolean; station?: boolean }

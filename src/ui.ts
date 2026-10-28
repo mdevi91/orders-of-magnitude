@@ -171,7 +171,7 @@ export function syncHud(){
   const B = G.mode==='combat' && G.boss && G.boss.alive ? G.boss : null;
   if (hudCache.boss !== !!B){ hudCache.boss = !!B; $('bossWrap').hidden = !B; }
   if (B){
-    setTxt('bossName', B.flag ? `${B.station ? 'Starbase' : 'Flagship'} · phase ${B.phaseN}` : 'Capital ship');
+    setTxt('bossName', B.flag ? `${B.station ? 'Starbase' : 'Flagship'}` : 'Capital ship');
     const bw = (100*Math.max(0, B.life/B.lifeMax)).toFixed(0)+'%';
     if (hudCache.bw !== bw){ hudCache.bw = bw; $('bossBar').style.width = bw; }
   }

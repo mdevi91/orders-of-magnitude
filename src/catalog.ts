@@ -17,8 +17,8 @@ export const BLOCKS = {
   hgatling:{name:'Maelstrom Gatling', make:'Teller Heavy Industries', key:'u', unlock:3, rar:2, cost:95, hp:22, mass:2.5, rot:true, gun:{range:280, cd:.1, en:1.1, spd:700, dmg:3.8, spread:.035, r:2, arc:1.05, fx:'line'}, desc:'2 blocks long. Turret with a hammering tracer stream, 38 damage per second. Covers 60° either side of its facing.'},
   gatling:{name:'Hailstorm Gatling', make:'Kessler Arms', key:'4', unlock:2, rar:0, cost:51, hp:16, mass:1.5, rot:true, gun:{range:273, cd:.15, en:1, spd:760, dmg:3.6, spread:.03, r:1.8, arc:1.25, fx:'line', over:true}, desc:'Turret. Tight tracer stream, 24 damage per second, fired over your own hull. Covers 72° either side of its facing.'},
   missile:{name:'Viper Missile', make:'Orion Dynamics', key:'5', unlock:2, rar:1, cost:86, hp:16, mass:2, gun:{range:1100, cd:4.1, en:8, spd:172, dmg:18, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 4 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
-  mirv:   {name:'Hydra MIRV', make:'Orion Dynamics', key:'v', unlock:6, rar:3, cost:120, hp:18, mass:2.5, gun:{range:1000, cd:6, en:22, spd:142, dmg:9, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:3}, desc:'2×2 launcher. A slow carrier missile that splits into 3 homing warheads shortly after launch (sooner near a target), fanning out wide, each with its own blast. Enemy point defense can shoot them down.'},
-  plasma: {name:'Helios Plasma Cannon', make:'Teller Heavy Industries', key:'p', unlock:9, rar:3, cost:210, hp:30, mass:3, rot:true, gun:{range:580, cd:2.2, en:16, spd:300, dmg:34, spread:.02, r:4, arc:.8, fx:'plasma', fuse:26, blast:52, nofall:true}, desc:'Turret. A slow plasma bolt that bursts beside a hull in a huge blast, about 15 damage per second before the splash. Covers 46° either side of its facing.'},
+  mirv:   {name:'Hydra MIRV', make:'Orion Dynamics', key:'v', unlock:6, rar:3, cost:120, hp:18, mass:2.5, gun:{range:1000, cd:6, en:22, spd:142, dmg:9, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:9}, desc:'2×2 launcher. A slow carrier missile that splits into 9 homing warheads shortly after launch (sooner near a target), fanning out wide, each with its own blast. Enemy point defense can shoot them down.'},
+  plasma: {name:'Helios Plasma Cannon', make:'Teller Heavy Industries', key:'p', unlock:9, rar:3, cost:210, hp:30, mass:3, rot:true, gun:{range:580, cd:2.93, en:16, spd:225, dmg:34, spread:.02, r:4, arc:.8, fx:'plasma', fuse:26, blast:52, nofall:true}, desc:'Turret. A slow plasma bolt that bursts beside a hull in a huge blast, about 12 damage per second before the splash. Covers 46° either side of its facing.'},
   swarm:  {name:'Swarm Pod', make:'Orion Dynamics', key:'e', unlock:11, rar:4, cost:300, hp:22, mass:2, gun:{range:900, cd:3.6, en:14, spd:351, dmg:3.5, spread:.3, r:1, homing:true, arc:Math.PI, pellets:12, fan:Math.PI*2*11/12, weave:true}, desc:'2×3 pod. Unleashes a storm of twelve micro-missiles that burst out in every direction, then loop and corkscrew in on long white smoke trails. Launch in any direction and fly over your own hull.'},
   flak:   {name:'Bloom Flak', make:'Ashgrove Defense', key:'f', unlock:2, rar:1, cost:45, hp:18, mass:1.5, rot:true, gun:{range:460, cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', fuse:22, blast:26, nofall:true}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
   scatter:{name:'Shrike Scattergun', make:'Ruiz Ordnance', key:'c', unlock:1, rar:0, cost:40, hp:18, mass:1.5, rot:true, gun:{range:213, cd:1.1, en:4, spd:520, dmg:2.9, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32, over:true}, desc:'Turret. Blasts 7 pellets in a wide cone over your own hull: about 18 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
@@ -78,24 +78,37 @@ export const CRAFT = {
 /** Is this cell a hangar that launches craft? */
 export const isCraft = (t: Cell): t is CraftKind => t in CRAFT;
 // structure is as tough as the player's own blocks (hull 22, armour 70); weapons and systems a little lighter
-export const ET = {plasma:{hp:22}, swarm:{hp:18}, gyro:{hp:18}, core:{hp:45}, engine:{hp:14}, hull:{hp:22}, armor:{hp:70}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}, pd:{hp:12}} satisfies Record<string, {hp:number}>;
-// Enemy turrets: the player's weapons, slowed down to enemy scale. They unlock on the same stages as the player's.
-// cd is per gun; gatlings fire bursts of `burst` shots `gap` apart; rails show a sight line for the last `aim` seconds.
+export const ET = {plasma:{hp:22}, swarm:{hp:18}, bigcannon:{hp:20}, hgatling:{hp:15}, scatter:{hp:13}, ion:{hp:13}, mirv:{hp:15}, laser:{hp:16}, glimmer:{hp:12}, tesla:{hp:15}, gyro:{hp:18}, core:{hp:45}, engine:{hp:14}, hull:{hp:22}, armor:{hp:70}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}, pd:{hp:12}} satisfies Record<string, {hp:number}>;
+// Enemy weapons: the player's, slowed down to enemy scale (all but torpedoes and mines, which need a pilot's timing).
+// Enemies carry one from the sector that unlocks it for the player, see enemyFrom.
+// cd is per gun; gatlings fire bursts of `burst` shots `gap` apart; rails show a sight line for the last `aim` seconds;
+// pellets fan out over `fan`; split carriers break into homing warheads; beams burn for `beam.dur` seconds; zaps arc to blocks.
+// arc and over stand in for the player weapon's own firing arc and over-the-hull rule where the enemy's differs.
 // Enemy rounds are fast enough that a ship can't simply outrun them; dodging means changing direction as they come.
 export const EW = {
-  cannon: {unlock:1, w:3, range:480, cd:3.8, spd:290, dmg:14, r:1.5, kind:'eoval', spread:.04},
-  gatling:{unlock:2, w:3, range:320, cd:3.2, burst:3, gap:.12, spd:400, dmg:5, r:.8, kind:'egat', spread:.07},
-  missile:{unlock:3, w:1.5, range:1000, cd:8, spd:95, dmg:22, r:1.2, kind:'emiss', spread:.5},
-  flak:   {unlock:4, w:2, range:560, cd:4.4, spd:240, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4},
-  rail:   {unlock:7, w:1, range:1100, cd:6.5, spd:460, dmg:36, r:1.5, kind:'snipe', aim:.9},
-  // the last sectors' weapons (tiers 16 and 17 are sectors 10 and 11)
-  plasma: {unlock:16, w:1.4, range:560, cd:5.5, spd:230, dmg:30, r:2.2, kind:'eflak', spread:.05, fuse:22, blast:44, life:4},
-  swarm:  {unlock:17, w:1.2, range:1000, cd:7, burst:5, gap:.12, spd:100, dmg:9, r:1, kind:'emiss', spread:.6},
+  cannon:   {w:3, range:480, cd:3.8, spd:290, dmg:14, r:1.5, kind:'eoval', spread:.04},
+  scatter:  {w:2, range:250, cd:4, spd:300, dmg:4, r:.7, kind:'egat', spread:.03, pellets:6, fan:.4},
+  gatling:  {w:3, range:320, cd:3.2, burst:3, gap:.12, spd:400, dmg:5, r:.8, kind:'egat', spread:.07},
+  hgatling: {w:1.5, range:300, cd:3.6, burst:6, gap:.09, spd:420, dmg:5, r:.8, kind:'egat', spread:.09},
+  bigcannon:{w:1, range:640, cd:8, spd:240, dmg:60, r:2.6, kind:'eoval', spread:.02},
+  missile:  {w:1.5, range:1000, cd:8, spd:95, dmg:22, r:1.2, kind:'emiss', spread:.5},
+  mirv:     {w:1, range:900, cd:10, spd:85, dmg:12, r:1.4, kind:'emiss', spread:.3, split:3},
+  flak:     {w:2, range:560, cd:4.4, spd:240, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4},
+  ion:      {w:1.2, range:440, cd:5, spd:260, dmg:6, r:1.2, kind:'ion', spread:.03, ion:true},
+  laser:    {w:1.2, range:360, cd:6, spd:0, dmg:0, r:0, kind:'line', arc:.5, beam:{dur:1.4, dps:30}},
+  glimmer:  {w:1.2, range:520, cd:4, spd:0, dmg:0, r:0, kind:'line', beam:{dur:2, dps:9, fall:.85}},
+  tesla:    {w:1, range:160, cd:3, spd:0, dmg:12, r:0, kind:'line', arc:Math.PI, over:true, zap:3},
+  rail:     {w:1, range:1100, cd:6.5, spd:460, dmg:36, r:1.5, kind:'snipe', aim:.9},
+  plasma:   {w:1.4, range:560, cd:7.3, spd:172, dmg:30, r:2.2, kind:'eflak', spread:.05, fuse:22, blast:44, life:5.3},
+  swarm:    {w:1.2, range:1000, cd:7, burst:5, gap:.12, spd:100, dmg:9, r:1, kind:'emiss', spread:.6},
 } satisfies Record<string, EnemyGunDef>;
 /** An enemy turret's stats, if the cell is one. */
 export const ewOf = (t: Cell): EnemyGunDef | undefined => (EW as Record<string, EnemyGunDef>)[t];
-export function pickWeapon(stage: number): EnemyGun {
-  const ks = (Object.keys(EW) as EnemyGun[]).filter(k => EW[k].unlock <= stage);
+/** The first sector whose enemies carry weapon k: the one that unlocks it for the player. */
+export const enemyFrom = (k: EnemyGun) => T[k].unlock || 1;
+/** A weapon for an enemy built in sector `sector`, weighted toward the common ones. */
+export function pickWeapon(sector: number): EnemyGun {
+  const ks = (Object.keys(EW) as EnemyGun[]).filter(k => enemyFrom(k) <= sector);
   let r = Math.random()*ks.reduce((a,k) => a + EW[k].w, 0);
   for (const k of ks) if ((r -= EW[k].w) < 0) return k;
   return ks[0];
@@ -106,7 +119,7 @@ export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', glimmer:'#d0f5c8', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
      fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', tesla:'#c8b0ff', torpedo:'#ffe08a', torpedo_b:'#c0a050', aegis:'#c9adff', aegis_b:'#8a70c0', swarm_b:'#a8a070', mine:'#ffb27a'},
-  e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
+  e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', plasma:'#ffc46b', swarm:'#ffc46b', bigcannon:'#ffc46b', hgatling:'#ffc46b', scatter:'#ffc46b', ion:'#ffc46b', mirv:'#ffc46b', laser:'#ffc46b', glimmer:'#ffc46b', tesla:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
   a:{},
 }; // hangar craft
 export const BCOL: Record<string, string> = {pellet:'#fff0a0', ion:'#a070ff', torp:'#ffd04a', mine:'#ff7a3a', shot:'#7fe8ff', oval:'#5fd8ff', slug:'#9fe4ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', plasma:'#ff4ad0', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
