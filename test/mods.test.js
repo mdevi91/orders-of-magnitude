@@ -5,21 +5,27 @@ const canvas = () => { const c = document.createElement('canvas'); c.width = c.h
 const solid = (col, box, w, h) => ({ box, pal: [col], px: Array.from({length: h}, () => '0'.repeat(w)) });
 
 // a part: the modded picture sits where the cannon was, whatever the plating under it
-setSprite('part/cannon/p', solid('#ff00ff', [-6, -6, 6, 6], 24, 24));
+setSprite('part/cannon', solid('#ff00ff', [-6, -6, 6, 6], 24, 24));
 let g = canvas(); drawBlock(g, 'cannon', 0, 'p', 0, 0, -Math.PI/2, false, 1);
 ok('modded part drawn', px(g, 20, 20).join() === '255,0,255,255', px(g, 20, 20));
-setSprite('part/cannon/p', null);
+setSprite('part/cannon', null);
 g = canvas(); drawBlock(g, 'cannon', 0, 'p', 0, 0, -Math.PI/2, false, 1);
 ok('dropped part falls back to the game drawing', px(g, 20, 20).join() !== '255,0,255,255', px(g, 20, 20));
 
-// plating: a modded steel plate stands in for a paint scheme with none of its own; enemies keep theirs
-setSprite('plate/hull/steel', solid('#00ff00', [-5, -5, 5, 5], 20, 20));
-const was = G.paint; G.paint = 'navy';
-g = canvas(); drawBlock(g, 'hull', 0, 'p', 0, 0, -Math.PI/2, false, 1);
-ok('steel plate stands in for navy', px(g, 12, 12).join() === '0,255,0,255', px(g, 12, 12));
-g = canvas(); drawBlock(g, 'hull', 0, 'e', 0, 0, -Math.PI/2, false, 1);
-ok('enemy plate untouched', px(g, 12, 12).join() !== '0,255,0,255', px(g, 12, 12));
-G.paint = was; setSprite('plate/hull/steel', null);
+// plating: one sprite, painted in steel, tinted in game: as painted on steel, to the paint scheme's own shades on navy,
+// and to rust on enemies; a saturated accent keeps its colour everywhere
+{
+  const [hl, hm, hd] = MET.p.hull, sp = { box: [-5, -5, 5, 5], pal: [hl, hm, hd, '#00ff00'], px: Array.from({length: 20}, (_, y) => (y < 5 ? '0' : y < 14 ? '1' : '2').repeat(18) + '33') };
+  setSprite('plate/hull', sp);
+  const was = G.paint, hex = a => '#' + a.slice(0, 3).map(v => v.toString(16).padStart(2, '0')).join('');
+  const look = (team, paint) => { G.paint = paint; const g = canvas(); drawBlock(g, 'hull', 0, team, 0, 0, -Math.PI/2, false, 1); return [hex(px(g, 12, 18)), hex(px(g, 12, 25)), hex(px(g, 29, 25))]; };
+  const steel = look('p', 'steel'), navy = look('p', 'navy'), foe = look('e', 'steel');
+  ok('steel shows the sprite as painted', steel[0] === hm, steel);
+  ok('navy paint tints it shade for shade', navy[0] === PAINTS.navy.hull[1] && navy[1] === PAINTS.navy.hull[2], navy);
+  ok('enemies tint it to rust', foe[0] === MET.e.hull[1], foe);
+  ok('a saturated accent keeps its colour', navy[2] === '#00ff00' && foe[2] === '#00ff00', [navy[2], foe[2]]);
+  G.paint = was; setSprite('plate/hull', null);
+}
 
 // encode and decode round-trip, transparency included
 {
@@ -57,14 +63,14 @@ d.remove(); setLabels({});
   const c = document.createElement('canvas'); c.width = 60; c.height = 60; const g = c.getContext('2d');
   const blank = () => Array.from(g.getImageData(0, 0, 60, 60).data).every(v => v === 0);
   // set aside any cockpit edits saved in mods.json, so the stock picture shows first
-  const kept = ['part/cockpit/p', 'part/core/p', 'cockpit/fighter/steel'].map(id => [id, MODS.sprites[id]]);
+  const kept = ['part/cockpit', 'part/core', 'cockpit/fighter'].map(id => [id, MODS.sprites[id]]);
   for (const [id] of kept) setSprite(id, null);
   g.translate(30, 10); drawCockpit(g, 'fighter', () => true);
   ok('stock cockpit picture drawn', !blank());
   g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 60, 60); g.translate(30, 10);
-  setSprite('part/cockpit/p', solid('#ff00ff', [-6, -6, 6, 6], 24, 24));
+  setSprite('part/cockpit', solid('#ff00ff', [-6, -6, 6, 6], 24, 24));
   drawCockpit(g, 'fighter', () => true);
   ok('modded cockpit cell wins over the stock picture', blank());
-  setSprite('part/cockpit/p', null);
+  setSprite('part/cockpit', null);
   for (const [id, sp] of kept) if (sp) setSprite(id, sp);
 }

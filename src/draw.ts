@@ -11,7 +11,7 @@ import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship,
 import { drawTargeting } from './targeting';
 import { drawStatus } from './status';
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
-import { BAKE, blit, hasSpr, spr } from './mods';
+import { BAKE, blit, hasSpr, sprTinted, type Tint } from './mods';
 
 // ---------- drawing ----------
 // Cel-shaded metal sprites, 90s mecha anime style: each block is an inked plate with a flat face, a hard shadow band and a
@@ -32,14 +32,22 @@ export const PAINTS: Record<string, {name: string; hull: Pal3; armor: Pal3; dark
   olive: {name:'Olive', hull:['#d0d8a6','#7c8652','#3a4020'], armor:['#a6ae7c','#565e36','#262a14'], dark:MET.p.dark},
   violet:{name:'Violet', hull:['#dcc6f2','#7c5caa','#3a2858'], armor:['#b49ad2','#503c76','#22183a'], dark:MET.p.dark},
 };
-// Sprites the mod editor can replace (see mods.ts), by id: plate/<hull|armor|dark>/<v>, part/<cell>/<v>, block/<wedge>/<v>,
-// cockpit/<id>/<paint>, craft/<kind>/<p|e>, bullet/<kind>. v is 'e' for enemies; the player's is 'p', or the paint scheme
-// for anything painted, where a modded steel sprite stands in for a paint that has none of its own. Sprites face up.
-export const paintOf = (team: Team) => team==='e' ? 'e' : PAINTS[G.paint] ? G.paint : 'steel';
-export const PAINTED = (t: Cell) => t==='hull' || t==='armor' || WEDGE(t);
-export function modId(base: string, v: string){
-  if (hasSpr(base + '/' + v)) return base + '/' + v;
-  return v !== 'e' && v !== 'p' && hasSpr(base + '/steel') ? base + '/steel' : '';
+// Sprites the mod editor can replace (see mods.ts), one per thing for every paint scheme and both sides: plate/<hull|armor|dark>,
+// part/<cell>, block/<wedge>, cockpit/<id>, craft/<kind>, bullet/<kind>. Each is painted in the player's steel look, faces
+// up, and is tinted in game (tintFor): plating to the paint scheme, anything on an enemy to rust.
+export const modId = (id: string) => hasSpr(id) ? id : '';
+export const GUN_P: Pal3 = ['#e8eef6','#9aa4b4','#2a2e36'], GUN_E: Pal3 = ['#ffd08a','#c8783a','#4a2010'];
+const CRAFT_P = ['#0a1830','#bcd0f5','#5a78b8'], CRAFT_E = ['#5a1008','#ff7a66','#a83a2e'];
+/** The tint a modded sprite takes in game: material hull, armor, dark (systems and guns), cockpit or craft; none for the
+ *  player's steel paint, or for systems, which keep their metal whatever the paint. */
+export function tintFor(team: Team, mat: 'hull' | 'armor' | 'dark' | 'cockpit' | 'craft'): Tint | undefined {
+  if (team==='e') return mat==='craft' ? {key:'ecraft', src:CRAFT_P, dst:CRAFT_E}
+    : mat==='dark' ? {key:'edark', src:[...MET.p.dark, ...GUN_P], dst:[...MET.e.dark, ...GUN_E]}
+    : mat==='cockpit' ? {key:'eck', src:[...MET.p.hull, ...MET.p.armor], dst:[...MET.e.hull, ...MET.e.armor]}
+    : {key:'e'+mat, src:MET.p[mat], dst:MET.e[mat]};
+  const P = PAINTS[G.paint];
+  if (!P || G.paint==='steel' || mat==='dark' || mat==='craft') return undefined;
+  return mat==='cockpit' ? {key:G.paint+'ck', src:[...MET.p.hull, ...MET.p.armor], dst:[...P.hull, ...P.armor]} : {key:G.paint+mat, src:MET.p[mat], dst:P[mat]};
 }
 // parts whose barrel swings to the aim point; their sprite is drawn turned that way
 export const TURRET = new Set<string>(['cannon', 'gun', 'bigcannon', 'hgatling', 'scatter', 'ion', 'torpedo', 'flak', 'gatling', 'plasma', 'glimmer']);
@@ -67,7 +75,7 @@ export function barrel(X: Ctx, x: number, y: number, ca: number, sa: number, len
   X.fillStyle = m[0]; X.beginPath(); X.moveTo(x+px*.3,y+py*.3); X.lineTo(x+px*.3+ca*len,y+py*.3+sa*len); X.lineTo(x-px*.4+ca*len,y-py*.4+sa*len); X.lineTo(x-px*.4,y-py*.4); X.closePath(); X.fill();
 }
 export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: number, aim: number, hit: boolean, ratio: number, firing?: boolean){
-  const M = team==='e' ? MET.e : PAINTS[G.paint] || MET.p, bx = x, by = y, pv = paintOf(team), tv = team==='e' ? 'e' : 'p';
+  const M = team==='e' ? MET.e : PAINTS[G.paint] || MET.p, bx = x, by = y;
   if (t==='sell'){
     X.fillStyle = '#ff3d2a'; X.save(); X.translate(x,y); X.rotate(Math.PI/4); X.fillRect(-5,-1.2,10,2.4); X.fillRect(-1.2,-5,2.4,10); X.restore(); return;
   }
@@ -75,8 +83,8 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     // corner plating: the solid half-cell is bottom-left in its own frame, the cut faces up-right; turned to its diagonal
     const m = t==='armorc' ? M.armor : M.hull, tri = (pts: number[]) => { X.beginPath(); X.moveTo(pts[0], pts[1]); for (let n=2; n<pts.length; n+=2) X.lineTo(pts[n], pts[n+1]); X.closePath(); X.fill(); };
     X.save(); X.translate(x,y); X.rotate((((o || 1) - 1)/2)*Math.PI/2);
-    const id = modId('block/'+t, pv);
-    if (id) blit(X, id, 0, 0);
+    const id = modId('block/'+t);
+    if (id) blit(X, id, 0, 0, 0, 1, tintFor(team, t==='armorc' ? 'armor' : 'hull'));
     else {
       X.fillStyle = '#0b0d12'; tri([-5,-5.6, -5,5, 5.6,5]);
       X.fillStyle = m[1]; tri([-4.4,-3.2, -4.4,4.4, 3.2,4.4]);
@@ -90,7 +98,7 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     X.restore(); return;
   }
   const base = t==='armor' ? M.armor : t==='hull' ? M.hull : M.dark, mat = t==='armor' || t==='hull' ? t : 'dark';
-  if (!BAKE.noPlate){ const id = modId('plate/'+mat, mat==='dark' ? tv : pv); if (id) blit(X, id, x, y); else plate(X,x,y,base); }
+  if (!BAKE.noPlate){ const id = modId('plate/'+mat); if (id) blit(X, id, x, y, 0, 1, tintFor(team, mat)); else plate(X,x,y,base); }
   if (hit){ X.fillStyle = '#ffffff'; X.globalAlpha = .85; X.fillRect(x-5,y-5,10,10); X.globalAlpha = 1; return; }
   const d = def(t), rot = o ? o*Math.PI/4 : 0;
   if (rot){ X.save(); X.translate(x,y); X.rotate(rot); x = 0; y = 0; }
@@ -98,8 +106,9 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
   const arc = d && d.gun ? (team==='p' ? cpArc(d.gun.arc || 0) : d.gun.arc || 0) : 0;
   if (arc) ang = -Math.PI/2 + clamp(angDiff(ang,-Math.PI/2), -arc, arc);
   const ca = Math.cos(ang), sa = Math.sin(ang), gun: Pal3 = team!=='e' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
-  const pid = modId('part/'+t, PAINTED(t) ? pv : tv);
-  if (pid) blit(X, pid, x, y, TURRET.has(t) ? ang + Math.PI/2 : 0);
+  // an enemy-only part (a carrier bay) is drawn as painted, already in enemy colours
+  const pid = modId('part/'+t);
+  if (pid) blit(X, pid, x, y, TURRET.has(t) ? ang + Math.PI/2 : 0, 1, d ? tintFor(team, mat) : undefined);
   else switch (t as string){
     case 'cockpit':
       // cockpit plating, seen only when its cockpit sprite can't be drawn whole
@@ -282,9 +291,9 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
 // has() says whether a cell is still there; a cockpit missing a cell falls back to plain plating.
 export function drawCockpit(X: Ctx, id: string, has: (k: Key) => boolean){
   const C = COCKPITS[id as keyof typeof COCKPITS]; if (!C || !C.cells.length || !C.cells.every(([i,j]) => has(K(i,j))) || !has(CORE)) return;
-  const cid = modId('cockpit/'+id, paintOf('p')); if (cid){ blit(X, cid, 0, 0); return; }
+  const cid = modId('cockpit/'+id); if (cid){ blit(X, cid, 0, 0, 0, 1, tintFor('p', 'cockpit')); return; }
   // a modded cockpit or core cell beats the stock cockpit picture: leave the cells to show their own sprites
-  if (modId('part/cockpit', 'p') || modId('part/core', 'p')) return;
+  if (modId('part/cockpit') || modId('part/core')) return;
   const P = PAINTS[G.paint] || MET.p, ink = '#0b0d12', glass = ['#0a3a6a','#1a8ad0','#5fd8ff','#e8ffff'];
   const poly = (pts: number[], col: string) => { X.fillStyle = col; X.beginPath(); X.moveTo(pts[0], pts[1]); for (let n=2; n<pts.length; n+=2) X.lineTo(pts[n], pts[n+1]); X.closePath(); X.fill(); };
   const rect = (x0: number, y0: number, x1: number, y1: number, col: string) => { X.fillStyle = col; X.fillRect(x0, y0, x1-x0, y1-y0); };
@@ -353,17 +362,20 @@ export const CRAFT_PIX: Record<CraftKind, string[]> = {
     '.o.e...e.o.',
   ],
 };
-const craftSprites = new Map<string, HTMLCanvasElement>();
+const craftSprites = new Map<string, HTMLCanvasElement>(), modCraft = new WeakMap<HTMLCanvasElement, HTMLCanvasElement[]>();
 export function craftSprite(k: CraftKind, foe: boolean, mode: 'n' | 'hit' | 'dark', flame: number){
-  const mod = spr(`craft/${k}/${foe ? 'e' : 'p'}`), key = `${k}${foe}${mode}${flame}${!!mod}`;
-  let c = craftSprites.get(key); if (c) return c;
+  const mod = sprTinted(`craft/${k}`, foe ? tintFor('e', 'craft') : undefined);
   if (mod){
-    // a modded craft: struck it flashes white, worn it darkens, keeping its outline
-    c = document.createElement('canvas'); c.width = mod.width; c.height = mod.height;
+    // a modded craft: struck it flashes white, worn it darkens, keeping its outline (kept per picture, so an edit shows at once)
+    let set = modCraft.get(mod); if (!set) modCraft.set(mod, set = []);
+    const m = mode==='n' ? 0 : mode==='hit' ? 1 : 2; if (set[m]) return set[m];
+    const c = document.createElement('canvas'); c.width = mod.width; c.height = mod.height;
     const g = c.getContext('2d')!; g.drawImage(mod, 0, 0);
     if (mode !== 'n'){ g.globalCompositeOperation = 'source-in'; g.fillStyle = mode==='hit' ? '#ffffff' : '#000000'; g.fillRect(0, 0, c.width, c.height); }
-    craftSprites.set(key, c); return c;
+    return set[m] = c;
   }
+  const key = `${k}${foe}${mode}${flame}`;
+  let c = craftSprites.get(key); if (c) return c;
   const P = CRAFT_PIX[k], w = P[0].length, h = P.length;
   c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d')!;

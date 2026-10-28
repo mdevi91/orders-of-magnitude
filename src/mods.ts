@@ -4,11 +4,7 @@ import data from './mods.json';
 
 /** A pixel sprite: rows of palette indices ('.' is see-through), drawn over box [x0, y0, x1, y1] in the sprite's own units. */
 export interface ModSprite { box: [number, number, number, number]; pal: string[]; px: string[] }
-export interface ModData {
-  sprites: Record<string, ModSprite>; labels: Record<string, string>;
-  /** for the mod editor only: sprite families (an id without its colour, like part/hull) whose colours are painted one by one */
-  unlinked?: string[];
-}
+export interface ModData { sprites: Record<string, ModSprite>; labels: Record<string, string> }
 export const MODS = data as unknown as ModData;
 /** Set while the mod editor bakes the game's own drawings, so no override sneaks into a default; noPlate leaves a
  * block's plating out so its part can be baked on its own. */
@@ -43,7 +39,7 @@ export function encode(img: ImageData, box: ModSprite['box']): ModSprite {
   }
   return { box, pal, px };
 }
-const decoded = new Map<string, HTMLCanvasElement>();
+const decoded = new Map<string, HTMLCanvasElement>(), tinted = new Map<string, HTMLCanvasElement>();
 /** The replacement picture for sprite `id`, or null to draw the game's own. */
 export function spr(id: string): HTMLCanvasElement | null {
   if (BAKE.on) return null;
@@ -55,12 +51,55 @@ export function spr(id: string): HTMLCanvasElement | null {
 export function setSprite(id: string, sp: ModSprite | null){
   if (sp) MODS.sprites[id] = sp; else delete MODS.sprites[id];
   decoded.delete(id);
+  for (const k of [...tinted.keys()]) if (k.startsWith(id + '|')) tinted.delete(k);
+}
+
+// ---------- tints ----------
+// One sprite serves every paint scheme and both sides: it is painted in the player's steel look, and tinted in game by a
+// gradient map. Each pixel takes the colour of dst at the point where its brightness sits among the src colours, so the
+// steel shades become the paint's (or the enemy's rust) shade for shade. Saturated accents (glass, glow, stripes) that
+// are not one of the src colours keep their own colour.
+export interface Tint { key: string; src: string[]; dst: string[] }
+const rgb = (h: string) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const lum = (c: number[]) => (.299*c[0] + .587*c[1] + .114*c[2])/255;
+function tintPixels(im: HTMLCanvasElement, t: Tint){
+  const stops = t.src.map((s, i) => ({src: rgb(s), dst: rgb(t.dst[i]), L: lum(rgb(s))})).sort((a, b) => a.L - b.L);
+  const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+  const g = c.getContext('2d')!; g.drawImage(im, 0, 0);
+  if (!im.width || !im.height) return c;
+  const img = g.getImageData(0, 0, c.width, c.height), D = img.data;
+  const lo = stops[0], hi = stops[stops.length - 1];
+  for (let n=0; n<D.length; n+=4){
+    if (!D[n+3]) continue;
+    const px = [D[n], D[n+1], D[n+2]], L = lum(px);
+    let out: number[];
+    if (L <= lo.L) out = lo.dst.map(v => v*(lo.L ? L/lo.L : 1));
+    else if (L >= hi.L) out = hi.dst.map(v => v + (255 - v)*(hi.L < 1 ? (L - hi.L)/(1 - hi.L) : 0));
+    else {
+      let q = 0; while (stops[q+1].L < L) q++;
+      const a = stops[q], b = stops[q+1], f = (L - a.L)/((b.L - a.L) || 1);
+      out = a.dst.map((v, i) => v + (b.dst[i] - v)*f);
+    }
+    // a src colour (or close to one) is mapped in full; otherwise grey takes the tint and colour keeps itself
+    const near = Math.min(...stops.map(s => Math.hypot(px[0]-s.src[0], px[1]-s.src[1], px[2]-s.src[2])));
+    const chroma = (Math.max(...px) - Math.min(...px))/255;
+    const w = Math.max(1 - near/60, Math.min(1, Math.max(0, 1 - (chroma - .18)/.3)));
+    for (let i=0; i<3; i++) D[n+i] = Math.round(px[i] + (out[i] - px[i])*w);
+  }
+  g.putImageData(img, 0, 0); return c;
+}
+/** Sprite `id`, tinted (see Tint); untinted with no tint. */
+export function sprTinted(id: string, t?: Tint): HTMLCanvasElement | null {
+  const im = spr(id); if (!im || !t) return im;
+  const k = id + '|' + t.key; let c = tinted.get(k);
+  if (!c){ c = tintPixels(im, t); tinted.set(k, c); }
+  return c;
 }
 /** Whether sprite `id` is modded. */
 export const hasSpr = (id: string) => !BAKE.on && !!MODS.sprites[id];
-/** Draws modded sprite `id` at x, y turned by a, crisp; k scales its box (bullets are sized by their round). */
-export function blit(X: CanvasRenderingContext2D, id: string, x: number, y: number, a = 0, k = 1){
-  const im = spr(id); if (!im) return;
+/** Draws modded sprite `id` at x, y turned by a, crisp, tinted by t if given; k scales its box (bullets are sized by their round). */
+export function blit(X: CanvasRenderingContext2D, id: string, x: number, y: number, a = 0, k = 1, t?: Tint){
+  const im = sprTinted(id, t); if (!im) return;
   const [x0, y0, x1, y1] = MODS.sprites[id].box, sm = X.imageSmoothingEnabled;
   X.save(); X.translate(x, y); if (a) X.rotate(a);
   X.imageSmoothingEnabled = false; X.drawImage(im, x0*k, y0*k, (x1-x0)*k, (y1-y0)*k); X.imageSmoothingEnabled = sm;

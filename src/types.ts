@@ -126,6 +126,8 @@ export interface Ship {
   ghost?: number;
   /** enemy: the local bearing (0 = +x, -PI/2 = nose) it turns toward its target, and when it next re-checks */
   bside?: number; bsT?: number;
+  /** enemy AI: when a gun last fired, and how far it has closed in (0 to 1) because none has for a while */
+  shotAt?: number; close?: number;
   // hangar craft (either side)
   kind: CraftKind | null; bay: Block | null; sortie: number; aimA: number; cd: number; pick: number;
   /** shared life pool: every block adds to it, damage to any block takes from it, and the ship explodes at 0 */

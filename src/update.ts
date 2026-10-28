@@ -394,8 +394,15 @@ export function update(dt: number){
       // speed from the thrust that points the way it wants to go, against its mass
       const ph = e.ph, turn = turnOf(ph.torque + (ph.jetCW + ph.jetCCW)/2, ph.inertia, ph.mass);
       e.a += clamp(angDiff(want,e.a), -turn*dt, turn*dt);
-      e.orb += e.orbSpd*dt;
-      const tx = clamp(p.x + Math.cos(e.orb)*e.pref, 0, G.AW), ty = clamp(p.y + Math.sin(e.orb)*e.pref, 0, G.AH);
+      // a ship whose guns have not fired for 4 s (out of reach, or blocked circling) closes in and stops circling until
+      // they do; once firing again it eases back out to its own distance
+      if (e.guns.length){
+        const idle = G.time - (e.shotAt ??= G.time) > 4;
+        e.close = clamp((e.close || 0) + (idle ? .25 : -.06)*dt, 0, 1);
+      }
+      const cl = e.close || 0, dist = e.pref*(1 - .7*cl) + (p.r + e.r)*.6*cl;
+      e.orb += e.orbSpd*(1 - cl)*dt;
+      const tx = clamp(p.x + Math.cos(e.orb)*dist, 0, G.AW), ty = clamp(p.y + Math.sin(e.orb)*dist, 0, G.AH);
       const ex = tx-e.x, ey = ty-e.y, el = Math.hypot(ex,ey) || 1, ux = ex/el, uy = ey/el;
       // big hulls lumber: top speed falls off with size, from full at about 24 blocks to under a third for a dreadnought
       const bulk = Math.min(1, Math.max(.3, Math.pow(24/Math.max(1, e.blocks.size), .45)));

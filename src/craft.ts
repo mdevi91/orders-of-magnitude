@@ -145,6 +145,7 @@ export function enemyFire(e: Ship, dt: number){
     if (g.cd > 0) continue;
     if (w.range && Math.hypot(tgt.x-wx, tgt.y-wy) - tgt.r > w.range*e.sc*R){ g.cd = .3; g.shots = 0; continue; }
     if (!clear){ g.cd = .2; g.shots = 0; continue; }
+    e.shotAt = G.time;
     if (w.burst && (g.shots = (g.shots || 0) + 1) < w.burst) g.cd = w.gap!;
     else { g.shots = 0; g.cd = w.cd*rand(.85,1.15); }
     if (w.beam){ g.burnT = G.time + w.beam.dur; sfx('laser', .6); continue; }
