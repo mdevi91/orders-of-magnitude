@@ -45,7 +45,8 @@ export interface BlockDef {
   /** make: the manufacturer, for weapons and hangars */
   name: string; make?: string; cost: number; desc?: string;
   /** unlock: the sector a run must reach for the block to join loot and shops; rar: rarity 0 (common) to 4 (legendary) */
-  key?: string; unlock?: number; rar?: number; hp?: number; mass?: number; rot?: boolean; thrust?: number; torque?: number;
+  /** off: shelved for now, kept out of the palette, loot, shops and enemy loadouts */
+  key?: string; off?: boolean; unlock?: number; rar?: number; hp?: number; mass?: number; rot?: boolean; thrust?: number; torque?: number;
   gun?: GunDef;
   /** arc: a turret beam's swing either side of its facing (fixed beams swing SWING); fall: share of damage lost at full range (default .75) */
   laser?: { dps: number; range: number; en: number; arc?: number; fall?: number };

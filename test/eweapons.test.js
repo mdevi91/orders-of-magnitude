@@ -1,6 +1,7 @@
 // Every player weapon but torpedoes and mines has an enemy version: each one, on a tough enemy hull held still in front
 // of the player, gets a shot off that hurts. Enemies carry a weapon from the sector that unlocks it.
-const kinds = Object.keys(EW), weapon = t => t!=='core' && t!=='torpedo' && t!=='mine' && (T[t].gun || T[t].laser || T[t].rail || T[t].tesla);
+// shelved weapons (off) keep their enemy version but no enemy carries them
+const kinds = Object.keys(EW), live = kinds.filter(k => !T[k].off), weapon = t => t!=='core' && t!=='torpedo' && t!=='mine' && (T[t].gun || T[t].laser || T[t].rail || T[t].tesla);
 ok('every player weapon has an enemy version', Object.keys(BLOCKS).filter(weapon).every(t => EW[t]), Object.keys(BLOCKS).filter(t => weapon(t) && !EW[t]).join(', '));
 ok('no enemy torpedoes or mines', !EW.torpedo && !EW.mine);
 for (const k of kinds){
@@ -26,8 +27,9 @@ fresh();
 const seen = s => { const got = new Set(); for (let n=0; n<3000; n++) got.add(pickWeapon(s)); return got; };
 const s1 = seen(1);
 ok('sector 1 enemies carry only starting weapons', [...s1].every(k => (T[k].unlock || 1) <= 1), [...s1].join(', '));
-for (const k of kinds){
+for (const k of live){
   const u = T[k].unlock || 1;
   if (u > 1) ok(`${k} (unlocks in sector ${u}) first carried there`, !seen(u-1).has(k) && seen(u).has(k));
 }
-ok('late sectors carry every weapon', seen(30).size === kinds.length);
+ok('late sectors carry every weapon', seen(30).size === live.length);
+ok('shelved weapons are never carried', kinds.filter(k => T[k].off).every(k => !seen(30).has(k)));

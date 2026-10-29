@@ -24,7 +24,7 @@ export const BLOCKS = {
   scatter:{name:'Shrike Scattergun', make:'Ruiz Ordnance', key:'c', unlock:1, rar:0, cost:40, hp:18, mass:1.5, rot:true, gun:{range:213, cd:1.1, en:4, spd:520, dmg:2.9, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32, over:true}, desc:'Turret. Blasts 7 pellets in a wide cone over your own hull: about 18 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
   ion:    {name:'VH-9 Ion Lance', make:'Varga-Holt', key:'i', unlock:3, rar:2, cost:85, hp:18, mass:1.5, rot:true, gun:{range:380, cd:1.4, en:9, spd:420, dmg:6, spread:.03, r:2.6, arc:.8, fx:'ion', ion:true}, desc:'Turret. Ion bolts do 5× damage to shield bubbles and jam the enemy weapons within 2 cells of the hit for 1.5 s. Weak against hull. Covers 46° either side of its facing.'},
   goo:    {name:'Mire Goo Sprayer', make:'Ruiz Ordnance', key:'s', unlock:2, rar:1, cost:55, hp:18, mass:1.5, rot:true, gun:{range:250, cd:.9, en:3, spd:300, dmg:1.2, spread:.05, r:1.8, arc:1, fx:'goo', pellets:5, fan:.45, over:true, stick:'goo'}, desc:'Turret. Sprays sticky goo over your own hull that clings to enemy ships for 5 s: each blob slows their flying and turning by 5%, down to under half speed. Barely scratches the paint. Covers 57° either side of its facing.'},
-  hack:   {name:'Wraith Hacking Module', make:'Varga-Holt', key:'a', unlock:4, rar:2, cost:110, hp:18, mass:1.5, rot:true, gun:{range:1000, cd:12, en:10, spd:150, dmg:4, spread:.01, r:2.4, arc:1, fx:'hack', stick:'hack', nofall:true}, desc:'Turret. Fires a slow, long-range module that drifts after its target and clamps onto the hull for 10 s, hacking it: 15% slower flying, 25% slower reloads and 30% less from its generators, stacking up to 3. Reloads very slowly. Covers 57° either side of its facing.'},
+  hack:   {name:'Wraith Hacking Module', make:'Varga-Holt', key:'a', off:true, unlock:4, rar:2, cost:110, hp:18, mass:1.5, rot:true, gun:{range:1000, cd:12, en:10, spd:150, dmg:4, spread:.01, r:2.4, arc:1, fx:'hack', stick:'hack', nofall:true}, desc:'Turret. Fires a slow, long-range module that drifts after its target and clamps onto the hull for 10 s, hacking it: 15% slower flying, 25% slower reloads and 30% less from its generators, stacking up to 3. Reloads very slowly. Covers 57° either side of its facing.'},
   tesla:  {name:'Stormcoil', make:'Helix Works', key:'z', unlock:5, rar:3, cost:120, hp:22, mass:2, tesla:{cd:.9, range:110, dmg:14, jumps:3, en:6}, desc:'Arcs lightning to the nearest enemy block within 11 m, then jumps to 2 more blocks close by. Reaches in every direction, through your own hull, and zaps enemy fighters and missiles too.'},
   torpedo:{name:'Leviathan Torpedo', make:'Teller Heavy Industries', key:'o', unlock:4, rar:3, cost:140, hp:22, mass:1.5, rot:true, gun:{range:1000, cd:5, en:22, spd:175, dmg:70, spread:.01, r:3.4, arc:.35, fx:'torp', nofall:true}, desc:'2 blocks long. Slow, unguided heavy torpedo fired along its facing (20° either side to aim): 70 damage and a wide blast. Point defense cannot stop it.'},
   mine:   {name:'Tangle Mine Layer', make:'Ashgrove Defense', key:'n', unlock:2, rar:1, cost:60, hp:18, mass:1.5, gun:{range:320, cd:2.4, en:5, spd:70, dmg:20, spread:.5, r:2.4, arc:Math.PI, fx:'mine', life:20, fuse:24, blast:34, lob:true}, desc:'Drops proximity mines that drift to a stop and wait up to 20 s, bursting when an enemy comes near. Launched over your own hull in any direction.'},
@@ -112,13 +112,13 @@ export const ewOf = (t: Cell): EnemyGunDef | undefined => (EW as Record<string, 
 export const enemyFrom = (k: EnemyGun) => T[k].unlock || 1;
 /** A weapon for an enemy built in sector `sector`, weighted toward the common ones. */
 export function pickWeapon(sector: number): EnemyGun {
-  const ks = (Object.keys(EW) as EnemyGun[]).filter(k => enemyFrom(k) <= sector);
+  const ks = (Object.keys(EW) as EnemyGun[]).filter(k => !T[k].off && enemyFrom(k) <= sector);
   let r = Math.random()*ks.reduce((a,k) => a + EW[k].w, 0);
   for (const k of ks) if ((r -= EW[k].w) < 0) return k;
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','goo','hack','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
+export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','goo','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', glimmer:'#d0f5c8', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
@@ -198,7 +198,7 @@ export const rarOf = (t: BlockType) => T[t].rar || 0;
 /** A block's name, coloured by its rarity. */
 export const rarName = (t: BlockType) => `<b style="color:${RARITY[rarOf(t)].col}">${T[t].name}</b>`;
 // Blocks unlock for good the first time a run reaches their sector; G.meta.best is the furthest sector ever reached.
-export const unlocked = (t: BlockType) => (T[t].unlock || 1) <= (G.meta.best || 1);
+export const unlocked = (t: BlockType) => !T[t].off && (T[t].unlock || 1) <= (G.meta.best || 1);
 // Hangar upgrades bought with data: permanent boosts to the player's ships (craft included).
 export const HM = {
   hp:  () => 1 + .05*metaLv('plating'),

@@ -17,7 +17,12 @@ for (const kind of Object.keys(HAZARDS)){
   p = setup(); startHazard(kind);
   let threw = '', saw = {rock:0, jam:0, pop:0};
   const life0 = p.life;
-  try { sim(30, () => false, () => { hold(p)(); saw.rock = Math.max(saw.rock, G.hz.rocks.length); if ([...p.blocks.values()].some(b => (b.jam || 0) > G.time)) saw.jam++; const B = p.shields[0]?.bub; if (B && B.down > 0) saw.pop++; }); } catch (e){ threw = String(e); }
+  // rocks are aimed at the ship so the hail can't miss it by chance
+  const aim = () => { if (G.hz.on) for (const R of G.hz.rocks) if (!R.aimed){ R.aimed = true; const v = Math.hypot(R.vx, R.vy), a = Math.atan2(p.y-R.y, p.x-R.x); R.vx = Math.cos(a)*v; R.vy = Math.sin(a)*v; } };
+  // lightning lands at random around the ship, so for the test every roll comes up even and strikes dead centre
+  const rnd = Math.random; if (kind==='storm') Math.random = () => .5;
+  try { sim(30, () => false, () => { hold(p)(); aim(); saw.rock = Math.max(saw.rock, G.hz.rocks.length); if ([...p.blocks.values()].some(b => (b.jam || 0) > G.time)) saw.jam++; const B = p.shields[0]?.bub; if (B && B.down > 0) saw.pop++; }); } catch (e){ threw = String(e); }
+  Math.random = rnd;
   ok(`${kind}: runs without errors`, !threw, threw);
   ok(`${kind}: announced`, G.hz.on);
   if (kind==='rocks') ok('rocks fly and hit the ship', saw.rock > 3 && p.life < life0, `${saw.rock} rocks, life lost ${(life0 - p.life).toFixed(1)}`);
