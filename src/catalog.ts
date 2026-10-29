@@ -211,6 +211,40 @@ export const HM = {
 // a group on auto fires on its own at the nearest hostile.
 export const WGRP: Partial<Record<Cell, number>> = {plasma:1, swarm:2, core:1, cannon:1, bigcannon:1, gatling:1, hgatling:1, scatter:1, flak:1, ion:1, goo:1, hack:3, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4, glimmer:4};
 export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
+// ---------- hardpoints (being built; stage 1: the data, and weapons drawn on their mounts over the hull) ----------
+// A ship is built in three layers: hull or armour, a mount on top, a weapon on the mount. A mount has no hit points:
+// it is lost once more than 49% of the blocks under it are destroyed, and its weapon with it. The weapon has its own
+// hit points, which count toward the ship's life. Mounts sit on full hull or armour only, never on corners.
+// arc: turn either side of the facing (rad); turn: turn speed (rad/s, 0 = cannot turn); over: fires over the hull;
+// a fixed mount is braced: more damage, less spread.
+export type MountKind = 'fixed' | 'gimbal' | 'ring' | 'barbette' | 'dome';
+/** Mount footprints: 1 cell, 2 (1×2) or 4 (2×2). Bigger mounts cost more, turn slower and unlock later. */
+export type MountSize = 1 | 2 | 4;
+export const MOUNTS: Record<MountKind, {name: string; arc: number; turn: number; over: boolean; cost: number; unlock: number; sizes: MountSize[]; dmg?: number; spread?: number}> = {
+  fixed:   {name:'Fixed mount', arc:3*Math.PI/180, turn:0, over:false, cost:6, unlock:1, sizes:[1,2,4], dmg:1.15, spread:.8},
+  gimbal:  {name:'Gimbal', arc:20*Math.PI/180, turn:140*Math.PI/180, over:false, cost:18, unlock:1, sizes:[1,2,4]},
+  ring:    {name:'Turret ring', arc:60*Math.PI/180, turn:100*Math.PI/180, over:false, cost:35, unlock:2, sizes:[1,2,4]},
+  barbette:{name:'Barbette', arc:90*Math.PI/180, turn:75*Math.PI/180, over:true, cost:65, unlock:4, sizes:[1,2,4]},
+  dome:    {name:'Dome', arc:Math.PI, turn:50*Math.PI/180, over:true, cost:110, unlock:6, sizes:[1]},
+};
+export const MSIZE: Record<MountSize, {name: string; cost: number; turn: number; later: number}> = {
+  1:{name:'Small', cost:1, turn:1, later:0}, 2:{name:'Medium', cost:2, turn:.75, later:1}, 4:{name:'Large', cost:4, turn:.5, later:2},
+};
+/** The smallest mount each weapon needs; a bigger mount takes a smaller weapon too. */
+export const WSIZE: Partial<Record<Cell, MountSize>> = {
+  gatling:1, scatter:1, cannon:1, flak:1, ion:1, goo:1, glimmer:1, missile:1, mine:1, tesla:1, pd:1,
+  hgatling:2, laser:2, torpedo:2, plasma:2, hack:2,
+  bigcannon:4, rail:4, mirv:4, swarm:4, aegis:4,
+};
+/** Everything that goes on a mount: every weapon (the core gun aside), point defense and the Stormcoil, and the body cells of the big ones. */
+export const isArm = (t: Cell | undefined): boolean => !!t && t!=='core' && (!!WSIZE[t] || (!!HEAD_OF[t] && isArm(HEAD_OF[t])));
+/** The mount closest to how a weapon aims today, for converting ships built before hardpoints. */
+export function mountFor(t: Cell): MountKind {
+  const d = def(t), g = d?.gun, arc = g ? g.arc || 0 : d?.laser ? d.laser.arc || .09 : d?.rail ? .09 : Math.PI, big = (WSIZE[t] || 1) > 1;
+  if (arc >= Math.PI - .01) return big ? 'barbette' : 'dome';
+  if (g?.over) return 'barbette';
+  return arc <= .5 ? 'gimbal' : 'ring';
+}
 export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t] && (t!=='core' || !!cockpit().gun);
 /** What a bay launches: a hangar bay's craft, or a fighter from the Carrier deck's core. */
 export const bayKind = (b: {t: Cell}): CraftKind | null => isCraft(b.t) ? b.t : b.t==='core' && cockpit().deck ? 'fbay' : null;

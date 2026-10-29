@@ -1,4 +1,4 @@
-import { BCOL, BEAM, COCKPITS, ESH, GCOL, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isWeapon, lvOf, shRad } from './catalog';
+import { BCOL, BEAM, COCKPITS, ESH, GCOL, HEAD_OF, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isArm, isWeapon, lvOf, mountFor, shRad, type MountKind } from './catalog';
 import { rangeOf } from './bullets';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { WARP } from './fights';
@@ -75,7 +75,45 @@ export function barrel(X: Ctx, x: number, y: number, ca: number, sa: number, len
   X.fillStyle = m[2]; X.beginPath(); X.moveTo(x+px,y+py); X.lineTo(x+px+ca*len,y+py+sa*len); X.lineTo(x-px+ca*len,y-py+sa*len); X.lineTo(x-px,y-py); X.closePath(); X.fill();
   X.fillStyle = m[0]; X.beginPath(); X.moveTo(x+px*.3,y+py*.3); X.lineTo(x+px*.3+ca*len,y+py*.3+sa*len); X.lineTo(x-px*.4+ca*len,y-py*.4+sa*len); X.lineTo(x-px*.4,y-py*.4); X.closePath(); X.fill();
 }
-export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: number, aim: number, hit: boolean, ratio: number, firing?: boolean){
+/** The mount a weapon sits on, drawn under it: a braced bracket, a gimbal, a turret ring, a raised barbette or a dome. */
+export function drawMount(X: Ctx, kind: MountKind, team: Team, x: number, y: number, rot: number, r = 1){
+  const dark = '#14171e', [hi, mid] = team==='e' ? ['#c8783a', '#6a3418'] : ['#9aa4b4', '#4a525e'];
+  X.save(); X.translate(x, y); X.rotate(rot); X.scale(r, r);
+  if (kind==='fixed'){
+    X.fillStyle = dark; X.fillRect(-3.8,-3.8,7.6,7.6); X.fillStyle = mid; X.fillRect(-3.8,-3.8,7.6,1.2); X.fillRect(-3.8,-3.8,1.2,7.6);
+    X.fillStyle = hi; for (const [a,b] of [[-3.2,2.4],[2.4,2.4]]) X.fillRect(a,b,.8,.8);
+  } else if (kind==='barbette'){
+    // raised: a drop shadow under a thick ring, lit on its upper left
+    X.fillStyle = 'rgba(0,0,0,.45)'; X.beginPath(); X.arc(.8, .9, 4.6, 0, TAU); X.fill();
+    X.fillStyle = mid; X.beginPath(); X.arc(0, 0, 4.6, 0, TAU); X.fill();
+    X.fillStyle = hi; X.beginPath(); X.moveTo(0, 0); X.arc(0, 0, 4.6, Math.PI, Math.PI*1.5); X.closePath(); X.fill();
+    X.fillStyle = dark; X.beginPath(); X.arc(0, 0, 3.3, 0, TAU); X.fill();
+  } else if (kind==='dome'){
+    X.fillStyle = 'rgba(0,0,0,.4)'; X.beginPath(); X.arc(.7, .8, 4.8, 0, TAU); X.fill();
+    orb(X, 0, 0, 4.8, [dark, mid, hi]);
+    X.strokeStyle = dark; X.lineWidth = .5; X.beginPath(); X.arc(0, 0, 3.2, 0, TAU); X.stroke();
+  } else {
+    // a gimbal is a small ring with two pivots; a turret ring is wider, with traverse ticks
+    const R = kind==='ring' ? 4.4 : 3.6;
+    X.fillStyle = mid; X.beginPath(); X.arc(0, 0, R, 0, TAU); X.fill(); X.fillStyle = dark; X.beginPath(); X.arc(0, 0, R - 1.1, 0, TAU); X.fill();
+    X.fillStyle = hi;
+    if (kind==='ring') for (let q=0; q<8; q++){ const a = q*TAU/8; X.fillRect(Math.cos(a)*(R-.5) - .3, Math.sin(a)*(R-.5) - .3, .6, .6); }
+    else { X.fillRect(-R, -.4, 1, .8); X.fillRect(R - 1, -.4, 1, .8); }
+  }
+  X.restore();
+}
+/** layer 'base' draws only a block's plating (with hits and wear), 'arm' only what sits on it: the mount and the weapon,
+ *  drawn after the whole hull so barrels reach over the neighbouring blocks. */
+export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: number, aim: number, hit: boolean, ratio: number, firing?: boolean, layer?: 'base' | 'arm'){
+  if (layer==='arm'){
+    const was = BAKE.noPlate; BAKE.noPlate = true;
+    try {
+      if (!HEAD_OF[t]) drawMount(X, mountFor(t), team, x, y, o ? o*Math.PI/4 : 0);
+      drawBlock(X, t, o, team, x, y, aim, false, 1, firing);
+    } finally { BAKE.noPlate = was; }
+    if (hit){ X.globalAlpha = .7; X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x, y, 4.6, 0, TAU); X.fill(); X.globalAlpha = 1; }
+    return;
+  }
   const M = team==='e' ? MET.e : PAINTS[G.paint] || MET.p, bx = x, by = y;
   if (t==='sell'){
     X.fillStyle = '#ff3d2a'; X.save(); X.translate(x,y); X.rotate(Math.PI/4); X.fillRect(-5,-1.2,10,2.4); X.fillRect(-1.2,-5,2.4,10); X.restore(); return;
@@ -98,9 +136,14 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     else if (ratio < .7){ X.fillStyle = '#000000'; X.globalAlpha = (1-ratio)*.45; tri([-5,-5.6, -5,5, 5.6,5]); X.globalAlpha = 1; }
     X.restore(); return;
   }
-  const base = t==='armor' ? M.armor : t==='hull' ? M.hull : M.dark, mat = t==='armor' || t==='hull' ? t : 'dark';
+  // a weapon's cell is plated as hull, the mount sitting on top of it
+  const pt = layer==='base' ? 'hull' : t, base = pt==='armor' ? M.armor : pt==='hull' ? M.hull : M.dark, mat = pt==='armor' || pt==='hull' ? pt : 'dark';
   if (!BAKE.noPlate){ const id = modId('plate/'+mat); if (id) blit(X, id, x, y, 0, 1, tintFor(team, mat)); else plate(X,x,y,base); }
   if (hit){ X.fillStyle = '#ffffff'; X.globalAlpha = .85; X.fillRect(x-5,y-5,10,10); X.globalAlpha = 1; return; }
+  if (layer==='base'){
+    if (ratio < .7){ X.globalAlpha = (1-ratio)*.4; X.fillStyle = '#000000'; X.fillRect(x-5,y-5,10,10); X.globalAlpha = 1; }
+    return;
+  }
   const d = def(t), rot = o ? o*Math.PI/4 : 0;
   if (rot){ X.save(); X.translate(x,y); X.rotate(rot); x = 0; y = 0; }
   let ang = aim - rot;
@@ -447,9 +490,14 @@ export function drawShip(s: Ship){
   }
   // mid-roll the ship flickers half see-through
   const ghost = (s.ghost || 0) > G.time || (s === G.player && G.cloakT > G.time);
+  // the hull first, then the weapons on their mounts over it
   for (const b of s.blocks.values()){
     if (ghost) ctx.globalAlpha = .45 + .2*Math.sin(G.time*50);
-    drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, b.firing);
+    drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, b.firing, isArm(b.t) ? 'base' : undefined);
+  }
+  for (const b of s.blocks.values()) if (isArm(b.t)){
+    if (ghost) ctx.globalAlpha = .45 + .2*Math.sin(G.time*50);
+    drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, b.firing, 'arm');
   }
   if (s === G.player) drawCockpit(ctx, G.cockpit, k => s.blocks.has(k)); // the cockpit sprite over its whole footprint
   ctx.globalAlpha = 1;
@@ -961,15 +1009,20 @@ export function renderBuild(){
   for (const [k,t] of G.design) if (t==='shield'){ ctx.beginPath(); ctx.arc(KI(k)*BS, KJ(k)*BS, shRad(), 0, TAU); ctx.stroke(); }
   ctx.setLineDash([]); ctx.globalAlpha = 1;
   for (const [k,t] of G.design) if (aimsOut(t) || BEAM(t)) drawArc(KI(k), KJ(k), G.dirs.get(k) || 0, t, t===G.sel ? .35 : .14, aR, aLen);
+  // the hull first; weapons and their mounts go over all of it, as in a fight
   for (const [k,t] of G.design){
-    const i = KI(k), j = KJ(k), o = G.dirs.get(k) || 0;
-    drawBlock(ctx, t, o, 'p', i*BS, j*BS, FA[o], false, 1, false);
+    const i = KI(k), j = KJ(k), o = G.dirs.get(k) || 0, broken = G.broken.has(k);
+    drawBlock(ctx, t, o, 'p', i*BS, j*BS, FA[o], false, 1, false, isArm(t) && !broken ? 'base' : undefined);
     // damaged: darkened plate with an orange crack
-    if (G.broken.has(k)){
+    if (broken){
       ctx.globalAlpha = .6; ctx.fillStyle = '#000000'; ctx.fillRect(i*BS-5, j*BS-5, 10, 10); ctx.globalAlpha = 1;
       ctx.strokeStyle = '#ff9a3a'; ctx.beginPath(); ctx.moveTo(i*BS-4,j*BS-3); ctx.lineTo(i*BS-1,j*BS); ctx.lineTo(i*BS+1,j*BS-2); ctx.lineTo(i*BS+4,j*BS+3); ctx.stroke();
-      continue;
     }
+  }
+  for (const [k,t] of G.design) if (isArm(t) && !G.broken.has(k)){ const o = G.dirs.get(k) || 0; drawBlock(ctx, t, o, 'p', KI(k)*BS, KJ(k)*BS, FA[o], false, 1, false, 'arm'); }
+  for (const [k,t] of G.design){
+    if (G.broken.has(k)) continue;
+    const i = KI(k), j = KJ(k), o = G.dirs.get(k) || 0;
     // warnings: engine exhaust covered, or a beam weapon looking into its own hull
     const bad = (t==='engine' && designType(K(i-FACE[o][0], j-FACE[o][1]))) || (BEAM(t) && !laneFwd(designType, i, j, o));
     const fc = aimsOut(t) ? arcClear(i, j, o, t) : 1;
