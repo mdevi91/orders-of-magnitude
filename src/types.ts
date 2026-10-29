@@ -233,6 +233,8 @@ export interface GameState {
   inv: Partial<Record<BlockType, number>>; dmg: Partial<Record<BlockType, number>>; grp: Record<Key, number>; auto: boolean[];
   /** mounts fitted from cargo, and arcs angled off the facing in 15° steps, per weapon head */
   mnt: Record<Key, MountKind>; ang: Record<Key, number>;
+  /** the mount (null: the weapon's stock one) and arc angle (15° steps) a weapon picked in the drydock goes down on */
+  selMk: MountKind | null; selAng: number;
   broken: Set<Key>; lost: Set<Key>; fresh: Set<BlockType>;
   map: StarMap | null; node: MapNode | null; pendingNode: MapNode | null; shopNode: MapNode | null; mapHover: MapNode | null;
   stats: RunStats | null; meta: Meta; bounty: number;

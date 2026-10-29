@@ -1,6 +1,6 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpPerks, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvHave, lvOf, mountFor, mountText, outfitPrice, rangeMul, turns, owned, partOffsets, rarOf } from './catalog';
+import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpPerks, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvHave, lvOf, mountFor, mountFits, mountText, outfitPrice, rangeMul, turns, ANG_MAX, ANG_STEP, MOUNTS, MOUNT_ITEM, unlocked, type MountKind, owned, partOffsets, rarOf } from './catalog';
 import { PAINTS, aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
@@ -20,11 +20,32 @@ import { $ } from './view';
 // The parts palette, in groups; a group's heading hides while none of its blocks are available.
 const GROUPS = [['Structure', (t: BlockType) => t==='sell' || PLATE(t)], ['Weapons', (t: BlockType) => isWeapon(t)], ['Mounts', (t: BlockType) => !!T[t].mount], ['Hangars', (t: BlockType) => isCraft(t)], ['Systems', () => true]] as const;
 const groupOf = (t: BlockType) => GROUPS.findIndex(([,f]) => f(t));
+const SHUT_KEY = 'oom-palette-shut';
+const shut = new Set<number>((() => { try { return JSON.parse(localStorage.getItem(SHUT_KEY) || '[]') as number[]; } catch { return []; } })());
+const keepShut = () => { try { localStorage.setItem(SHUT_KEY, JSON.stringify([...shut])); } catch { /* storage off: folding just isn't remembered */ } };
+function foldSections(){
+  GROUPS.forEach((_, n) => {
+    const open = !shut.has(n);
+    $('palg-'+n).hidden = !open; $('palt-'+n).setAttribute('aria-expanded', String(open));
+  });
+}
 export function buildPalette(){
   const root = $('palette');
+  $('selMount').addEventListener('click', e => {
+    const b = (e.target as HTMLElement).closest('button'); if (!b || b.disabled) return;
+    if (b.dataset.mk){ const mk = b.dataset.mk as MountKind; G.selMk = mk===mountFor(G.sel) ? null : mk; }
+    if (b.dataset.ang) G.selAng = Math.max(-ANG_MAX, Math.min(ANG_MAX, G.selAng + +b.dataset.ang));
+    syncUI();
+  });
+  // each section folds away under its heading; which ones are folded is remembered on this device
   GROUPS.forEach(([name], n) => {
-    const h = document.createElement('h3'); h.className = 'palh'; h.id = 'palh-'+n; h.textContent = name;
+    const h = document.createElement('h3'); h.className = 'palh'; h.id = 'palh-'+n;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'palt'; b.id = 'palt-'+n;
+    b.innerHTML = `<span>${name}</span><span class="chev" aria-hidden="true"></span>`;
+    b.addEventListener('click', () => { if (shut.has(n)) shut.delete(n); else shut.add(n); keepShut(); foldSections(); });
+    h.append(b);
     const g = document.createElement('div'); g.className = 'palg'; g.id = 'palg-'+n;
+    if (name==='Mounts'){ const p = document.createElement('p'); p.className = 'palhelp'; p.textContent = 'Pick a weapon, then choose its mount and arc angle on the part card before placing it. Or pick a mount here and click a placed weapon to fit it.'; g.append(p); }
     root.append(h, g);
   });
   for (const t of PAL){
@@ -67,10 +88,31 @@ function syncSelCard(S: number){
     (d.mount ? '' : row('Level', `${L} / ${MAXLV}` + (L > 1 ? `: ${lvHave(t)}` : L < MAXLV ? ': upgrade at shops' : ''))) +
     (turns(t) ? row('Stock mount', mountText(t, mountFor(t))) : '') +
     (PARTS[t] ? row('Size', `${partOffsets(PARTS[t]!).length} cells`) : '');
+  syncMountPick(t);
+}
+// The mount picker under a turret's card: its stock mount and every mount it fits that is in cargo (or can be bought
+// in Engineering), then the arc angle. The weapon goes down on what is picked here.
+function syncMountPick(t: BlockType){
+  const box = $('selMount');
+  if (!turns(t)){ box.innerHTML = ''; return; }
+  const stock = mountFor(t), cur = G.selMk && mountFits(t, G.selMk) === true ? G.selMk : stock;
+  const kinds = (Object.keys(MOUNTS) as MountKind[]).filter(mk => mk!==stock && mountFits(t, mk) === true && ((G.inv[MOUNT_ITEM[mk]] || 0) > 0 || (G.outfit && unlocked(MOUNT_ITEM[mk]))));
+  const btn = (mk: MountKind, label: string) => `<button type="button" class="mopt" data-mk="${mk}" aria-pressed="${cur===mk}" title="${mountText(t, mk)}">${label}</button>`;
+  const deg = G.selAng*15;
+  box.innerHTML = `<div class="mrow"><span>Mount</span>${btn(stock, `${MOUNTS[stock].name} <i>stock</i>`)}` +
+    kinds.map(mk => btn(mk, `${MOUNTS[mk].name} <i>${G.outfit && !(G.inv[MOUNT_ITEM[mk]] || 0) ? outfitPrice(MOUNT_ITEM[mk]) + ' cr' : '×' + G.inv[MOUNT_ITEM[mk]]}</i>`)).join('') + '</div>' +
+    `<div class="mrow"><span>Arc angle</span><button type="button" class="mstep" data-ang="-1" aria-label="Angle the arc 15° to port"${G.selAng <= -ANG_MAX ? ' disabled' : ''}>◀</button>` +
+    `<b>${deg > 0 ? '+' : ''}${deg}°</b><button type="button" class="mstep" data-ang="1" aria-label="Angle the arc 15° to starboard"${G.selAng >= ANG_MAX ? ' disabled' : ''}>▶</button></div>` +
+    `<p class="mnote">${mountText(t, cur, G.selAng*ANG_STEP)}. Placed weapons of this type: click one to move it onto this.</p>`;
 }
 export function select(t: BlockType){
   if (!owned(t)) return; // blocks you have never found stay secret
-  G.sel = t; G.grpBrush = 0; if (PARTS[t]) G.rot &= ~1; if (WEDGE(t)) G.rot |= 1; syncUI();
+  G.sel = t; G.grpBrush = 0; if (PARTS[t]) G.rot &= ~1; if (WEDGE(t)) G.rot |= 1;
+  // a picked mount the new weapon can't take falls back to its stock one
+  if (G.selMk && turns(t) && mountFits(t, G.selMk) !== true) G.selMk = null;
+  // a hotkey into a folded section opens it
+  const n = groupOf(t); if (shut.delete(n)){ keepShut(); foldSections(); }
+  syncUI();
 }
 export function designStats(){
   const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), o:G.dirs.get(k)||0}));
@@ -100,6 +142,7 @@ export function designStats(){
 }
 export function syncUI(){
   const s = G.stage, R = buildR(), S = scaleOf(s);
+  if (G.mode!=='build'){ $('buildTip').hidden = true; delete $('buildTip').dataset.k; }
   for (const t of PAL){
     const btn = $<HTMLButtonElement>('pal-'+t), ct = $('ct-'+t), have = G.inv[t] || 0;
     btn.setAttribute('aria-pressed', String(G.sel===t)); btn.hidden = !owned(t);
@@ -122,7 +165,7 @@ export function syncUI(){
     // paint: one swatch per scheme, hull colour over armour colour
     '<h3 class="palh">Paint</h3><div class="paints">' + Object.entries(PAINTS).map(([id, p]) =>
       `<button type="button" class="paint" data-paint="${id}" aria-pressed="${G.paint===id}" aria-label="${p.name} paint" title="${p.name}" style="--a:${p.hull[1]};--b:${p.armor[1]}"></button>`).join('') + '</div>';
-  GROUPS.forEach((_, n) => { $('palh-'+n).hidden = !PAL.some(t => groupOf(t)===n && owned(t)); });
+  GROUPS.forEach((_, n) => { const any = PAL.some(t => groupOf(t)===n && owned(t)); $('palh-'+n).hidden = !any; if (!any) $('palg-'+n).hidden = true; else $('palg-'+n).hidden = shut.has(n); });
   const rb = $<HTMLButtonElement>('repair');
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
   rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;

@@ -1,4 +1,4 @@
-import { BCOL, BEAM, COCKPITS, ESH, GCOL, HEAD_OF, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isArm, isWeapon, lvOf, mountFor, rangeMul, traverse, turns, angAt, mountAt, mountFits, mountText, MOUNTS, shRad, type MountKind } from './catalog';
+import { BCOL, BEAM, COCKPITS, ESH, GCOL, HEAD_OF, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isArm, isWeapon, lvOf, mountFor, rangeMul, traverse, turns, angAt, mountAt, mountFits, mountText, MOUNTS, ANG_STEP, shRad, type MountKind } from './catalog';
 import { rangeOf } from './bullets';
 import { cellsFor, headOf, placeCheck, placeSpots } from './editor';
 import { WARP } from './fights';
@@ -974,10 +974,12 @@ export function rayOut(i: number, j: number, a: number, R: number){
   return Infinity;
 }
 /** The turret's arc swing, for a block that has a gun. */
-const arcOf = (t: Cell, k?: Key) => turns(t) ? traverse(t, k == null ? undefined : G.mnt[k]).arc : cpArc(def(t)?.gun?.arc || def(t)?.laser?.arc || 0);
+// a placed weapon (k given) aims through its own mount and angle; one about to be placed through the picked ones
+const mkOf = (t: Cell, k?: Key) => k == null ? (t===G.sel && G.selMk && mountFits(t, G.selMk) === true ? G.selMk : undefined) : G.mnt[k];
+const arcOf = (t: Cell, k?: Key) => turns(t) ? traverse(t, mkOf(t, k)).arc : cpArc(def(t)?.gun?.arc || def(t)?.laser?.arc || 0);
 /** Whether a design weapon fires over the hull: through its mount for a turret. */
-const overOf = (t: Cell, k?: Key) => turns(t) ? traverse(t, k == null ? undefined : G.mnt[k]).over : !!def(t)?.gun?.over;
-const midOf = (o: Facing, k?: Key) => FA[o] + (k == null ? 0 : angAt(k));
+const overOf = (t: Cell, k?: Key) => turns(t) ? traverse(t, mkOf(t, k)).over : !!def(t)?.gun?.over;
+const midOf = (o: Facing, k?: Key) => FA[o] + (k == null ? G.selAng*ANG_STEP : angAt(k));
 export const ARC_N = 16, arcRays = (o: Facing, t: Cell, k?: Key) => Array.from({length:ARC_N}, (_,n) => midOf(o,k) - arcOf(t,k) + 2*arcOf(t,k)*n/(ARC_N-1));
 export function arcClear(i: number, j: number, o: Facing, t: Cell, k?: Key){
   if (overOf(t, k)) return 1;
@@ -1117,6 +1119,12 @@ export function renderBuild(){
         tip = [T[ht as BlockType].name, ws.length ? `Boosts ${ws.map(q => T[q.t as BlockType]?.name || q.t).join(', ')}` : 'Boosts nothing: touch a weapon (corners count)'];
       } else if (boostable(wt)){
         tip = [`${T[wt as BlockType]?.name || wt}${turns(wt) ? ': ' + mountText(wt, mountAt(head, wt), angAt(head)) : ''}`];
+        // the selected weapon type: a click moves it onto the picked mount and angle, or turns it if it already matches
+        if (wt===G.sel && turns(wt)){
+          const want = G.selMk && mountFits(wt, G.selMk) === true ? G.selMk : mountFor(wt);
+          tip.push(mountAt(head, wt)===want && (G.ang[head] || 0)===G.selAng ? 'Click to turn it 45°' : `Click to move it onto: ${mountText(wt, want, G.selAng*ANG_STEP)}`);
+          tipCol = '#ffc46b';
+        }
         if (f){ tip.push(`${f.mods.length} module${f.mods.length > 1 ? 's' : ''}: ${boostText(f.B)}`); for (const [m,w] of f.mods) link(m, w, 1); }
       }
     }
@@ -1133,12 +1141,10 @@ export function renderBuild(){
     }
   }
   ctx.restore();
-  if (tip){
-    ctx.font = FONT(8); ctx.textAlign = 'left';
-    const w = Math.max(...tip.map(l => ctx.measureText(l).width)) + 12, hh = tip.length*12 + 8;
-    const x = clamp(cx + tipAt[0]*cs - w/2, 4, W - w - 4), y = Math.max(4, cy + tipAt[1]*cs - cs*.7 - hh);
-    ctx.globalAlpha = .94; ctx.fillStyle = '#05060c'; ctx.fillRect(x, y, w, hh); ctx.globalAlpha = 1;
-    ctx.strokeStyle = tipCol; ctx.lineWidth = 1; ctx.strokeRect(x+.5, y+.5, w-1, hh-1);
-    tip.forEach((l, n) => { ctx.fillStyle = n ? '#e2ecff' : tipCol; ctx.fillText(l, x + 6, y + 15 + n*12); });
+  // the tip is a page element over the top of the build area, so its text stays crisp
+  const el = $('buildTip'), key = tip ? tipCol + tip.join('|') : '';
+  if (el.dataset.k !== key){
+    el.dataset.k = key; el.hidden = !tip; el.style.setProperty('--tc', tipCol);
+    el.replaceChildren(...(tip || []).map((l, n) => { const d = document.createElement('div'); if (!n) d.className = 'tt'; d.textContent = l; return d; }));
   }
 }

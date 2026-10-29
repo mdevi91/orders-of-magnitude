@@ -81,6 +81,28 @@ kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line);padding:
 /* palette: groups of blocks, each a row with icon, name and cargo count */
 #palette{display:flex;flex-direction:column;gap:6px}
 .palh{margin:6px 0 0;padding-bottom:2px;border-bottom:2px solid var(--line);font:600 13px/1.3 var(--cond);color:var(--line);text-transform:uppercase;letter-spacing:.14em}
+.palt{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;width:100%;min-height:28px;cursor:pointer;font:inherit;color:inherit;letter-spacing:inherit}
+.palt:hover{color:var(--paper)}
+.palt:focus-visible{outline:2px solid var(--paper);outline-offset:2px}
+.palt .chev{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid currentColor;transition:transform .12s steps(2)}
+.palt[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.palg[hidden]{display:none}
+.palhelp{margin:2px 0 4px;font-family:var(--mono);font-size:12px;line-height:1.35;color:var(--muted)}
+#buildTip{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:5;max-width:min(460px,calc(100vw - 32px));padding:6px 10px;background:var(--ink);border:2px solid var(--tc,var(--line));font-family:var(--mono);font-size:13px;line-height:1.4;color:var(--paper);pointer-events:none}
+#buildTip[hidden]{display:none}
+#buildTip .tt{color:var(--tc,var(--line));font-weight:600}
+#selMount:empty{display:none}
+#selMount{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.mrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.mrow > span{width:100%;color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+.mopt,.mstep{min-height:30px;padding:3px 8px;border:2px solid var(--line);background:transparent;color:var(--paper);font:600 13px/1.1 var(--cond);text-transform:uppercase;letter-spacing:.04em;cursor:pointer}
+.mopt i{font-style:normal;color:var(--gold);margin-left:4px}
+.mopt[aria-pressed="true"]{background:var(--line);color:var(--ink)}
+.mopt[aria-pressed="true"] i{color:var(--ink)}
+.mstep:disabled{opacity:.4;cursor:not-allowed}
+.mrow b{min-width:48px;text-align:center;font-family:var(--mono);font-size:13px}
+.mopt:focus-visible,.mstep:focus-visible{outline:2px solid var(--paper);outline-offset:2px}
+.mnote{margin:0;font-family:var(--mono);font-size:12px;line-height:1.35;color:var(--muted)}
 .palh[hidden]{display:none}
 .palg{display:flex;flex-direction:column;gap:2px}
 .cockpits{display:flex;flex-direction:column;gap:3px}

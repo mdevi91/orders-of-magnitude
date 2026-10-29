@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { ANG_MAX, HEAD_OF, MOUNT_ITEM, PARTS, PLATE, T, WEDGE, canBuyHere, def, faceFor, isPart, mountFits, mountFor, outfitPrice, partOffsets, repCost } from './catalog';
+import { ANG_MAX, HEAD_OF, MOUNT_ITEM, PARTS, PLATE, T, WEDGE, canBuyHere, def, faceFor, isPart, mountAt, mountFits, mountFor, outfitPrice, partOffsets, repCost, turns, type MountKind } from './catalog';
 import { layoutBuild } from './draw';
 import { CORE, FACE, K, NB, flipO, mirrorO } from './grid';
 import { assignAt } from './groups';
@@ -62,7 +62,8 @@ export function placeCheck(i: number, j: number, t: BlockType, o: Facing): true 
   }
   return true;
 }
-export function tryPlace(i: number, j: number, t: BlockType, o: Facing): true | string {
+// sg: the sign the picked arc angle takes on this spot (a mirror twin's angle is mirrored)
+export function tryPlace(i: number, j: number, t: BlockType, o: Facing, sg = 1): true | string {
   const why = placeCheck(i,j,t,o); if (why !== true) return why;
   const k = K(i,j), oo = faceFor(t, o);
   if (G.design.has(k)) removeCell(k);
@@ -73,12 +74,36 @@ export function tryPlace(i: number, j: number, t: BlockType, o: Facing): true | 
     if (T[ct].rot) G.dirs.set(kk,oo); else G.dirs.delete(kk);
   }
   if (hurt) G.broken.add(k);
+  if (turns(t)){
+    if (G.selMk && G.selMk !== mountFor(t) && mountFits(t, G.selMk) === true){
+      const r = fitMount(k, t, G.selMk); if (r !== true) toast(`${r}: placed on its stock mount`);
+    }
+    if (G.selAng) G.ang[k] = G.selAng*sg;
+  }
+  return true;
+}
+/** Takes a mount item from cargo (or buys it on the spot in Engineering): true, or why not. */
+function takeMount(mt: BlockType): true | string {
+  if ((G.inv[mt] || 0) > 0){ G.inv[mt] = G.inv[mt]! - 1; return true; }
+  if (!canBuyHere(mt)) return `No ${T[mt].name.toLowerCase()} left in cargo`;
+  if (outfitPrice(mt) > G.credits) return `Not enough credits for ${T[mt].name.toLowerCase()}`;
+  G.credits -= outfitPrice(mt); return true;
+}
+/** Puts the weapon head at k on mount mk, the one it had going back to cargo; its stock kind just takes the fitted one off. */
+export function fitMount(k: Key, t: Cell, mk: MountKind): true | string {
+  const fit = mountFits(t, mk); if (fit !== true) return fit;
+  if (mountAt(k, t)===mk) return true;
+  const ang = G.ang[k];
+  if (mk !== mountFor(t)){ const r = takeMount(MOUNT_ITEM[mk]); if (r !== true) return r; }
+  unmount(k); if (ang) G.ang[k] = ang;
+  if (mk !== mountFor(t)) G.mnt[k] = mk;
   return true;
 }
 // A body cell belongs to the head that sits ahead of it (and to port, for wide parts) along the shared facing.
 export function headOf(i: number, j: number): [number, number] {
   const k = K(i,j), t = G.design.get(k), ht = t && HEAD_OF[t];
-  if (!ht) return [i,j];
+  // cockpit cells belong to the core, which has no part shape: they are their own head
+  if (!ht || !PARTS[ht]) return [i,j];
   const o = G.dirs.get(k)||0, [fx,fy] = FACE[o], [sx,sy] = FACE[(o+2)%8], P = PARTS[ht]!;
   for (const [n,m] of partOffsets(P)){
     const a = i+fx*n-sx*m, b = j+fy*n-sy*m, hk = K(a,b);
@@ -149,16 +174,23 @@ export function mountAction(i: number, j: number, tap: boolean): true | string {
       G.ang[k] = step*sg; if (!G.ang[k]) delete G.ang[k];
       continue;
     }
-    if (mk===mountFor(t)){ unmount(k); continue; }
-    if (!((G.inv[mt] || 0) > 0)){
-      if (!canBuyHere(mt)){ if (!n) res = `No ${T[mt].name.toLowerCase()} left in cargo`; continue; }
-      if (outfitPrice(mt) > G.credits){ if (!n) res = `Not enough credits for ${T[mt].name.toLowerCase()}`; continue; }
-      G.credits -= outfitPrice(mt); G.inv[mt] = 1; // outfitting: bought on the spot
-    }
-    const ang = G.ang[k]; unmount(k); if (ang) G.ang[k] = ang;
-    G.inv[mt] = (G.inv[mt] || 0) - 1; G.mnt[k] = mk;
+    const r = fitMount(k, t, mk); if (r !== true && !n) res = r;
   }
   return res;
+}
+/** With a weapon type selected, a tap on a placed one of that type moves it onto the picked mount and arc angle (and its
+ *  mirror twins); false if it already matches, so the tap turns it instead. */
+export function refitAt(i: number, j: number){
+  const [hi,hj] = headOf(i,j), k = K(hi,hj), t = G.design.get(k);
+  if (!t || t!==G.sel || !turns(t)) return false;
+  const want = G.selMk && mountFits(t, G.selMk) === true ? G.selMk : mountFor(t);
+  if (mountAt(k, t)===want && (G.ang[k] || 0)===G.selAng) return false;
+  for (const [a,b,sg] of mountTwins(i,j)){
+    const [ti,tj] = headOf(a,b), tk = K(ti,tj); if (G.design.get(tk)!==t) continue;
+    const r = fitMount(tk, t, want); if (r !== true && tk===k) toast(r);
+    if (G.selAng) G.ang[tk] = G.selAng*sg; else delete G.ang[tk];
+  }
+  return true;
 }
 export function buildAction(i: number, j: number, mode: 'place' | 'sell', tap = false){
   if (G.grpBrush){ assignAt(i,j); syncUI(); return; }
@@ -168,11 +200,13 @@ export function buildAction(i: number, j: number, mode: 'place' | 'sell', tap = 
     syncUI(); return;
   }
   sfx('place');
-  if (mode!=='sell' && tap && spinAt(i,j)){ G.drag = null; syncUI(); return; }
+  if (mode!=='sell' && tap && (refitAt(i,j) || spinAt(i,j))){ G.drag = null; syncUI(); return; }
   if (mode==='sell'){ for (const [a,b] of mirrorSpots(i,j,0)) sellAt(a,b); }
   else {
+    // a mirror twin's arc angle is mirrored once for each axis it is flipped across
+    const sgn = (a: number, b: number) => (Math.sign(a)===Math.sign(i) ? 1 : -1)*(Math.sign(b)===Math.sign(j) ? 1 : -1);
     const [first, ...rest] = placeSpots(i,j,G.rot,G.sel), r = tryPlace(first[0],first[1],G.sel,first[2]);
-    for (const [a,b,mo] of rest) tryPlace(a,b,G.sel,mo);
+    for (const [a,b,mo] of rest) tryPlace(a,b,G.sel,mo,sgn(a,b));
     if (r !== true && r !== 'Already placed') toast(r);
   }
   syncUI();

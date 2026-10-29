@@ -5,7 +5,7 @@ import type { GameState } from './types';
 // ---------- state ----------
 export const G: GameState = {
   mode:'title', bz:1, bpx:0, bpy:0, mir:1, sel:'hull', rot:0, mirror:true, hover:null, drag:null, lastCell:null, grpBrush:0,
-  cockpit:'std', paint:'steel', stage:1, credits:0, design:new Map(), dirs:new Map(), lv:{}, inv:{}, dmg:{}, grp:{}, mnt:{}, ang:{}, auto:[false,false,false,true,false],
+  cockpit:'std', paint:'steel', stage:1, credits:0, design:new Map(), dirs:new Map(), lv:{}, inv:{}, dmg:{}, grp:{}, mnt:{}, ang:{}, selMk:null, selAng:0, auto:[false,false,false,true,false],
   broken:new Set(), lost:new Set(), fresh:new Set(),
   map:null, node:null, pendingNode:null, shopNode:null, mapHover:null, stats:null, meta:{data:0, lv:{}}, bounty:0, sim:false, outfit:false, pick:null,
   fight:'fight', ships:[], player:null, boss:null, pb:[], eb:[], fx:[], beams:[], slugs:[],
@@ -18,7 +18,8 @@ export const G: GameState = {
 export const buildR = () => {
   if (G.drag && G.dragR) return G.dragR;
   let m = 0; for (const k of G.design.keys()) m = Math.max(m, Math.abs(KI(k)), Math.abs(KJ(k)));
-  return Math.max(3, m + 2);
+  // room to build five cells out past the hull, so zooming out shows usable space
+  return Math.max(6, m + 5);
 };
 // Speeds, ranges and bullet sizes stay the same in every sector (they used to grow 22% per sector); only enemy ships grow.
 export const scaleOf = (_s: number) => 1;
