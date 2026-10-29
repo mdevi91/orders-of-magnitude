@@ -23,6 +23,8 @@ export const BLOCKS = {
   flak:   {name:'Bloom Flak', make:'Ashgrove Defense', key:'f', unlock:2, rar:1, cost:45, hp:18, mass:1.5, rot:true, gun:{range:460, cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', fuse:22, blast:26, nofall:true}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
   scatter:{name:'Shrike Scattergun', make:'Ruiz Ordnance', key:'c', unlock:1, rar:0, cost:40, hp:18, mass:1.5, rot:true, gun:{range:213, cd:1.1, en:4, spd:520, dmg:2.9, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32, over:true}, desc:'Turret. Blasts 7 pellets in a wide cone over your own hull: about 18 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
   ion:    {name:'VH-9 Ion Lance', make:'Varga-Holt', key:'i', unlock:3, rar:2, cost:85, hp:18, mass:1.5, rot:true, gun:{range:380, cd:1.4, en:9, spd:420, dmg:6, spread:.03, r:2.6, arc:.8, fx:'ion', ion:true}, desc:'Turret. Ion bolts do 5× damage to shield bubbles and jam the enemy weapons within 2 cells of the hit for 1.5 s. Weak against hull. Covers 46° either side of its facing.'},
+  goo:    {name:'Mire Goo Sprayer', make:'Ruiz Ordnance', key:'s', unlock:2, rar:1, cost:55, hp:18, mass:1.5, rot:true, gun:{range:250, cd:.9, en:3, spd:300, dmg:1.2, spread:.05, r:1.8, arc:1, fx:'goo', pellets:5, fan:.45, over:true, stick:'goo'}, desc:'Turret. Sprays sticky goo over your own hull that clings to enemy ships for 5 s: each blob slows their flying and turning by 5%, down to under half speed. Barely scratches the paint. Covers 57° either side of its facing.'},
+  hack:   {name:'Wraith Hacking Module', make:'Varga-Holt', key:'a', unlock:4, rar:2, cost:110, hp:18, mass:1.5, rot:true, gun:{range:1000, cd:12, en:10, spd:150, dmg:4, spread:.01, r:2.4, arc:1, fx:'hack', stick:'hack', nofall:true}, desc:'Turret. Fires a slow, long-range module that drifts after its target and clamps onto the hull for 10 s, hacking it: 15% slower flying, 25% slower reloads and 30% less from its generators, stacking up to 3. Reloads very slowly. Covers 57° either side of its facing.'},
   tesla:  {name:'Stormcoil', make:'Helix Works', key:'z', unlock:5, rar:3, cost:120, hp:22, mass:2, tesla:{cd:.9, range:110, dmg:14, jumps:3, en:6}, desc:'Arcs lightning to the nearest enemy block within 11 m, then jumps to 2 more blocks close by. Reaches in every direction, through your own hull, and zaps enemy fighters and missiles too.'},
   torpedo:{name:'Leviathan Torpedo', make:'Teller Heavy Industries', key:'o', unlock:4, rar:3, cost:140, hp:22, mass:1.5, rot:true, gun:{range:1000, cd:5, en:22, spd:175, dmg:70, spread:.01, r:3.4, arc:.35, fx:'torp', nofall:true}, desc:'2 blocks long. Slow, unguided heavy torpedo fired along its facing (20° either side to aim): 70 damage and a wide blast. Point defense cannot stop it.'},
   mine:   {name:'Tangle Mine Layer', make:'Ashgrove Defense', key:'n', unlock:2, rar:1, cost:60, hp:18, mass:1.5, gun:{range:320, cd:2.4, en:5, spd:70, dmg:20, spread:.5, r:2.4, arc:Math.PI, fx:'mine', life:20, fuse:24, blast:34, lob:true}, desc:'Drops proximity mines that drift to a stop and wait up to 20 s, bursting when an enemy comes near. Launched over your own hull in any direction.'},
@@ -78,7 +80,7 @@ export const CRAFT = {
 /** Is this cell a hangar that launches craft? */
 export const isCraft = (t: Cell): t is CraftKind => t in CRAFT;
 // structure is as tough as the player's own blocks (hull 22, armour 70); weapons and systems a little lighter
-export const ET = {plasma:{hp:22}, swarm:{hp:18}, bigcannon:{hp:20}, hgatling:{hp:15}, scatter:{hp:13}, ion:{hp:13}, mirv:{hp:15}, laser:{hp:16}, glimmer:{hp:12}, tesla:{hp:15}, gyro:{hp:18}, core:{hp:45}, engine:{hp:14}, hull:{hp:22}, armor:{hp:70}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}, pd:{hp:12}} satisfies Record<string, {hp:number}>;
+export const ET = {plasma:{hp:22}, swarm:{hp:18}, bigcannon:{hp:20}, hgatling:{hp:15}, scatter:{hp:13}, ion:{hp:13}, goo:{hp:13}, hack:{hp:13}, mirv:{hp:15}, laser:{hp:16}, glimmer:{hp:12}, tesla:{hp:15}, gyro:{hp:18}, core:{hp:45}, engine:{hp:14}, hull:{hp:22}, armor:{hp:70}, cannon:{hp:15}, gatling:{hp:13}, missile:{hp:14}, flak:{hp:15}, rail:{hp:20}, shield:{hp:14}, gen:{hp:10}, bay:{hp:30}, pd:{hp:12}} satisfies Record<string, {hp:number}>;
 // Enemy weapons: the player's, slowed down to enemy scale (all but torpedoes and mines, which need a pilot's timing).
 // Enemies carry one from the sector that unlocks it for the player, see enemyFrom.
 // cd is per gun; gatlings fire bursts of `burst` shots `gap` apart; rails show a sight line for the last `aim` seconds;
@@ -95,6 +97,8 @@ export const EW = {
   mirv:     {w:1, range:900, cd:10, spd:85, dmg:12, r:1.4, kind:'emiss', spread:.3, split:3},
   flak:     {w:2, range:560, cd:4.4, spd:240, dmg:10, r:1, kind:'eflak', spread:.1, fuse:16, blast:26, life:4},
   ion:      {w:1.2, range:440, cd:5, spd:260, dmg:6, r:1.2, kind:'ion', spread:.03, ion:true},
+  goo:      {w:1.5, range:260, cd:4.5, spd:240, dmg:1.5, r:1, kind:'egoo', spread:.05, pellets:5, fan:.5, stick:'goo'},
+  hack:     {w:.8, range:800, cd:14, spd:130, dmg:5, r:1.2, kind:'ehack', spread:.02, stick:'hack'},
   laser:    {w:1.2, range:360, cd:6, spd:0, dmg:0, r:0, kind:'line', arc:.5, beam:{dur:1.4, dps:30}},
   glimmer:  {w:1.2, range:520, cd:4, spd:0, dmg:0, r:0, kind:'line', beam:{dur:2, dps:9, fall:.85}},
   tesla:    {w:1, range:160, cd:3, spd:0, dmg:12, r:0, kind:'line', arc:Math.PI, over:true, zap:3},
@@ -114,15 +118,15 @@ export function pickWeapon(sector: number): EnemyGun {
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
+export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','goo','hack','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', glimmer:'#d0f5c8', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
-     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', tesla:'#c8b0ff', torpedo:'#ffe08a', torpedo_b:'#c0a050', aegis:'#c9adff', aegis_b:'#8a70c0', swarm_b:'#a8a070', mine:'#ffb27a'},
-  e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', plasma:'#ffc46b', swarm:'#ffc46b', bigcannon:'#ffc46b', hgatling:'#ffc46b', scatter:'#ffc46b', ion:'#ffc46b', mirv:'#ffc46b', laser:'#ffc46b', glimmer:'#ffc46b', tesla:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
+     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', goo:'#9cff5a', hack:'#4affb0', tesla:'#c8b0ff', torpedo:'#ffe08a', torpedo_b:'#c0a050', aegis:'#c9adff', aegis_b:'#8a70c0', swarm_b:'#a8a070', mine:'#ffb27a'},
+  e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', plasma:'#ffc46b', swarm:'#ffc46b', bigcannon:'#ffc46b', hgatling:'#ffc46b', scatter:'#ffc46b', ion:'#ffc46b', goo:'#ffc46b', hack:'#ffc46b', mirv:'#ffc46b', laser:'#ffc46b', glimmer:'#ffc46b', tesla:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
   a:{},
 }; // hangar craft
-export const BCOL: Record<string, string> = {pellet:'#fff0a0', ion:'#a070ff', torp:'#ffd04a', mine:'#ff7a3a', shot:'#7fe8ff', oval:'#5fd8ff', slug:'#9fe4ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', plasma:'#ff4ad0', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
+export const BCOL: Record<string, string> = {pellet:'#fff0a0', ion:'#a070ff', torp:'#ffd04a', mine:'#ff7a3a', shot:'#7fe8ff', oval:'#5fd8ff', slug:'#9fe4ff', line:'#7ff6ff', miss:'#ffe08a', mirv:'#ff7ad8', flak:'#ff9a3a', plasma:'#ff4ad0', goo:'#9cff5a', hack:'#4affb0', egoo:'#e8c040', ehack:'#ff4a8a', aim:'#ff8a2a', ring:'#ff4ad0', snipe:'#ff2a2a', eoval:'#ff8a2a', egat:'#ff6a3a', eflak:'#ffb03a', emiss:'#ff5a3a'};
 // Hull and armor are plating: bought with credits in drydock. Every other block comes out of cargo.
 export const PLATE = (t: Cell) => t==='hull' || t==='armor' || WEDGE(t);
 /** Corner plating: a half-cell triangle whose cut corner faces one of the four diagonals (an odd facing). */
@@ -205,7 +209,7 @@ export const HM = {
 };
 // Weapon groups, Starsector style: every weapon on the ship (keyed by its head cell) sits in one of five groups, starting in its type's default;
 // a group on auto fires on its own at the nearest hostile.
-export const WGRP: Partial<Record<Cell, number>> = {plasma:1, swarm:2, core:1, cannon:1, bigcannon:1, gatling:1, hgatling:1, scatter:1, flak:1, ion:1, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4, glimmer:4};
+export const WGRP: Partial<Record<Cell, number>> = {plasma:1, swarm:2, core:1, cannon:1, bigcannon:1, gatling:1, hgatling:1, scatter:1, flak:1, ion:1, goo:1, hack:3, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4, glimmer:4};
 export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
 export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t] && (t!=='core' || !!cockpit().gun);
 /** What a bay launches: a hangar bay's craft, or a fighter from the Carrier deck's core. */

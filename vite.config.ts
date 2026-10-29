@@ -19,12 +19,19 @@ const obfuscate = (): Plugin => ({
   },
 });
 
-// The dev server's end of the mod editor (mod-editor.html): its Save writes the sprites and labels to src/mods.json.
+// The dev server's end of the editor (mod-editor.html): its Save writes the sprites and labels to src/mods.json, keeping
+// the version it replaces in editor-history/ (local only, never built); GET /__mods/history lists them, newest first.
 const modSave = (): Plugin => ({
   name: 'mod-save',
   apply: 'serve',
   configureServer(server){
+    const file = path.join(server.config.root, 'src', 'mods.json'), hist = path.join(server.config.root, 'editor-history');
     server.middlewares.use('/__mods', (req, res) => {
+      if (req.method === 'GET' && req.url?.startsWith('/history')){
+        const names = fs.existsSync(hist) ? fs.readdirSync(hist).filter(n => n.endsWith('.json')).sort().reverse() : [];
+        const list = names.map(name => { try { return {name, ...JSON.parse(fs.readFileSync(path.join(hist, name), 'utf8'))}; } catch { return null; } }).filter(Boolean);
+        res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(list)); return;
+      }
       if (req.method !== 'POST'){ res.statusCode = 405; res.end(); return; }
       let body = '';
       req.on('data', c => { body += c; });
@@ -32,7 +39,12 @@ const modSave = (): Plugin => ({
         try {
           const d = JSON.parse(body);
           if (typeof d.sprites !== 'object' || typeof d.labels !== 'object') throw new Error('expected {sprites, labels}');
-          fs.writeFileSync(path.join(server.config.root, 'src', 'mods.json'), body.endsWith('\n') ? body : body + '\n');
+          const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+          if (old && old.replace(/\s/g, '') !== body.replace(/\s/g, '')){
+            fs.mkdirSync(hist, {recursive: true});
+            fs.writeFileSync(path.join(hist, new Date().toISOString().replace(/[:.]/g, '-').slice(0, 23) + '.json'), old);
+          }
+          fs.writeFileSync(file, body.endsWith('\n') ? body : body + '\n');
           res.end('saved');
         } catch (e){ res.statusCode = 400; res.end(String(e)); }
       });

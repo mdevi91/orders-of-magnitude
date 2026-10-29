@@ -11,6 +11,7 @@ import { endSim } from './sim';
 import { genDesign, gunDirs, makeShip } from './ships';
 import { NODE, goOn, nextSector, toMap } from './starmap';
 import { G, blockCount, scaleOf, spanFor } from './state';
+import { rollHazard } from './hazards';
 import { tut, tutFight } from './tutorial';
 import { designStats, hideOverlay, showOverlay, syncUI, toast } from './ui';
 import { keys } from './update';
@@ -203,7 +204,7 @@ export function startFight(kind: FightKind){
   G.waves = planFight(kind, G.stage, G.node ? G.node.col : 1); G.waveIdx = 0; G.waveGap = 2.5;
   G.camX = p.x; G.camY = p.y; G.joy = null; G.aimJoy = null; G.deadT = 0; G.earned = 0; G.paused = false;
   G.banner = {text:G.waves.name || NODE[kind].name, sub:`Sector ${G.stage}`, t:2};
-  G.mode = 'combat'; hideOverlay(); syncUI(); tut('combat'); tutFight();
+  G.mode = 'combat'; hideOverlay(); syncUI(); tut('combat'); tutFight(); rollHazard();
   const st = designStats(), n = st.badT + st.badW + st.badE;
   if (n) toast(`${n} block${n>1?'s':''} can't fire or thrust: marked ✕ in drydock`);
 }

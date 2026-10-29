@@ -21,7 +21,9 @@ export type NodeType = keyof typeof NODE;
 export type FightKind = 'fight' | 'elite' | 'ambush' | 'gate' | 'boss' | 'station';
 
 export type BulletKind = 'shot' | 'oval' | 'slug' | 'line' | 'pellet' | 'ion' | 'torp' | 'mine' | 'miss' | 'mirv' | 'flak' | 'plasma'
-  | 'eoval' | 'egat' | 'eflak' | 'emiss' | 'snipe' | 'ring' | 'aim';
+  | 'goo' | 'hack' | 'eoval' | 'egat' | 'eflak' | 'emiss' | 'snipe' | 'ring' | 'aim' | 'egoo' | 'ehack';
+/** what a round leaves stuck to the hull it hits: goo slows the ship; a hacking module slows it, its reload and its generators */
+export type StickKind = 'goo' | 'hack';
 
 export interface GunDef {
   /** reach in world units at scale 1 */
@@ -37,6 +39,7 @@ export interface GunDef {
   aa?: boolean;
   /** fires over the ship's own hull, so nothing on board blocks it */
   over?: boolean;
+  stick?: StickKind;
 }
 export interface BlockDef {
   /** make: the manufacturer, for weapons and hangars */
@@ -56,7 +59,7 @@ export interface BlockDef {
 export interface EnemyGunDef {
   w: number; range: number; cd: number; spd: number; dmg: number; r: number; kind: BulletKind; spread?: number;
   burst?: number; gap?: number; fuse?: number; blast?: number; life?: number; aim?: number;
-  pellets?: number; fan?: number; split?: number; ion?: boolean; arc?: number; over?: boolean;
+  pellets?: number; fan?: number; split?: number; ion?: boolean; arc?: number; over?: boolean; stick?: StickKind;
   /** a beam that burns for dur seconds at dps, losing fall of it at full reach */ beam?: {dur: number; dps: number; fall?: number};
   /** lightning: hits the nearest block in reach, then jumps on to zap-1 more */ zap?: number;
 }
@@ -128,6 +131,8 @@ export interface Ship {
   bside?: number; bsT?: number;
   /** enemy AI: when a gun last fired, and how far it has closed in (0 to 1) because none has for a while */
   shotAt?: number; close?: number;
+  /** goo and hacking modules stuck to the hull: on block k, offset (ox, oy) from its centre, until time t */
+  stuck?: {k: Key; ox: number; oy: number; t: number; kind: StickKind}[];
   // hangar craft (either side)
   kind: CraftKind | null; bay: Block | null; sortie: number; aimA: number; cd: number; pick: number;
   /** shared life pool: every block adds to it, damage to any block takes from it, and the ship explodes at 0 */
@@ -138,7 +143,7 @@ export interface Ship {
 
 export interface Bullet {
   x: number; y: number; vx: number; vy: number; sp: number; r: number; dmg: number; life: number; life0?: number; kind: BulletKind;
-  dead?: boolean; fuse?: number; blast?: number; fall?: boolean; ion?: boolean; homing?: boolean; mirv?: number; aa?: boolean;
+  dead?: boolean; fuse?: number; blast?: number; fall?: boolean; ion?: boolean; stick?: StickKind; homing?: boolean; mirv?: number; aa?: boolean;
   /** missile exhaust trail as x,y pairs */
   tr?: number[] | null;
   /** a weaving missile's corkscrew: phase and turns per second */
@@ -189,6 +194,14 @@ export interface Meta { data: number; lv: Record<string, number>; best?: number;
   /** Engineering keeps one starting ship per cockpit */
   builds?: Partial<Record<CockpitId, StartDesign>>; runs?: number; wins?: number; earned?: number; kills?: number }
 export interface Stick { id: number; x0: number; y0: number; x: number; y: number }
+/** A battle hazard (see hazards.ts): its kind, a countdown to its next beat, and whether it has been announced */
+export interface Hazard {
+  kind: 'rocks' | 'storm' | 'flare'; t: number; on: boolean;
+  /** the way the asteroid hail flies */ dir: number;
+  rocks: {x: number; y: number; vx: number; vy: number; r: number; hp: number; a: number; w: number; shape: number[]}[];
+  bolts: {x: number; y: number; life: number; seed: number}[];
+  /** a flare's warning countdown, and the white-out after it */ warn: number; flash: number;
+}
 export interface Banner { text: string; sub: string; t: number; red?: boolean }
 export type Mode = 'title' | 'map' | 'build' | 'combat' | 'clear' | 'dead';
 
@@ -229,5 +242,7 @@ export interface GameState {
   /** the Phantom's Cloak runs until cloakT: enemies hold fire at the player */
   cloakT: number; fireHeld: boolean; mouse: { x: number; y: number; has: boolean };
   joy: Stick | null; aimJoy: Stick | null;
+  /** this fight's battle hazard, if any */
+  hz: Hazard | null;
   banner: Banner | null; deadT: number; earned: number; shake: number; aim: { x: number; y: number };
 }

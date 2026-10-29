@@ -66,30 +66,16 @@ export function showRnD(){
     '<div class="rows"><h3>Ship systems</h3></div><div class="tiles">' + META.filter(m => m.ship).map(t).join('') + '</div>',
     [['Back', showTitle]], true, {eye:'Station · Research & Development', ac:STATION_AC.rnd});
 }
-// Cantina: your records, a rumor from the bar, and the ship deck.
-const PILOTS = ['Vex, freighter captain', 'a bored dockhand', 'Okafor, ex-navy gunner', 'a pilot nursing a drink', 'Lin, salvage crew', 'the bartender'];
+// Cantina: your records and the ship deck.
 // station accent colours, matching their doorways in the base
 const STATION_AC = {cantina:'var(--line)', rnd:'var(--line)', eng:'var(--line)', hangar:'var(--line)'};
-const RUMORS = [
-  'Pilots say armor plates shrug off a third of every hit. Wrap your core in them.',
-  'Ion bolts jam the guns near where they hit. Aim them at a turret cluster.',
-  'Flak bursts clear enemy bullets out of the sky.',
-  'A ship explodes when its life runs out, core or not. Big hulls last longer.',
-  'Shops in deeper sectors stock rarer blocks.',
-  'Generators blow up and take their neighbours with them: shoot the enemy ones.',
-  'Every third sector ends in a flagship or a starbase. Arrive repaired.',
-  'Data buys more than you think. Research and Development never closes.',
-];
 export function showCantina(){
-  const m = G.meta, best = m.best || 1, next = PAL.map(t => T[t].unlock || 1).filter(u => u > best).sort((a,b) => a-b)[0];
-  const rumor = next && Math.random() < .4 ? `Word is that the sector ${next} yards are building something new. Get there and see.` : RUMORS[(Math.random()*RUMORS.length)|0];
+  const m = G.meta, best = m.best || 1;
   const ro = (v: string | number, k: string) => `<div class="readout"><b>${v}</b><span>${k}</span></div>`;
-  const who = PILOTS[(Math.random()*PILOTS.length)|0];
   // wiping every save takes three clicks; the button counts down
   let wipe = 0;
   const reset = () => { if (++wipe >= 3) return resetAll(); $('ovActions').lastElementChild!.textContent = wipe===1 ? 'Erase all progress? Click 2 more times' : 'Last chance: click once more'; sfx('hit'); };
-  showOverlay('Cantina', `<div class="rows"><h3>Your record</h3></div><div class="readouts">${ro(m.runs || 0, 'Runs')}${ro(m.wins || 0, 'Won')}${ro(best, 'Best sector')}${ro(m.earned || 0, 'Data earned')}${ro(m.kills || 0, 'Kills')}</div>` +
-    `<div class="rows"><h3>Overheard at the bar</h3></div><blockquote class="quote">“${rumor}”<cite>— ${who}</cite></blockquote>`,
+  showOverlay('Cantina', `<div class="rows"><h3>Your record</h3></div><div class="readouts">${ro(m.runs || 0, 'Runs')}${ro(m.wins || 0, 'Won')}${ro(best, 'Best sector')}${ro(m.earned || 0, 'Data earned')}${ro(m.kills || 0, 'Kills')}</div>`,
     [['Ship deck', showDeck], ['Back', showTitle, 'ghost'], ['Reset everything', reset, 'ghost reset']], true, {eye:'Station · Cantina', ac:STATION_AC.cantina});
 }
 // Ship deck: every block, what it does, how rare it is, and where it unlocks.

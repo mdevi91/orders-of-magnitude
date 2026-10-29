@@ -9,7 +9,7 @@ import { locked } from './targeting';
 import { REDUCE } from './view';
 
 // ---------- bullets ----------
-// Flak burst: falls off from the centre, hits every enemy block in range and clears enemy bullets caught in it.
+// Flak burst: falls off from the centre, hits every enemy block in range and clears enemy bullets within half its radius.
 export function flakBurst(b: Bullet){
   const blast = b.blast || 0;
   b.dead = true; boomAt(b.x, b.y, blast*.55, .25); sfx('boom', .5);
@@ -22,7 +22,8 @@ export function flakBurst(b: Bullet){
       if (d < blast) damage(e, k, b.dmg*(1 - .6*d/blast));
     }
   }
-  for (const x of G.eb) if (!x.dead && Math.hypot(x.x-b.x, x.y-b.y) < blast) x.dead = true;
+  // only bullets near the heart of the burst are wiped out
+  for (const x of G.eb) if (!x.dead && Math.hypot(x.x-b.x, x.y-b.y) < blast*.5) x.dead = true;
 }
 // Missile warhead: wide blast that hits every block within 1.6 cells of the impact, falling off from the centre.
 export function missileBlast(b: Bullet, e: Ship, k: Key){
@@ -59,7 +60,7 @@ export function pBullet(x: number, y: number, ang: number, gun: GunDef, target: 
   const sp = gun.spd*G.SC*(gun.homing || gun.mirv ? .85 : 1), life = gun.homing ? 7 : gun.life || (gun.range ? gun.range*cockpit().range/gun.spd : 3);
   // weaving warheads leave the pod at a quarter to half speed, so a volley ripples out instead of flying as one
   const v0 = gun.weave ? sp*rand(.25,.5) : sp;
-  G.pb.push({x, y, vx:Math.cos(ang)*v0, vy:Math.sin(ang)*v0, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC,
+  G.pb.push({x, y, vx:Math.cos(ang)*v0, vy:Math.sin(ang)*v0, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, stick:gun.stick, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC,
     life, life0:life, fall:!!gun.range && !gun.homing && !gun.lob && !gun.nofall, homing:!!gun.homing, aa:!!gun.aa, tr:gun.homing ? [] : null, target, mirv:gun.mirv || 0,
     kind:gun.mirv ? 'mirv' : gun.homing ? 'miss' : gun.fx || 'shot', ...(gun.weave ? {wv:rand(0,TAU), wf:rand(1.4,2.4)*(Math.random() < .5 ? -1 : 1), prox:Math.random() < .5 ? rand(1.2,2.2)*BS*G.SC : 0} : {})});
 }

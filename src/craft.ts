@@ -161,6 +161,7 @@ export function enemyFire(e: Ship, dt: number){
       if (w.kind==='emiss'){ b.tgt = tgt; b.tr = []; b.life = b.life0 = 7; b.mirv = w.split || 0; }
       if (w.fuse){ b.fuse = w.fuse*e.sc; b.blast = w.blast!*e.sc; b.life = w.life!; }
       if (w.ion) b.ion = true;
+      if (w.stick) b.stick = w.stick;
     }
   }
 }

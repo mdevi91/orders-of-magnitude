@@ -6,11 +6,12 @@ import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
 import { BS, FA, K, NB, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { dirSpeed } from './physics';
-import { boomAt, broadside, damage, hitShip, impact, killShip, laneClear, rayHits, sparks, wpos } from './ships';
+import { boomAt, broadside, damage, drag, hitShip, impact, killShip, laneClear, rayHits, sparks, stick, wpos } from './ships';
 import { G, turnOf } from './state';
 import { tut, tutTick } from './tutorial';
 import type { Block, Key, Ship } from './types';
 import { simOver } from './sim';
+import { updateHazard } from './hazards';
 import { locked } from './targeting';
 import { H, REDUCE, W } from './view';
 
@@ -160,8 +161,10 @@ export function update(dt: number){
   const may = (b: Block) => (b.jam || 0) <= G.time && (fire || isAuto(b)), aimX = (b: Block) => isAuto(b) ? px : ax!, aimY = (b: Block) => isAuto(b) ? py : ay;
 
   const spend = (c: number) => { if (p.en < c) return false; p.en -= c; return true; };
+  // enemy goo and hacking modules stuck to the hull slow its flying, reloads and generators
+  const slow = drag(p);
   if (p.alive){
-    p.en = Math.min(p.enMax, p.en + p.enRegen*dt);
+    p.en = Math.min(p.enMax, p.en + p.enRegen*slow.gen*dt);
     const ph = p.ph;
     for (const e of ph.engines) e.c.firing = false;
     // movement: top speed depends on how much engine thrust points the way you want to go.
@@ -189,7 +192,7 @@ export function update(dt: number){
     }
     const ml = Math.hypot(mx,my), ux = ml ? mx/ml : 0, uy = ml ? my/ml : 0;
     const lx = ux*p.c + uy*p.sn, ly = -ux*p.sn + uy*p.c;
-    const spd = ml ? dirSpeed(ph,lx,ly)*SC*analog*cpSpeed() : 0;
+    const spd = ml ? dirSpeed(ph,lx,ly)*SC*analog*cpSpeed()*slow.move : 0;
     p.vx += (ux*spd - p.vx)*Math.min(1,dt*(ml ? 5 : 3));
     p.vy += (uy*spd - p.vy)*Math.min(1,dt*(ml ? 5 : 3));
     p.x += p.vx*dt; p.y += p.vy*dt;
@@ -206,7 +209,7 @@ export function update(dt: number){
     p.a += drift/ph.inertia*dt;
     // nose swings toward the aim point (or turns on A/D); engines whose push helps the turn act as jets
     const aimTurn = !kb || shift, want = Math.atan2(ax!-p.x, -(ay-p.y)), da = aimTurn ? angDiff(want,p.a) : turnIn, cw = da > 0;
-    const rate = turnOf(ph.torque + (cw ? ph.jetCW : ph.jetCCW), ph.inertia, ph.mass)*cpTurn();
+    const rate = turnOf(ph.torque + (cw ? ph.jetCW : ph.jetCCW), ph.inertia, ph.mass)*cpTurn()*slow.move;
     // angular momentum: heavy hulls take time to start and stop a turn
     const wWant = aimTurn ? clamp(da*4, -rate, rate) : turnIn*rate, acc = rate*2.5;
     p.w = (p.w||0) + clamp(wWant - (p.w||0), -acc*dt, acc*dt);
@@ -250,7 +253,7 @@ export function update(dt: number){
   if (p.alive){
     // turrets: inside their arc and with a clear line out of the hull
     // Fire control speeds every weapon's cycle; a Cruiser reloads its launchers faster; a Salvo fires them on its own
-    const RATE = G.fireT > G.time ? 1.5 : 1, salvo = G.salvoT > G.time;
+    const RATE = (G.fireT > G.time ? 1.5 : 1)*slow.fire, salvo = G.salvoT > G.time;
     for (const g of p.guns){
       const ms = missileGun(g), self = salvo && ms;
       // reloads run all the time, firing or not
@@ -381,7 +384,7 @@ export function update(dt: number){
   // enemies
   for (const e of enemies){
     if (e.craft){ updateECraft(e, dt, allies); continue; }
-    const dx = p.x-e.x, dy = p.y-e.y;
+    const dx = p.x-e.x, dy = p.y-e.y, slowE = drag(e);
     // turn the side with the most guns that bear toward the player, re-checked as guns are lost
     if (!e.station && G.time >= (e.bsT || 0)){ e.bside = broadside(e); e.bsT = G.time + 2; }
     const want = Math.atan2(dx,-dy) - ((e.bside ?? FA[0]) - FA[0]);
@@ -392,7 +395,7 @@ export function update(dt: number){
     else {
       // the same physics as the player: turning from the core, gyros and engine jets against the hull's inertia;
       // speed from the thrust that points the way it wants to go, against its mass
-      const ph = e.ph, turn = turnOf(ph.torque + (ph.jetCW + ph.jetCCW)/2, ph.inertia, ph.mass);
+      const ph = e.ph, turn = turnOf(ph.torque + (ph.jetCW + ph.jetCCW)/2, ph.inertia, ph.mass)*slowE.move;
       e.a += clamp(angDiff(want,e.a), -turn*dt, turn*dt);
       // a ship whose guns have not fired for 4 s (out of reach, or blocked circling) closes in and stops circling until
       // they do; once firing again it eases back out to its own distance
@@ -406,7 +409,7 @@ export function update(dt: number){
       const ex = tx-e.x, ey = ty-e.y, el = Math.hypot(ex,ey) || 1, ux = ex/el, uy = ey/el;
       // big hulls lumber: top speed falls off with size, from full at about 24 blocks to under a third for a dreadnought
       const bulk = Math.min(1, Math.max(.3, Math.pow(24/Math.max(1, e.blocks.size), .45)));
-      const v = e.vmax === 0 ? 0 : Math.min(dirSpeed(ph, ux*e.c + uy*e.sn, -ux*e.sn + uy*e.c)*e.sc*bulk, el*1.2);
+      const v = e.vmax === 0 ? 0 : Math.min(dirSpeed(ph, ux*e.c + uy*e.sn, -ux*e.sn + uy*e.c)*e.sc*bulk*slowE.move, el*1.2);
       e.vx += (ex/el*v - e.vx)*Math.min(1,dt*1.4); e.vy += (ey/el*v - e.vy)*Math.min(1,dt*1.4);
       e.x += e.vx*dt; e.y += e.vy*dt;
     }
@@ -415,7 +418,7 @@ export function update(dt: number){
       const k = hitShip(p, e.x, e.y, e.r*.5);
       if (k >= 0){ damage(p, k, 1 + e.blocks.size*.4); G.shake = Math.max(G.shake, 2); sfx('ram'); killShip(e); continue; }
     }
-    if (p.alive) enemyFire(e, dt*e.fireMul);
+    if (p.alive) enemyFire(e, dt*e.fireMul*slowE.fire);
     // point defense: shoots down the player's missiles and MIRV warheads
     for (const d of e.epd){
       if ((d.jam || 0) > G.time) continue;
@@ -428,7 +431,7 @@ export function update(dt: number){
     }
     for (const sb of e.shields){
       const B = sb.bub!;
-      if (B.down > 0) B.down -= dt; else if (G.time - B.last > ESH.delay) B.hp = Math.min(B.max, B.hp + ESH.regen*e.hpMul*dt);
+      if (B.down > 0) B.down -= dt; else if (G.time - B.last > ESH.delay) B.hp = Math.min(B.max, B.hp + ESH.regen*e.hpMul*slowE.gen*dt);
     }
     // carriers fly the player's fighters and bombers: one craft per bay at a time, a new one some time after it is lost
     if (e.bays.length && p.alive) for (const b of e.bays){
@@ -451,6 +454,8 @@ export function update(dt: number){
   for (const b of G.pb){
     if (b.dead) continue;
     if (b.kind==='mine'){ const f = Math.pow(.35, dt); b.vx *= f; b.vy *= f; }
+    // a hacking module drifts after its target
+    if (b.kind==='hack' && b.target?.alive){ const na = Math.atan2(b.vy,b.vx) + clamp(angDiff(Math.atan2(b.target.y-b.y, b.target.x-b.x), Math.atan2(b.vy,b.vx)), -.9*dt, .9*dt); b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp; }
     if (b.homing){
       if (lock && b.target !== lock) b.target = lock;
       if (!b.target || !b.target.alive){ let bd = 1e18; b.target = null; for (const e of enemies){ const d = (e.x-b.x)**2 + (e.y-b.y)**2; if (d < bd){ bd = d; b.target = e; } } }
@@ -491,7 +496,7 @@ export function update(dt: number){
         const burst = b.kind==='flak' || b.kind==='plasma' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse || 0 : b.r);
         if (k >= 0 && burst){ flakBurst(b); break; }
         if (k >= 0){
-          const hb = e.blocks.get(k)!; b.dmg *= fallOff(b)*(b.aa && e.craft ? 2 : 1); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.kind==='slug') impact(b,e,k, false, true); if (b.homing) missileBlast(b,e,k);
+          const hb = e.blocks.get(k)!; if (b.stick) stick(e, k, b.x, b.y, b.stick); b.dmg *= fallOff(b)*(b.aa && e.craft ? 2 : 1); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.kind==='slug') impact(b,e,k, false, true); if (b.homing) missileBlast(b,e,k);
           if (b.kind==='torp'){ missileBlast(b,e,k); impact(b,e,k); }
           if (b.ion){ ionJam(e, hb); sparks(b.x, b.y, 0, 8, 140*SC, ['#a070ff','#e8dcff','#ffffff']); } G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }
@@ -521,6 +526,7 @@ export function update(dt: number){
         continue;
       }
     }
+    if (b.kind==='ehack' && p.alive){ const na = Math.atan2(b.vy,b.vx) + clamp(angDiff(Math.atan2(p.y-b.y, p.x-b.x), Math.atan2(b.vy,b.vx)), -.7*dt, .7*dt); b.vx = Math.cos(na)*b.sp; b.vy = Math.sin(na)*b.sp; }
     if (b.kind==='eflak'){
       // flak bursts when it comes near a hull or runs out of fuse
       let near = b.life <= dt;
@@ -534,6 +540,7 @@ export function update(dt: number){
         if (shieldBlock(p,b)){ b.dead = true; break; }
         const k = hitShip(p,b.x,b.y,b.r);
         if (k >= 0){
+          if (b.stick) stick(p, k, b.x, b.y, b.stick);
           b.dmg *= fallOff(b); damage(p,k,b.dmg); sfx('hit'); b.dead = true; G.fx.push({k:'spk', x:b.x, y:b.y, vx:0, vy:0, life:.2, max:.2, col:BCOL[b.kind]});
           if (b.kind==='snipe') boomAt(b.x,b.y,8*SC,.2);
           if (b.kind==='eoval'){ if (p.alive) for (const d of NB) if (p.blocks.has(k+d)) damage(p, k+d, b.dmg*.4); boomAt(b.x,b.y,9*SC,.2); }
@@ -554,6 +561,7 @@ export function update(dt: number){
   G.ships = G.ships.filter(s => s.alive || s===p);
 
   updateFx(dt);
+  updateHazard(dt);
 
   // zoom-out animation: ease in and out over 4 s
   if (G.spanAt < 1){ G.spanAt = Math.min(1, G.spanAt + dt/4); const k = G.spanAt*G.spanAt*(3 - 2*G.spanAt); G.span = G.span0 + (G.spanT - G.span0)*k; }

@@ -10,6 +10,7 @@ import { JOY_R, RAIL_CHARGE, keys } from './update';
 import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship, Stick, Team } from './types';
 import { drawTargeting } from './targeting';
 import { drawStatus } from './status';
+import { drawHazard } from './hazards';
 import { $, DPR, FONT, H, PX, W, ctx, hctx } from './view';
 import { BAKE, blit, hasSpr, sprTinted, type Tint } from './mods';
 
@@ -50,7 +51,7 @@ export function tintFor(team: Team, mat: 'hull' | 'armor' | 'dark' | 'cockpit' |
   return mat==='cockpit' ? {key:G.paint+'ck', src:[...MET.p.hull, ...MET.p.armor], dst:[...P.hull, ...P.armor]} : {key:G.paint+mat, src:MET.p[mat], dst:P[mat]};
 }
 // parts whose barrel swings to the aim point; their sprite is drawn turned that way
-export const TURRET = new Set<string>(['cannon', 'gun', 'bigcannon', 'hgatling', 'scatter', 'ion', 'torpedo', 'flak', 'gatling', 'plasma', 'glimmer']);
+export const TURRET = new Set<string>(['cannon', 'gun', 'bigcannon', 'hgatling', 'scatter', 'ion', 'goo', 'hack', 'torpedo', 'flak', 'gatling', 'plasma', 'glimmer']);
 export function plate(X: Ctx, x: number, y: number, m: Pal3){
   X.fillStyle = '#0b0d12'; X.fillRect(x-5,y-5,10,10);
   X.fillStyle = m[1]; X.fillRect(x-4.4,y-4.4,8.8,8.8);
@@ -144,6 +145,16 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
     case 'ion':
       barrel(X,x,y,ca,sa,6,2,['#c8f4ff','#3a8ab0','#0a2a3a']); orb(X,x,y,3, ['#0a2a4a','#2a9ad0','#9ae8ff']);
       X.fillStyle = Math.sin(G.time*8) > 0 ? '#ffffff' : '#5fe0ff'; X.fillRect(x-.6,y-.6,1.2,1.2); break;
+    case 'goo':
+      // a flared spray nozzle over a bubbling tank of goo
+      barrel(X,x,y,ca,sa,5.6,2.2,gun); X.fillStyle = gun[2]; X.fillRect(x + ca*5.6 - 1.4, y + sa*5.6 - 1.4, 2.8, 2.8);
+      orb(X,x,y,3.2, ['#1a3a0a','#4aa020','#9cff5a']);
+      X.fillStyle = '#e8ffd0'; X.fillRect(x - 1 + Math.sin(G.time*3 + x)*.8, y - .8, 1, 1); break;
+    case 'hack':
+      // a launch cradle holding the next hacking module, its status light blinking
+      barrel(X,x,y,ca,sa,6.2,2.6,gun); orb(X,x,y,3, ['#0a2a20','#1a8a60','#4affb0']);
+      X.fillStyle = '#1a1e24'; X.fillRect(x + ca*3 - 1.3, y + sa*3 - 1.3, 2.6, 2.6);
+      X.fillStyle = Math.sin(G.time*6 + x) > 0 ? '#4affb0' : '#ff3d5a'; X.fillRect(x + ca*3 - .5, y + sa*3 - .5, 1, 1); break;
     case 'tesla': {
       X.fillStyle = '#1a1430'; X.fillRect(x-3.6,y-3.6,7.2,7.2);
       orb(X,x,y,3, ['#2a1a4a','#8a6ae0','#e8dcff']);
@@ -446,6 +457,26 @@ export function drawShip(s: Ship){
   for (const b of s.blocks.values()) if ((b.jam || 0) > G.time){
     ctx.globalAlpha = .35 + .3*Math.sin(G.time*40 + b.i*3); ctx.fillStyle = '#a070ff'; ctx.fillRect(b.i*BS-5, b.j*BS-5, 10, 10); ctx.globalAlpha = 1;
   }
+  // goo and hacking modules stuck to the hull
+  if (s.stuck) for (const q of s.stuck){
+    const b = s.blocks.get(q.k); if (!b || q.t <= G.time) continue;
+    const x = b.i*BS + q.ox, y = b.j*BS + q.oy, fade = Math.min(1, (q.t - G.time)/.8), foe = s.team==='p';
+    ctx.globalAlpha = fade;
+    if (q.kind==='goo'){
+      const h = (q.ox*7.3 + q.oy*3.1) & 3;
+      ctx.fillStyle = foe ? BCOL.egoo : BCOL.goo; ctx.fillRect(x-1.5, y-1, 3, 2); ctx.fillRect(x-1, y-1.5, 2, 3);
+      ctx.fillRect(x + (h&1 ? 1.5 : -2.5), y + (h&2 ? 1 : -2), 1, 1); ctx.fillRect(x - .5, y + 1.5, 1, 1 + (h&1));
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x-1, y-1, .8, .8);
+    } else {
+      ctx.strokeStyle = foe ? BCOL.ehack : BCOL.hack; ctx.lineWidth = .6; ctx.beginPath();
+      for (const sy of [-1, 1]) for (const sx of [-1, 1]){ ctx.moveTo(x + sx*1.2, y + sy*1.2); ctx.lineTo(x + sx*2.8, y + sy*2.2); }
+      ctx.stroke(); ctx.fillStyle = '#1a1e24'; ctx.fillRect(x-1.8, y-1.5, 3.6, 3);
+      ctx.fillStyle = Math.sin(G.time*10 + x) > 0 ? (foe ? BCOL.ehack : BCOL.hack) : '#ffffff'; ctx.fillRect(x-.5, y-.5, 1, 1);
+      // interference: a flicker of static across the hacked block
+      if (Math.sin(G.time*23 + x*5) > .7){ ctx.globalAlpha = .35*fade; ctx.fillRect(b.i*BS-5, b.j*BS-1 + Math.sin(G.time*31)*3, 10, 1); }
+    }
+    ctx.globalAlpha = 1;
+  }
   ctx.restore();
 }
 // deep-space backdrop: three parallax star layers and a few nebula clouds, all in screen space
@@ -467,7 +498,7 @@ export function drawSpace(cx: number, cy: number, z: number){
   }
 }
 // enemy rounds share the shape of the player's matching weapon, only the hue differs
-export const SHAPE: Partial<Record<BulletKind, BulletKind>> = {eoval:'oval', egat:'line', emiss:'miss', eflak:'flak', snipe:'oval'};
+export const SHAPE: Partial<Record<BulletKind, BulletKind>> = {eoval:'oval', egat:'line', emiss:'miss', eflak:'flak', snipe:'oval', egoo:'goo', ehack:'hack'};
 // A round in flight with its glow (all but the hairline tracers), at x, y heading along ang; s is its size in pixels,
 // small draws a light cannon shell a little under its hit size, len is a core-gun tracer's length.
 export function bulletHead(X: Ctx, kind: BulletKind, x: number, y: number, s: number, ang: number, wf = 0, small = false, len = 5){
@@ -485,6 +516,21 @@ export function bulletHead(X: Ctx, kind: BulletKind, x: number, y: number, s: nu
     X.strokeStyle = '#e8dcff'; X.lineWidth = 1; X.beginPath();
     for (let q=0; q<3; q++){ const a = rand(0,TAU), r2 = R*rand(1.6,2.6); X.moveTo(x + Math.cos(a)*R, y + Math.sin(a)*R); X.lineTo(x + Math.cos(a+rand(-.5,.5))*r2*.7, y + Math.sin(a+rand(-.5,.5))*r2*.7); X.lineTo(x + Math.cos(a)*r2, y + Math.sin(a)*r2); }
     X.stroke();
+  } else if (k==='goo'){
+    // a wobbling glob of goo with two droplets trailing behind
+    const R = s*1.3 + .7, w = Math.sin(G.time*14 + x)*.25;
+    X.fillStyle = BCOL[kind]; X.beginPath(); X.ellipse(x, y, R*(1 + w), R*(1 - w), ang, 0, TAU); X.fill();
+    X.fillRect(Math.round(x - ca*R*2), Math.round(y - sa*R*2), 1, 1); X.fillRect(Math.round(x - ca*R*3.2 + sa), Math.round(y - sa*R*3.2 - ca), 1, 1);
+    X.fillStyle = '#ffffff'; X.fillRect(Math.round(x + ca*R*.3 - sa*R*.3), Math.round(y + sa*R*.3 + ca*R*.3), 1, 1);
+  } else if (k==='hack'){
+    // a hacking module: a dark box with four grabbing legs and a blinking light
+    const q = s*1.2 + .8;
+    X.save(); X.translate(x, y); X.rotate(ang);
+    X.strokeStyle = BCOL[kind]; X.lineWidth = .7; X.beginPath();
+    for (const sy of [-1, 1]) for (const sx of [-1, 1]){ X.moveTo(sx*q*.6, sy*q*.6); X.lineTo(sx*q*1.5, sy*q*1.1); }
+    X.stroke(); X.fillStyle = '#1a1e24'; X.fillRect(-q, -q*.8, 2*q, 1.6*q);
+    X.fillStyle = Math.sin(G.time*12) > 0 ? BCOL[kind] : '#ffffff'; X.fillRect(-.5, -.5, 1, 1);
+    X.restore();
   } else if (k==='slug'){
     // Goliath slug: a blunt, fat nose tapering to a narrow tail, a white-hot face and three heavy speed lines behind
     const q = s;
@@ -629,6 +675,7 @@ export function renderCombat(){
   }
 
   for (const s of G.ships) if (s.alive) drawShip(s);
+  drawHazard(ctx, sx, sy, z, W, H);
 
   // the cockpit ability's cooldown: a ring round the ship fills up as it recharges, then flashes once when ready
   if (p && p.alive && !(p.warp || 0)){

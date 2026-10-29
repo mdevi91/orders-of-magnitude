@@ -4,7 +4,7 @@ import { BS, CORE, FA, K, KI, KJ, NB, SWING, angDiff, rand } from './grid';
 import { laneFwd, partComplete, physics } from './physics';
 import { metaLv } from './runs';
 import { G } from './state';
-import type { Block, BlockType, Cell, EnemyCell, Facing, Key, Physics, Ship, Team } from './types';
+import type { Block, BlockType, Cell, EnemyCell, Facing, Key, Physics, Ship, StickKind, Team } from './types';
 import { REDUCE } from './view';
 
 // Life: every block adds its hit points times LIFE to the ship's life, and every point of damage a block takes comes off it too.
@@ -196,6 +196,25 @@ export function broadside(s: Ship){
 }
 /** World position of a block on a ship. */
 export function wpos(s: Ship, b: {i: number; j: number}): [number, number] { const lx=b.i*BS, ly=b.j*BS; return [s.x + lx*s.c - ly*s.sn, s.y + lx*s.sn + ly*s.c]; }
+// Goo and hacking modules stick where they hit, riding the block until they wear off or it is shot away.
+// Each goo blob takes 5% off speed and turning (down to 45%); each hacking module, up to 3, takes 15% off speed,
+// 25% off reload and 30% off generator output (energy for the player, shield recharge for enemies).
+export const STICK = {goo:{t:5, max:30}, hack:{t:10, max:3}} as const;
+export function stick(s: Ship, k: Key, x: number, y: number, kind: StickKind){
+  const b = s.blocks.get(k); if (!b) return;
+  const dx = x-s.x, dy = y-s.y, lx = dx*s.c + dy*s.sn, ly = -dx*s.sn + dy*s.c, L = (s.stuck ||= []);
+  L.push({k, ox:Math.max(-4, Math.min(4, lx - b.i*BS)), oy:Math.max(-4, Math.min(4, ly - b.j*BS)), t:G.time + STICK[kind].t, kind});
+  const mine = L.filter(q => q.kind===kind);
+  if (mine.length > STICK[kind].max) L.splice(L.indexOf(mine[0]), 1);
+}
+/** How much what is stuck to a ship slows it: multipliers for speed and turning, reload, and generators. */
+export function drag(s: Ship){
+  if (!s.stuck?.length) return {move:1, fire:1, gen:1};
+  s.stuck = s.stuck.filter(q => q.t > G.time && s.blocks.has(q.k));
+  let goo = 0, hack = 0;
+  for (const q of s.stuck) if (q.kind==='goo') goo++; else hack++;
+  return {move:Math.max(.45, 1 - .05*goo)*(1 - .15*hack), fire:1 - .25*hack, gen:1 - .3*hack};
+}
 /** The ship's block nearest (x,y) within r, or -1. */
 export function hitShip(s: Ship, x: number, y: number, r: number): Key {
   const dx = x-s.x, dy = y-s.y, rr = s.r + r;

@@ -6,7 +6,7 @@ import { $ } from './view';
 // ---------- tutorial ----------
 // One tip the first time each screen or mechanic comes up, remembered in this browser. Skip turns them all off.
 export const TUT: Record<string, [title: string, text: string]> = {
-  title:['Welcome aboard', 'This is your base. Walk into the <b>Hangar</b> to launch a run, <b>Engineering</b> to design the ship every run starts with, <b>Research &amp; Development</b> to spend data on upgrades, and the <b>Cantina</b> for records and rumors.'],
+  title:['Welcome aboard', 'This is your base. Walk into the <b>Hangar</b> to launch a run, <b>Engineering</b> to design the ship every run starts with, <b>Research &amp; Development</b> to spend data on upgrades, and the <b>Cantina</b> for your records.'],
   map:['Star map', 'Click a beacon linked to yours to jump there: <b>!</b> fight, <b>$</b> shop, <b>?</b> signal, <b>*</b> wreckage, <b>+</b> repair dock. Reach the gate on the far right to leave the sector. <b>Open drydock</b> (or <b>D</b>) to rebuild between jumps.'],
   combat:['Fighting', '<b>W/S</b> thrust, <b>A/D</b> turn. Aim with the mouse; click or hold <b>Space</b> to fire. <b>Shift</b> points the nose at the mouse while <b>A/D</b> slide sideways; <b>T</b> turns on auto-aim. The mouse wheel or <b>+ / −</b> zooms; on touch, drag to move. Destroy every hostile to win. Every block adds to your Life bar; lose it all, or the core, and the run is over.'],
   target:['Targeting', 'Press <b>Q</b>: the fight slows to a crawl while you pick. Click a hostile to lock it, and your auto weapons, auto-aim, missiles, fighters and bombers go for it first. The card top right shows what it carries. Click empty space to clear the lock.'],

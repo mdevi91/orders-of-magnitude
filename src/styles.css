@@ -289,8 +289,6 @@ button,.pal,label{touch-action:manipulation}
 .unl{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
 .unl span{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 4px;border:2px solid var(--line);color:var(--paper);font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:.03em}
 .unl .bi{width:20px;height:20px}
-.quote{margin:0;padding:10px 14px;border:2px solid var(--dim);color:var(--paper);font-family:var(--mono);font-size:14px;line-height:1.5}
-.quote cite{display:block;margin-top:6px;color:var(--muted);font-style:normal;font-size:12px}
 /* ---------- full-screen layouts (shop, after-action report): their content brings its own title and columns ---------- */
 .card[data-screen=shop],.card[data-screen=report]{max-width:min(1160px,calc(100vw - 32px));width:100%;height:min(720px,calc(100vh - 32px));padding:34px 28px 22px;gap:0}
 .card[data-screen=shop] .ovh,.card[data-screen=report] .ovh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
