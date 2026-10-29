@@ -4,7 +4,8 @@ import { BS, CORE, FA, K, KI, KJ, NB, SWING, angDiff, rand } from './grid';
 import { laneFwd, partComplete, physics } from './physics';
 import { metaLv } from './runs';
 import { G } from './state';
-import type { Block, BlockType, Cell, EnemyCell, Facing, Key, Physics, Ship, StickKind, Team } from './types';
+import { cellsFor } from './editor';
+import type { Block, BlockType, Boost, Cell, EnemyCell, Facing, Key, Physics, Ship, StickKind, Team } from './types';
 import { REDUCE } from './view';
 
 // Life: every block adds its hit points times LIFE to the ship's life, and every point of damage a block takes comes off it too.
@@ -196,6 +197,19 @@ export function broadside(s: Ship){
 }
 /** World position of a block on a ship. */
 export function wpos(s: Ship, b: {i: number; j: number}): [number, number] { const lx=b.i*BS, ly=b.j*BS; return [s.x + lx*s.c - ly*s.sn, s.y + lx*s.sn + ly*s.c]; }
+// Support modules: each one touching a weapon, corners included, adds its share to the weapon's range, damage or reload
+// speed, and to its energy use. Worked out once, then again whenever the ship loses a block.
+const NB8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+export function boost(s: Ship, b: Block): Boost {
+  if (b.bst && b.bst.n === s.blocks.size) return b.bst;
+  const r = {rng:1, dmg:1, rate:1, en:1, n:s.blocks.size}, cs = cellsFor(b.i, b.j, b.t, b.o), own = new Set(cs.map(([i,j]) => K(i,j))), seen = new Set<Key>();
+  for (const [i,j] of cs) for (const [di,dj] of NB8){
+    const k = K(i+di, j+dj); if (own.has(k) || seen.has(k)) continue; seen.add(k);
+    const m = s.blocks.get(k), M = m && def(m.t)?.mod; if (!M) continue;
+    r.rng += M.rng || 0; r.dmg += M.dmg || 0; r.rate += M.rate || 0; r.en += M.en;
+  }
+  return b.bst = r;
+}
 // Goo and hacking modules stick where they hit, riding the block until they wear off or it is shot away.
 // Each goo blob takes 5% off speed and turning (down to 45%); each hacking module, up to 3, takes 15% off speed,
 // 25% off reload and 30% off generator output (energy for the player, shield recharge for enemies).

@@ -1,12 +1,12 @@
 import { sfx } from './audio';
 import { EB_SPD, PD_KINDS, aimPoint, eBullet, fallOff, flakBurst, mirvSplit, missileBlast, pBullet, shieldBlock } from './bullets';
-import { BCOL, CRAFT, ESH, HM, LV, T, bayKind, cockpit, cpArc, cpSpeed, cpTurn, def, grpOf, isCraft } from './catalog';
+import { BCOL, CRAFT, ESH, HM, LV, T, rangeMul, traverse, turns, bayKind, cockpit, cpArc, cpSpeed, cpTurn, def, grpOf, isCraft } from './catalog';
 import { blastShip, eBurst, enemyFire, fireRail, launchCraft, launchECraft, updateCraft, updateECraft, updateFx, updateSlugs } from './craft';
 import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
 import { BS, FA, K, NB, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { dirSpeed } from './physics';
-import { boomAt, broadside, damage, drag, hitShip, impact, killShip, laneClear, rayHits, sparks, stick, wpos } from './ships';
+import { boomAt, boost, broadside, damage, drag, hitShip, impact, killShip, laneClear, rayHits, sparks, stick, wpos } from './ships';
 import { G, turnOf } from './state';
 import { tut, tutTick } from './tutorial';
 import type { Block, Key, Ship } from './types';
@@ -115,7 +115,8 @@ export function useAbility(p: Ship, ax: number, ay: number, ux: number, uy: numb
   }
 }
 export function update(dt: number){
-  const RM = cockpit().range; // the command bridge stretches every weapon's reach
+  // each weapon's reach: the command bridge stretches all of them, and every upgrade level adds 10%
+  const RM = cockpit().range;
   G.time += dt;
   if (G.impT > 0) G.impT -= dt;
   if (G.stats) G.stats.secs = (G.stats.secs || 0) + dt;
@@ -255,38 +256,49 @@ export function update(dt: number){
     // Fire control speeds every weapon's cycle; a Cruiser reloads its launchers faster; a Salvo fires them on its own
     const RATE = (G.fireT > G.time ? 1.5 : 1)*slow.fire, salvo = G.salvoT > G.time;
     for (const g of p.guns){
-      const ms = missileGun(g), self = salvo && ms;
+      const ms = missileGun(g), self = salvo && ms, B = boost(p, g), RG = rangeMul(g.t)*B.rng;
       // reloads run all the time, firing or not
-      if (g.cd > 0) g.cd -= dt*RATE*(ms ? cockpit().mrl || 1 : 1);
+      if (g.cd > 0) g.cd -= dt*RATE*B.rate*(ms ? cockpit().mrl || 1 : 1);
       // a ripple-fire pod launches its whole volley in 0.6 s, each warhead at random within 115° either side of the target
       if (g.rip){
         g.ripT = (g.ripT || 0) - dt;
         while (g.rip > 0 && g.ripT <= 0){
           const [rx,ry] = wpos(p,g), tg = g.ripTg?.alive ? g.ripTg : tgtM, a = tg ? Math.atan2(tg.y-ry, tg.x-rx) : g.ripA || 0;
-          pBullet(rx, ry, a + rand(-1,1)*115*Math.PI/180, def(g.t)!.gun!, tg, LV(g.t)*HM.dmg());
+          pBullet(rx, ry, a + rand(-1,1)*115*Math.PI/180, def(g.t)!.gun!, tg, LV(g.t)*HM.dmg()*B.dmg, RG);
           sfx('missile', .5); g.rip--; g.ripT += .6/12;
         }
       }
+      const gun = def(g.t)!.gun!, TV = turns(g.t) ? traverse(g.t) : null, arc = TV ? TV.arc : cpArc(gun.arc || 0), face = p.a + FA[g.o];
+      // a turret swings toward what it aims at, at its mount's speed, reloading or not: on auto the ship it last picked
+      // (before its first pick, the lock or the enemy nearest the cursor), by hand the cursor
+      if (TV){
+        const [wx,wy] = wpos(p,g), auto = isAuto(g) || self, tgt = !auto ? null : g.tgt?.alive ? g.tgt : lock || tgtM;
+        const want = tgt ? Math.atan2(tgt.y-wy, tgt.x-wx) : auto ? null : Math.atan2(aimY(g)-wy, aimX(g)-wx);
+        if (want != null){ const cur = g.tr || 0, step = TV.turn*dt; g.tr = cur + clamp(clamp(angDiff(want, face), -arc, arc) - cur, -step, step); }
+      }
       if ((!may(g) && !self) || g.cd > 0) continue;
-      const gun = def(g.t)!.gun!, arc = cpArc(gun.arc || 0), [wx,wy] = wpos(p,g);
+      const [wx,wy] = wpos(p,g);
       // missiles launched by hand home on the lock, if there is one
       let tg = gun.homing && lock ? lock : tgtM, tx = aimX(g), ty = aimY(g);
       if (isAuto(g) || self){
-        const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RM, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak', !!gun.aa, wseed(g));
+        const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RG, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak', !!gun.aa, wseed(g));
         if (!P){ g.cd = .15; continue; }
         [tg, tx, ty] = P;
       }
+      g.tgt = tg;
       const ang = Math.atan2(ty-wy, tx-wx);
       // out of range: hold fire rather than waste the shot
       // out of range: auto fire holds rather than waste the shot; a held trigger fires anyway
-      if (gun.range && (isAuto(g) || self || !held) && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > gun.range*SC*RM)){ g.cd = .1; continue; }
-      if (Math.abs(angDiff(ang, p.a + FA[g.o])) > arc) continue;
+      if (gun.range && (isAuto(g) || self || !held) && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > gun.range*SC*RG)){ g.cd = .1; continue; }
+      if (Math.abs(angDiff(ang, face)) > arc) continue;
+      // a turret fires only once it has swung onto the shot
+      if (TV && Math.abs(angDiff(ang, face + (g.tr || 0))) > .08) continue;
       if (!gun.homing && !gun.lob && !gun.over && !laneClear(p,g,ang)) continue;
-      if (!spend(gun.en || 0)){ sfx('lowEn'); continue; }
+      if (!spend((gun.en || 0)*B.en)){ sfx('lowEn'); continue; }
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
       const n = gun.pellets || 1;
       if (gun.weave){ g.rip = n; g.ripT = 0; g.ripTg = tg; g.ripA = ang; continue; }
-      for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t)*HM.dmg());
+      for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t)*HM.dmg()*B.dmg, RG);
       sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='slug' ? 'goliath' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
       if (gun.fx==='slug'){
         // a big muzzle blast, and the recoil shoves your own ship back
@@ -300,43 +312,48 @@ export function update(dt: number){
     const RG = T.rail.rail!;
     for (const h of p.rails){
       // a charging railgun fires when its charge is full, along the aim it took
-      if (h.chg){ if (G.time < h.chg) continue; h.chg = 0; const [wx,wy] = wpos(p,h); fireRail(p, wx, wy, p.a + FA[h.o] + clamp(h.off || 0, -SWING, SWING)); sfx('rail'); continue; }
-      if (h.cd > 0) h.cd -= dt*RATE;
+      const B = boost(p, h), RR = RG.range*SC*rangeMul('rail')*B.rng;
+      if (h.chg){ if (G.time < h.chg) continue; h.chg = 0; const [wx,wy] = wpos(p,h); fireRail(p, wx, wy, p.a + FA[h.o] + clamp(h.off || 0, -SWING, SWING), B); sfx('rail'); continue; }
+      if (h.cd > 0) h.cd -= dt*RATE*B.rate;
       if (!may(h) || h.cd > 0) continue;
       if (!h.lane) continue;
-      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, RG.range*SC*RM, 0, true, false, wseed(h)) : null;
+      const [wx,wy] = wpos(p,h), face = p.a + FA[h.o], P = isAuto(h) ? pick(wx, wy, face, SWING, RR, 0, true, false, wseed(h)) : null;
       if (isAuto(h) && !P) continue;
       const tg = P ? P[0] : tgtM, off = angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), face);
-      if ((isAuto(h) || !held) && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > RG.range*SC*RM)) continue;
+      if ((isAuto(h) || !held) && (!tg || Math.hypot(tg.x-wx, tg.y-wy) - tg.r > RR)) continue;
       if (Math.abs(off) > SWING + .02) continue;
-      if (!spend(RG.en)) continue;
+      if (!spend(RG.en*B.en)) continue;
       h.cd = RG.cd; h.chg = G.time + RAIL_CHARGE; h.off = off; sfx('pd', .6);
     }
   }
   updateSlugs(dt);
   // lasers: continuous beam on whatever is first along their line within range; turret beams swing through their arc
   if (p.alive) for (const h of p.lasers){
-    const L = def(h.t)!.laser!, arc = L.arc ? cpArc(L.arc) : SWING;
+    const L = def(h.t)!.laser!, TV = turns(h.t) ? traverse(h.t) : null, arc = TV ? TV.arc : L.arc ? cpArc(L.arc) : SWING, B = boost(p, h);
     h.beam = null; if ((!L.arc && !h.lane) || !may(h)) continue;
     const [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
-    const P = isAuto(h) ? pick(wx, wy, base, arc, L.range*SC*RM, 0, true, false, wseed(h)) : null;
+    const P = isAuto(h) ? pick(wx, wy, base, arc, L.range*SC*rangeMul(h.t)*B.rng, 0, true, false, wseed(h)) : null;
     if (isAuto(h) && !P) continue;
-    const face = base + clamp(angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), base), -arc, arc), dx = Math.cos(face), dy = Math.sin(face);
+    let off = clamp(angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), base), -arc, arc);
+    // a turret beam swings at its mount's speed, burning whatever it sweeps across on the way
+    if (TV){ const cur = h.tr || 0, step = TV.turn*dt; off = h.tr = cur + clamp(off - cur, -step, step); }
+    const face = base + off, dx = Math.cos(face), dy = Math.sin(face);
     if (L.arc && !laneClear(p,h,face)) continue;
-    const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC*RM;
+    const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC*rangeMul(h.t)*B.rng;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
-    if (hit && spend(L.en*dt)){
+    if (hit && spend(L.en*B.en*dt)){
       sfx('laser');
-      damage(hit.e, hit.k, L.dps*LV(h.t)*HM.dmg()*(1 - (L.fall ?? .75)*hit.t/range)*dt);
+      damage(hit.e, hit.k, L.dps*LV(h.t)*HM.dmg()*B.dmg*B.rate*(1 - (L.fall ?? .75)*hit.t/range)*dt);
       h.beam = [ox, oy, ox + dx*hit.t, oy + dy*hit.t];
       if (Math.random() < .35) sparks(ox + dx*hit.t, oy + dy*hit.t, face+Math.PI, 1, 140*SC, L.arc ? ['#d0f5c8','#ffffff'] : ['#9dff8a','#ffffff']);
-    } else if (!hit && held && spend(L.en*dt)){ sfx('laser'); h.beam = [ox, oy, ox + dx*range, oy + dy*range]; }
+    } else if (!hit && held && spend(L.en*B.en*dt)){ sfx('laser'); h.beam = [ox, oy, ox + dx*range, oy + dy*range]; }
   }
   // tesla coils: lightning to the nearest enemy block in reach, then on to blocks close by; an enemy missile if no hull is in reach
   if (p.alive) for (const c of p.teslas){
-    if (c.cd > 0) c.cd -= dt;
+    const B = boost(p, c);
+    if (c.cd > 0) c.cd -= dt*B.rate;
     if (!may(c) || c.cd > 0) continue;
-    const Z = T.tesla.tesla!, [wx,wy] = wpos(p,c), R = Z.range*SC*RM;
+    const Z = T.tesla.tesla!, [wx,wy] = wpos(p,c), R = Z.range*SC*rangeMul('tesla')*B.rng;
     let hit: [Ship, number, number, number] | null = null, hd = R*R;
     for (const e of enemies){
       if (!e.alive || Math.hypot(e.x-wx, e.y-wy) > R + e.r) continue;
@@ -344,11 +361,11 @@ export function update(dt: number){
     }
     if (!hit){
       let mb: typeof G.eb[number] | null = null; for (const b of G.eb){ if (b.dead || b.kind!=='emiss') continue; const q = (b.x-wx)**2 + (b.y-wy)**2; if (q < hd){ hd = q; mb = b; } }
-      if (mb && spend(Z.en)){ mb.dead = true; c.cd = Z.cd*.5; G.beams.push({x1:wx, y1:wy, x2:mb.x, y2:mb.y, life:.15, max:.15, kind:'tesla'}); sfx('pd'); }
+      if (mb && spend(Z.en*B.en)){ mb.dead = true; c.cd = Z.cd*.5; G.beams.push({x1:wx, y1:wy, x2:mb.x, y2:mb.y, life:.15, max:.15, kind:'tesla'}); sfx('pd'); }
       else c.cd = .15;
       continue;
     }
-    if (!spend(Z.en)){ c.cd = .3; continue; }
+    if (!spend(Z.en*B.en)){ c.cd = .3; continue; }
     c.cd = Z.cd; sfx('laser');
     const e = hit[0]; let k = hit[1], lx = wx, ly = wy;
     const done = new Set<number>();
@@ -356,7 +373,7 @@ export function update(dt: number){
       const [bx,by] = wpos(e, e.blocks.get(k)!);
       G.beams.push({x1:lx, y1:ly, x2:bx, y2:by, life:.15, max:.15, kind:'tesla'});
       sparks(bx, by, 0, 3, 120*SC, ['#e8dcff','#ffffff']);
-      damage(e, k, Z.dmg*LV('tesla')*HM.dmg()); done.add(k); lx = bx; ly = by;
+      damage(e, k, Z.dmg*LV('tesla')*HM.dmg()*B.dmg); done.add(k); lx = bx; ly = by;
       // jump to the closest untouched block within two cells
       let nk: number | null = null, nd = (2.2*BS)**2;
       if (e.alive) for (const [kk,b2] of e.blocks){ if (done.has(kk)) continue; const [x2,y2] = wpos(e,b2), q = (x2-lx)**2 + (y2-ly)**2; if (q < nd){ nd = q; nk = kk; } }

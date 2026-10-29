@@ -1,6 +1,6 @@
 import { sfx } from './audio';
 import { EB_SPD, eBullet, leadAngle, pBullet } from './bullets';
-import { CRAFT, HM, LV, T, bayKind, cockpit, ewOf, isCraft, shRad } from './catalog';
+import { CRAFT, HM, LV, T, rangeMul, bayKind, cockpit, ewOf, isCraft, shRad } from './catalog';
 import { eDmg, eReach } from './fights';
 import { BS, FA, K, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { boomAt, damage, laneClear, makeShip, rayHits, sparks, wpos } from './ships';
@@ -90,9 +90,9 @@ export function updateCraft(A: Ship, dt: number, enemies: Ship[]){
 }
 // The railgun fires a slug that crosses its whole range in about a third of a second, piercing until its damage is spent.
 export const SLUG_SPD = 3200;
-export function fireRail(p: Ship, wx: number, wy: number, face: number){
-  const R = T.rail.rail!, SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = R.range*SC*cockpit().range;
-  G.slugs.push({ox, oy, dx, dy, len, d:0, pool:R.pool*LV('rail')*HM.dmg()});
+export function fireRail(p: Ship, wx: number, wy: number, face: number, B = {rng:1, dmg:1}){
+  const R = T.rail.rail!, SC = G.SC, dx = Math.cos(face), dy = Math.sin(face), ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, len = R.range*SC*rangeMul('rail')*B.rng;
+  G.slugs.push({ox, oy, dx, dy, len, d:0, pool:R.pool*LV('rail')*HM.dmg()*B.dmg});
   boomAt(ox, oy, 6*SC, .1);
   const kick = 70*SC/Math.sqrt(p.ph.mass); p.vx -= dx*kick; p.vy -= dy*kick;
   if (!REDUCE) G.shake = Math.min(4, G.shake + 2.4);

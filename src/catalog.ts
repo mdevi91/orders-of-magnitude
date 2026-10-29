@@ -16,9 +16,9 @@ export const BLOCKS = {
   bigcannon:{name:'Goliath Cannon', make:'Teller Heavy Industries', key:'k', unlock:4, rar:2, cost:120, hp:30, mass:3, rot:true, gun:{range:552, cd:1.69, en:12, spd:400, dmg:42, spread:.015, r:4.2, arc:.7, fx:'slug'}, desc:'Inverted T: a 3-wide base with a 2-cell nose ahead of it. Turret firing huge slugs, about 25 damage per second, from the tip of its nose. Each one hits like a ram: a wide blast that cracks blocks two cells out, a hard shove, and a kick back on your own ship. Covers 40° either side of its facing.'},
   hgatling:{name:'Maelstrom Gatling', make:'Teller Heavy Industries', key:'u', unlock:3, rar:2, cost:95, hp:22, mass:2.5, rot:true, gun:{range:280, cd:.1, en:1.1, spd:700, dmg:3.8, spread:.035, r:2, arc:1.05, fx:'line'}, desc:'2 blocks long. Turret with a hammering tracer stream, 38 damage per second. Covers 60° either side of its facing.'},
   gatling:{name:'Hailstorm Gatling', make:'Kessler Arms', key:'4', unlock:2, rar:0, cost:51, hp:16, mass:1.5, rot:true, gun:{range:273, cd:.15, en:1, spd:760, dmg:3.6, spread:.03, r:1.8, arc:1.25, fx:'line', over:true}, desc:'Turret. Tight tracer stream, 24 damage per second, fired over your own hull. Covers 72° either side of its facing.'},
-  missile:{name:'Viper Missile', make:'Orion Dynamics', key:'5', unlock:2, rar:1, cost:86, hp:16, mass:2, gun:{range:1100, cd:4.1, en:8, spd:172, dmg:18, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 4 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
-  mirv:   {name:'Hydra MIRV', make:'Orion Dynamics', key:'v', unlock:6, rar:3, cost:120, hp:18, mass:2.5, gun:{range:1000, cd:6, en:22, spd:142, dmg:9, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:9}, desc:'2×2 launcher. A slow carrier missile that splits into 9 homing warheads shortly after launch (sooner near a target), fanning out wide, each with its own blast. Enemy point defense can shoot them down.'},
-  plasma: {name:'Helios Plasma Cannon', make:'Teller Heavy Industries', key:'p', unlock:9, rar:3, cost:210, hp:30, mass:3, rot:true, gun:{range:700, cd:2.93, en:16, spd:225, dmg:34, spread:.02, r:4, arc:.8, fx:'plasma', fuse:26, blast:52, nofall:true}, desc:'Turret. A slow plasma bolt that bursts beside a hull in a huge blast, about 12 damage per second before the splash. Covers 46° either side of its facing.'},
+  missile:{name:'Viper Missile', make:'Orion Dynamics', key:'5', unlock:2, rar:1, cost:120, hp:16, mass:2, gun:{range:1100, cd:4.6, en:8, spd:172, dmg:18, spread:.6, r:3.2, homing:true, arc:Math.PI}, desc:'Slow warheads that home for 4 s, then fly straight and blow up in a wide blast. Launch in any direction and fly over your own hull.'},
+  mirv:   {name:'Hydra MIRV', make:'Orion Dynamics', key:'v', unlock:6, rar:3, cost:180, hp:18, mass:2.5, gun:{range:1000, cd:6, en:22, spd:142, dmg:9, spread:.4, r:3.6, homing:true, arc:Math.PI, mirv:8}, desc:'2×2 launcher. A slow carrier missile that splits into 8 homing warheads shortly after launch (sooner near a target), fanning out wide, each with its own blast. Enemy point defense can shoot them down.'},
+  plasma: {name:'Helios Plasma Cannon', make:'Teller Heavy Industries', key:'p', unlock:9, rar:3, cost:300, hp:30, mass:3, rot:true, gun:{range:700, cd:2.93, en:16, spd:225, dmg:34, spread:.02, r:4, arc:.8, fx:'plasma', fuse:26, blast:52, nofall:true}, desc:'Turret. A slow plasma bolt that bursts beside a hull in a huge blast, about 12 damage per second before the splash. Covers 46° either side of its facing.'},
   swarm:  {name:'Swarm Pod', make:'Orion Dynamics', key:'e', unlock:11, rar:4, cost:300, hp:22, mass:2, gun:{range:900, cd:3.6, en:14, spd:351, dmg:3.5, spread:.3, r:1, homing:true, arc:Math.PI, pellets:12, fan:Math.PI*2*11/12, weave:true}, desc:'2×3 pod. Unleashes a storm of twelve micro-missiles that burst out in every direction, then loop and corkscrew in on long white smoke trails. Launch in any direction and fly over your own hull.'},
   flak:   {name:'Bloom Flak', make:'Ashgrove Defense', key:'f', unlock:2, rar:1, cost:45, hp:18, mass:1.5, rot:true, gun:{range:460, cd:.8, en:4, spd:420, dmg:7, spread:.08, r:2.2, arc:1.1, fx:'flak', fuse:22, blast:26, nofall:true}, desc:'Turret. Shells burst near enemy ships, damaging every block in the blast and wiping out enemy bullets. Covers 63° either side of its facing.'},
   scatter:{name:'Shrike Scattergun', make:'Ruiz Ordnance', key:'c', unlock:1, rar:0, cost:40, hp:18, mass:1.5, rot:true, gun:{range:213, cd:1.1, en:4, spd:520, dmg:2.9, spread:.04, r:1.6, arc:1, fx:'pellet', pellets:7, fan:.32, over:true}, desc:'Turret. Blasts 7 pellets in a wide cone over your own hull: about 18 damage per second up close, nothing at range. Covers 57° either side of its facing.'},
@@ -37,6 +37,9 @@ export const BLOCKS = {
   pd:     {name:'Picket Point Defense', make:'Ashgrove Defense', key:'q', unlock:2, rar:1, cost:40, hp:16, mass:1.5, pd:{cd:.45, range:85, en:2}, desc:'Shoots down enemy missiles, flak and gatling rounds that come close. Cannon slugs, rail rounds and capital-ship orbs are too heavy to stop.'},
   aegis:  {name:'Aegis Array', make:'Ashgrove Defense', key:'y', unlock:5, rar:3, cost:230, hp:60, mass:6, pd:{cd:.16, range:210, en:3, heavy:true}, desc:'2×3 point defense battery. Reaches two and a half times as far as point defense and fires three times as fast, and its heavy guns stop cannon slugs as well as missiles, flak and gatling rounds.'},
   gen:    {name:'Generator', key:'g', unlock:1, rar:0, cost:25, hp:14, mass:2, en:{regen:8}, desc:'Makes 8 energy per second. Weapons and shields run on energy. Safe deep inside the hull.'},
+  rmod:   {name:'Longsight Rangefinder', make:'Nakamura Kinetics', unlock:2, rar:1, cost:50, hp:14, mass:1, mod:{rng:.2, en:.3}, desc:'Support module. Every weapon touching it, corners included, reaches 20% further but uses 30% more energy per shot. Several add up.'},
+  dmod:   {name:'Overcharge Coupler', make:'Lumen Industries', key:'d', unlock:3, rar:1, cost:60, hp:14, mass:1, mod:{dmg:.2, en:.3}, desc:'Support module. Every weapon touching it, corners included, hits 20% harder but uses 30% more energy per shot. Several add up.'},
+  cmod:   {name:'Quickfeed Autoloader', make:'Kessler Arms', key:'m', unlock:3, rar:1, cost:60, hp:14, mass:1, mod:{rate:.2, en:.3}, desc:'Support module. Every weapon touching it, corners included, reloads 20% faster (a beam burns 20% hotter) but uses 30% more energy per shot. Several add up.'},
   battery:{name:'Battery', key:'b', unlock:1, rar:0, cost:15, hp:12, mass:1.5, en:{cap:60}, desc:'Stores 60 energy for bursts of fire. Safe deep inside the hull.'},
   fbay:   {name:'Wasp Fighter Bay', make:'Orion Dynamics', key:'h', unlock:4, rar:2, cost:95, hp:20, mass:1.5, rot:true, desc:'1×4 hangar. Launches a fighter out of its front end that dogfights nearby enemies. Every 30 s it docks to rearm and repair, then flies out again. A lost fighter takes 15 s to replace.'},
   bbay:   {name:'Albatross Bomber Bay', make:'Orion Dynamics', key:'j', unlock:7, rar:4, cost:240, hp:24, mass:2, rot:true, desc:'2×6 hangar. Launches a slow, tough bomber that passes over enemy hulls dropping heavy area bombs. Every 30 s it docks to rearm and repair, then flies out again. A lost bomber takes 25 s to replace.'},
@@ -118,11 +121,11 @@ export function pickWeapon(sector: number): EnemyGun {
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','goo','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','sell'];
+export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','goo','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','rmod','dmod','cmod','sell'];
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', glimmer:'#d0f5c8', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
-     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', goo:'#9cff5a', hack:'#4affb0', tesla:'#c8b0ff', torpedo:'#ffe08a', torpedo_b:'#c0a050', aegis:'#c9adff', aegis_b:'#8a70c0', swarm_b:'#a8a070', mine:'#ffb27a'},
+     fbay:'#a8ecff', fbay_b:'#7fb0d0', bbay:'#ffc46b', bbay_b:'#c09050', scatter:'#a8ecff', ion:'#7fd8ff', goo:'#9cff5a', hack:'#4affb0', tesla:'#c8b0ff', torpedo:'#ffe08a', torpedo_b:'#c0a050', aegis:'#c9adff', aegis_b:'#8a70c0', swarm_b:'#a8a070', mine:'#ffb27a', rmod:'#7fe8ff', dmod:'#ff7a5a', cmod:'#ffd04a'},
   e:{core:'#ffd6cc', hull:'#ff7a66', armor:'#d0504a', cannon:'#ffc46b', gatling:'#ffc46b', missile:'#ffc46b', flak:'#ffc46b', rail:'#ffc46b', plasma:'#ffc46b', swarm:'#ffc46b', bigcannon:'#ffc46b', hgatling:'#ffc46b', scatter:'#ffc46b', ion:'#ffc46b', goo:'#ffc46b', hack:'#ffc46b', mirv:'#ffc46b', laser:'#ffc46b', glimmer:'#ffc46b', tesla:'#ffc46b', shield:'#5fd3ff', gen:'#ffd04a', bay:'#9a4630', pd:'#c9adff', engine:'#ff9a6a'},
   a:{},
 }; // hangar craft
@@ -187,11 +190,35 @@ export function cpPerks(id: CockpitId){
   return out;
 }
 export const cpUnlocked = (id: CockpitId) => !COCKPITS[id].off && COCKPITS[id].unlock <= (G.meta.best || 1);
-// block levels: bought per type at shops, +35% to the block's main stat per level up to Lv5, then +20% per level up to Lv10
+// block levels: bought per type at shops, +35% to the block's main stat and hit points per level up to Lv5, then +20% per
+// level up to Lv10; a weapon also reaches 10% further per level
 export const MAXLV = 10;
 const lvMul = (L: number) => L <= 5 ? 1 + .35*(L-1) : 2.4 + .2*(L-5);
 /** What the next level adds to a block's main stat, in percent. */
 export const lvStep = (L: number) => Math.round((lvMul(L+1)/lvMul(L) - 1)*100);
+/** Weapon reach at level L: +10% of the base per level. */
+const lvRange = (L: number) => 1 + .1*(L-1);
+/** How far the player's weapon t reaches, times its listed range: its level and the cockpit's reach together. */
+export const rangeMul = (t: Cell) => cockpit().range*lvRange(lvOf(t));
+// What levels do, in words: p is the main stat and hit points in percent, r the extra range in percent.
+function lvWords(t: BlockType, p: number, r: number, wider: boolean){
+  const d = T[t], hp = `+${p}% hit points`;
+  if (d.rail) return `+${p}% pierce, +${r}% range, ${hp}`;
+  if (d.gun || d.laser || d.tesla) return `+${p}% damage, +${r}% range, ${hp}`;
+  if (d.pd) return `+${p}% fire rate, ${hp}`;
+  if (d.sh) return `+${p}% bubble strength${wider ? ', a wider bubble' : ''}, ${hp}`;
+  if (t==='gen') return `+${p}% energy made, ${hp}`;
+  if (t==='battery') return `+${p}% energy stored, ${hp}`;
+  if (t==='engine') return `+${p}% thrust, ${hp}`;
+  if (t==='gyro') return `+${p}% turning, ${hp}`;
+  if (t==='fbay' || t==='bbay') return `+${p}% craft damage and toughness, ${hp}`;
+  // a support module's boost is fixed; levels only make it tougher
+  return hp;
+}
+/** What the next level of t adds, for the shop. */
+export const lvGain = (t: BlockType) => lvWords(t, lvStep(lvOf(t)), 10, lvOf(t) < 4);
+/** What t's levels add so far, for the inspector ('' at level 1). */
+export const lvHave = (t: BlockType) => { const L = lvOf(t); return L > 1 ? lvWords(t, Math.round((lvMul(L) - 1)*100), Math.round((lvRange(L) - 1)*100), false) : ''; };
 // Rarity: rare blocks drop less often, but anything already unlocked can turn up from sector 1 on (see rollBlock).
 export const RARITY = [{name:'Common', col:'#bcd0f5'}, {name:'Uncommon', col:'#7fe07a'}, {name:'Rare', col:'#5fb8ff'}, {name:'Epic', col:'#c88aff'}, {name:'Legendary', col:'#ffb03a'}];
 export const rarOf = (t: BlockType) => T[t].rar || 0;
@@ -211,7 +238,8 @@ export const HM = {
 // a group on auto fires on its own at the nearest hostile.
 export const WGRP: Partial<Record<Cell, number>> = {plasma:1, swarm:2, core:1, cannon:1, bigcannon:1, gatling:1, hgatling:1, scatter:1, flak:1, ion:1, goo:1, hack:3, laser:1, missile:2, mirv:2, rail:3, torpedo:3, mine:4, tesla:4, glimmer:4};
 export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
-// ---------- hardpoints (being built; stage 1: the data, and weapons drawn on their mounts over the hull) ----------
+// ---------- hardpoints (being built; stage 1: the data, and weapons drawn on their mounts over the hull; stage 2: a
+// turret aims through its mount's arc and swings at its mount's speed, firing once it is on target) ----------
 // A ship is built in three layers: hull or armour, a mount on top, a weapon on the mount. A mount has no hit points:
 // it is lost once more than 49% of the blocks under it are destroyed, and its weapon with it. The weapon has its own
 // hit points, which count toward the ship's life. Mounts sit on full hull or armour only, never on corners.
@@ -245,6 +273,10 @@ export function mountFor(t: Cell): MountKind {
   if (g?.over) return 'barbette';
   return arc <= .5 ? 'gimbal' : 'ring';
 }
+/** Whether a player's weapon swings on its mount to aim; guided launchers and lobbed mines just launch, coils just zap. */
+export const turns = (t: Cell) => { const d = def(t); return isArm(t) && (!!d?.laser?.arc || (!!d?.gun && !d.gun.homing && !d.gun.lob)); };
+/** How a player's turret aims on its mount: how far either side of its facing (rad) and how fast it swings (rad/s). */
+export function traverse(t: Cell){ const M = MOUNTS[mountFor(t)]; return {arc: cpArc(M.arc), turn: M.turn*MSIZE[WSIZE[HEAD_OF[t] || t] || 1].turn}; }
 export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t] && (t!=='core' || !!cockpit().gun);
 /** What a bay launches: a hangar bay's craft, or a fighter from the Carrier deck's core. */
 export const bayKind = (b: {t: Cell}): CraftKind | null => isCraft(b.t) ? b.t : b.t==='core' && cockpit().deck ? 'fbay' : null;
@@ -253,7 +285,7 @@ export const grpOf = (k: Key, t: Cell) => G.grp[k] || WGRP[t] || 1;
 const m = (u: number) => Math.round(u/BS) + ' m', n1 = (v: number) => (Math.round(v*10)/10).toString();
 export function blurb(t: BlockType){
   const d = T[t], g = d.gun;
-  if (g) return [`${n1(g.dmg*(g.pellets || 1)*(g.mirv || 1)/g.cd)} dmg/s`, g.range ? m(g.range) : '', g.homing ? 'homing' : (g.arc ?? Math.PI) >= Math.PI - .01 ? 'all round' : `±${Math.round((g.arc || 0)*180/Math.PI)}°`, g.over ? 'fires over hull' : ''].filter(Boolean).join(' · ');
+  if (g) return [`${n1(g.dmg*(g.pellets || 1)*(g.mirv || 1)/g.cd)} dmg/s`, g.range ? m(g.range) : '', g.homing ? 'homing' : turns(t) ? `±${Math.round(traverse(t).arc*180/Math.PI)}° · turns ${Math.round(traverse(t).turn*180/Math.PI)}°/s` : (g.arc ?? Math.PI) >= Math.PI - .01 ? 'all round' : `±${Math.round((g.arc || 0)*180/Math.PI)}°`, g.over ? 'fires over hull' : ''].filter(Boolean).join(' · ');
   if (d.laser) return `${d.laser.dps} dmg/s up close · ${m(d.laser.range)} · ${d.laser.arc ? `±${Math.round(d.laser.arc*180/Math.PI)}° beam` : 'beam'}`;
   if (d.rail) return `pierces ${d.rail.pool} · every ${d.rail.cd} s · ${m(d.rail.range)}`;
   if (d.tesla) return `${d.tesla.dmg} × ${d.tesla.jumps} chain · every ${d.tesla.cd} s · ${m(d.tesla.range)}`;

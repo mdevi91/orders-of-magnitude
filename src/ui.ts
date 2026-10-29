@@ -1,6 +1,6 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpPerks, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvOf, outfitPrice, owned, partOffsets, rarOf } from './catalog';
+import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpPerks, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvHave, lvOf, outfitPrice, rangeMul, owned, partOffsets, rarOf } from './catalog';
 import { PAINTS, aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
@@ -63,8 +63,8 @@ function syncSelCard(S: number){
   $('selStats').innerHTML = t==='sell' ? '' :
     row('Source', plate ? `${d.cost} cr each` : have ? `${have} in cargo` + (dmgOf(t) ? ` (${dmgOf(t)} damaged)` : '') : canBuyHere(t) ? `${outfitPrice(t)} cr each` : 'none in cargo') +
     (d.hp ? row('Hit points', String(Math.round(d.hp*LV(t)*HM.hp()))) : '') +
-    (rg ? row('Range', `${Math.round(rg*cockpit().range*Math.pow(S,.8)/BS)} m`) : '') +
-    row('Level', `${L} / ${MAXLV}`) +
+    (rg ? row('Range', `${Math.round(rg*rangeMul(t)*Math.pow(S,.8)/BS)} m`) : '') +
+    row('Level', `${L} / ${MAXLV}` + (L > 1 ? `: ${lvHave(t)}` : L < MAXLV ? ': upgrade at shops' : '')) +
     (PARTS[t] ? row('Size', `${partOffsets(PARTS[t]!).length} cells`) : '');
 }
 export function select(t: BlockType){

@@ -53,6 +53,9 @@ export interface BlockDef {
   rail?: { cd: number; pool: number; en: number; range: number };
   tesla?: { cd: number; range: number; dmg: number; jumps: number; en: number };
   sh?: { hp: number; regen: number; delay: number; down: number; en: number };
+  /** a support module: every weapon touching it (corners too) reaches (rng), hits (dmg) and reloads (rate) that much
+   *  further, harder or faster, and pays en more energy per shot; several modules add up */
+  mod?: { rng?: number; dmg?: number; rate?: number; en: number };
   /** heavy: also shoots down cannon slugs */
   pd?: { cd: number; range: number; en: number; heavy?: boolean };
   en?: { regen?: number; cap?: number };
@@ -74,6 +77,8 @@ export interface CraftDef {
 export interface Bubble { hp: number; max: number; down: number; last: number; flash: number; /** bearing of the last hit, for the hexagon flash */ ha?: number }
 
 /** A block on a live ship. */
+/** what the support modules touching a weapon add to it: multipliers on its range, damage, reload speed and energy use */
+export interface Boost { rng: number; dmg: number; rate: number; en: number }
 export interface Block {
   t: Cell; i: number; j: number; o: Facing; hp: number; max: number;
   /** railgun: charging until chg (game time), aimed off its facing by off */
@@ -82,6 +87,10 @@ export interface Block {
   rip?: number; ripT?: number; ripTg?: Ship | null; ripA?: number;
   /** weapon cooldown */
   cd: number;
+  /** a player's turret: where it has swung to, off its facing (rad), and the ship it last picked to shoot at */
+  tr?: number; tgt?: Ship | null;
+  /** the support modules' boost on this weapon, worked out while the ship has bst.n blocks */
+  bst?: Boost & { n: number };
   /** time it was last hit, for the white flash */
   hit: number;
   bub?: Bubble;

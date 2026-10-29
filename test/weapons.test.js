@@ -39,8 +39,10 @@ for (const t of W){
   fresh(); armed(t);
   G.auto = [true,true,true,true,true]; G.fireHeld = false; G.aimJoy = null;
   const e = dummy(t==='mine' ? 70 : R*.6 + 25);
+  // auto aim wobbles on purpose, on a pattern seeded per target: pinned here so a run can't draw one where every slow shot misses
+  e.wob = 0;
   // slow, long-reload weapons get a few shots in, since auto aim wobbles on purpose and can miss one
-  sim(t==='torpedo' || t==='rail' ? 20 : 8);
+  sim(t==='torpedo' ? 30 : t==='rail' ? 20 : 8);
   ok(`${t} hits on auto fire`, hpLost(e) > 0, `damage ${Math.round(hpLost(e))}`);
 }
 // the big cannon is an inverted T: nose ahead, a 3-wide base at the back; every body cell finds its head

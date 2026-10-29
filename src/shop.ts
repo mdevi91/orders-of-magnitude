@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { MAXLV, PAL, RARITY, T, blurb, lvOf, lvStep, onShip, priceMul, rarOf, repCost, upCost } from './catalog';
+import { MAXLV, PAL, RARITY, T, blurb, lvGain, lvOf, onShip, priceMul, rarOf, repCost, upCost } from './catalog';
 import { addBlock, cargoTypes, dmgOf, lootPool, repTotal, repair, rollBlock, takeCargo } from './loot';
 import { flipOption } from './options';
 import { META, metaCost, metaLv, showRnD } from './runs';
@@ -37,7 +37,7 @@ export function openShop(n: MapNode){
       `<div class="si-price"><b>${buyPrice(o.t)} cr</b><small>${o.n ? `×${o.n} left` : 'sold out'}</small></div><button class="buy" type="button" data-act="buy:${i}"${!o.n || buyPrice(o.t) > G.credits ? ' disabled' : ''}>Buy</button></div>`).join('') +
     '</div><div class="scr-side">';
   if (G.broken.size) s += `<div class="warnbox"><div>${tag('Warning', 'red')}<span>${G.broken.size} damaged block${G.broken.size > 1 ? 's' : ''}</span></div><button class="buy red" type="button" data-act="rep:0"${canRepair(.5) ? '' : ' disabled'}>Repair ${rep} cr</button></div>`;
-  s += '<h3>Upgrades <small>Permanent this run</small></h3>' + (ups.length ? ups.map(t => `<div class="sup">${icon(t)}<div><b>${T[t].name} <i>Lv ${lvOf(t)}${lvOf(t) < MAXLV ? ` → ${lvOf(t) + 1}` : ''}</i></b><small>${lvOf(t) < MAXLV ? `+${lvStep(lvOf(t))}% to every ${low(t)}` : 'fully upgraded'}</small></div>` +
+  s += '<h3>Upgrades <small>Permanent this run</small></h3>' + (ups.length ? ups.map(t => `<div class="sup">${icon(t)}<div><b>${T[t].name} <i>Lv ${lvOf(t)}${lvOf(t) < MAXLV ? ` → ${lvOf(t) + 1}` : ''}</i></b><small>${lvOf(t) < MAXLV ? `Every ${low(t)}: ${lvGain(t)}` : 'fully upgraded'}</small></div>` +
     `<button class="rot" type="button" data-act="up:${t}"${lvOf(t) >= MAXLV || upCost(t) > G.credits ? ' disabled' : ''}>${lvOf(t) < MAXLV ? `${upCost(t)} cr` : 'max'}</button></div>`).join('') : '<p class="log">&gt; NOTHING TO UPGRADE</p>');
   s += '<h3>Sell <small>From cargo</small></h3>' + (cargo.length ? cargo.map(t => `<div class="sup">${icon(t)}<div><b>${T[t].name} <i>×${G.inv[t]}</i></b>${dmgOf(t) ? `<small>${dmgOf(t)} damaged, sold first at half price</small>` : ''}</div>` +
     `<button class="rot" type="button" data-act="sell:${t}">+${dmgOf(t) ? Math.round(sellPrice(t)/2) : sellPrice(t)} cr</button></div>`).join('') : '<p class="log">&gt; CARGO HOLD EMPTY</p>');

@@ -55,9 +55,10 @@ export function mirvSplit(b: Bullet, enemies: Ship[]){
 export const fallOff = (b: Pick<Bullet, 'fall' | 'life' | 'life0'>) => b.fall ? 1 - .5*clamp((1 - b.life/b.life0!)*2 - 1, 0, 1) : 1;
 // Reach of a weapon in world units at scale 1 (times G.SC in a fight)
 export const rangeOf = (t: BlockType) => { const d = def(t); return !d ? 0 : d.gun ? d.gun.range || 0 : d.laser ? d.laser.range : d.rail ? d.rail.range : d.tesla ? d.tesla.range : 0; };
-export function pBullet(x: number, y: number, ang: number, gun: GunDef, target: Ship | null, mul=1){
+// rm: how much further than its listed range the shot flies (the cockpit, and the weapon's level for the player's own guns)
+export function pBullet(x: number, y: number, ang: number, gun: GunDef, target: Ship | null, mul=1, rm=cockpit().range){
   // missiles fly 15% under their listed speed; guided ones steer for 4 s, then fly straight for 3 s and burn out
-  const sp = gun.spd*G.SC*(gun.homing || gun.mirv ? .85 : 1), life = gun.homing ? 7 : gun.life || (gun.range ? gun.range*cockpit().range/gun.spd : 3);
+  const sp = gun.spd*G.SC*(gun.homing || gun.mirv ? .85 : 1), life = gun.homing ? 7 : gun.life || (gun.range ? gun.range*rm/gun.spd : 3);
   // weaving warheads leave the pod at a quarter to half speed, so a volley ripples out instead of flying as one
   const v0 = gun.weave ? sp*rand(.25,.5) : sp;
   G.pb.push({x, y, vx:Math.cos(ang)*v0, vy:Math.sin(ang)*v0, sp, r:gun.r*G.SC, dmg:gun.dmg*mul, ion:!!gun.ion, stick:gun.stick, fuse:(gun.fuse||0)*G.SC, blast:(gun.blast||0)*G.SC,

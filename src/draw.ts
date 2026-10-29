@@ -1,10 +1,10 @@
-import { BCOL, BEAM, COCKPITS, ESH, GCOL, HEAD_OF, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isArm, isWeapon, lvOf, mountFor, shRad, type MountKind } from './catalog';
+import { BCOL, BEAM, COCKPITS, ESH, GCOL, HEAD_OF, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isArm, isWeapon, lvOf, mountFor, rangeMul, traverse, turns, shRad, type MountKind } from './catalog';
 import { rangeOf } from './bullets';
 import { cellsFor, placeCheck, placeSpots } from './editor';
 import { WARP } from './fights';
 import { BS, CORE, FA, FACE, K, KI, KJ, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { laneFwd } from './physics';
-import { wpos } from './ships';
+import { wpos, boost } from './ships';
 import { G, buildR, closeSpan, spanFor } from './state';
 import { JOY_R, RAIL_CHARGE, keys } from './update';
 import type { BlockType, Bullet, BulletKind, Cell, CraftKind, Facing, Key, Ship, Stick, Team } from './types';
@@ -147,7 +147,7 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
   const d = def(t), rot = o ? o*Math.PI/4 : 0;
   if (rot){ X.save(); X.translate(x,y); X.rotate(rot); x = 0; y = 0; }
   let ang = aim - rot;
-  const arc = d && d.gun ? (team==='p' ? cpArc(d.gun.arc || 0) : d.gun.arc || 0) : 0;
+  const arc = d && d.gun ? (team==='p' ? (turns(t) ? traverse(t).arc : cpArc(d.gun.arc || 0)) : d.gun.arc || 0) : 0;
   if (arc) ang = -Math.PI/2 + clamp(angDiff(ang,-Math.PI/2), -arc, arc);
   const ca = Math.cos(ang), sa = Math.sin(ang), gun: Pal3 = team!=='e' ? ['#e8eef6','#9aa4b4','#2a2e36'] : ['#ffd08a','#c8783a','#4a2010'];
   // an enemy-only part (a carrier bay) is drawn as painted, already in enemy colours
@@ -297,6 +297,27 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       X.fillStyle = '#16191f'; X.fillRect(x-4,y-5,8,10);
       X.fillStyle = t==='fbay_b' ? '#3a8ab0' : '#a07830'; X.fillRect(x-.5,y-3.5,1,2.6); X.fillRect(x-.5,y+1,1,2.6);
       break;
+    // support modules: a dark plate with feed ports on every side, and what they feed the weapons around them
+    case 'rmod': case 'dmod': case 'cmod': {
+      const col = t==='rmod' ? '#7fe8ff' : t==='dmod' ? '#ff7a5a' : '#ffd04a', k = .5 + .5*Math.sin(G.time*4 + x*.3);
+      X.fillStyle = '#1a1e26'; X.fillRect(x-3.8,y-3.8,7.6,7.6);
+      X.fillStyle = '#4a525e'; X.fillRect(x-3.8,y-3.8,7.6,.8); X.fillRect(x-3.8,y-3.8,.8,7.6);
+      X.fillStyle = col; X.fillRect(x-.7,y-4.6,1.4,1.2); X.fillRect(x-.7,y+3.4,1.4,1.2); X.fillRect(x-4.6,y-.7,1.2,1.4); X.fillRect(x+3.4,y-.7,1.2,1.4);
+      if (t==='rmod'){
+        // a rangefinder lens with its crosshair
+        orb(X, x, y, 2.6, ['#0a2a3a', '#2a8ab0', k > .5 ? '#d8f8ff' : '#7fe8ff']);
+        X.fillStyle = '#0a1a24'; X.fillRect(x-2.6,y-.25,5.2,.5); X.fillRect(x-.25,y-2.6,.5,5.2);
+      } else if (t==='dmod'){
+        // a capacitor bank, its middle cell pulsing
+        for (let q=0; q<3; q++){ X.fillStyle = '#4a1a10'; X.fillRect(x-2.8+q*2,y-2.6,1.6,5.2); X.fillStyle = q===1 && k > .5 ? '#ffe0c8' : col; X.fillRect(x-2.8+q*2,y-2.6,1.6,1.4); }
+        X.fillStyle = '#ffe0c8'; X.fillRect(x-.3,y+.4,.6,1.8);
+      } else {
+        // an ammunition drum turning
+        orb(X, x, y, 2.8, ['#3a2a08', '#a07a20', '#ffe08a']);
+        X.fillStyle = '#1a1208'; for (let q=0; q<6; q++){ const a = G.time*3 + q*TAU/6; X.fillRect(x + Math.cos(a)*1.7 - .45, y + Math.sin(a)*1.7 - .45, .9, .9); }
+      }
+      break;
+    }
     case 'battery':
       X.fillStyle = '#142a14'; X.fillRect(x-3.6,y-3,7.2,6);
       for (let q=0; q<3; q++){ X.fillStyle = '#3ac84a'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,4.6); X.fillStyle = '#b8ffb0'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,.9); }
@@ -497,7 +518,8 @@ export function drawShip(s: Ship){
   }
   for (const b of s.blocks.values()) if (isArm(b.t)){
     if (ghost) ctx.globalAlpha = .45 + .2*Math.sin(G.time*50);
-    drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, aim, G.time-b.hit < .05, b.hp/b.max, b.firing, 'arm');
+    // the player's turrets point where they have swung to on their mounts
+    drawBlock(ctx, b.t, b.o, s.team, b.i*BS, b.j*BS, s.team==='p' && b.tr != null ? FA[b.o] + b.tr : aim, G.time-b.hit < .05, b.hp/b.max, b.firing, 'arm');
   }
   if (s === G.player) drawCockpit(ctx, G.cockpit, k => s.blocks.has(k)); // the cockpit sprite over its whole footprint
   ctx.globalAlpha = 1;
@@ -705,9 +727,9 @@ export function renderCombat(){
     const seen = new Set<Cell>();
     ctx.lineWidth = 1;
     for (const b of [...p.guns, ...p.rails, ...p.lasers, ...p.teslas, ...p.pds]){
-      const d = def(b.t)!, r = (d.pd ? d.pd.range*Math.sqrt(G.S) : rangeOf(b.t as BlockType)*G.SC)*cockpit().range; if (!r) continue;
+      const d = def(b.t)!, r = d.pd ? d.pd.range*Math.sqrt(G.S)*cockpit().range : rangeOf(b.t as BlockType)*G.SC*rangeMul(b.t)*boost(p, b).rng; if (!r) continue;
       const col = b.t==='core' ? '#ffffff' : d.pd ? '#c9adff' : GCOL[grpOf(K(b.i,b.j), b.t)-1], rr = r*z;
-      const arc = d.gun ? cpArc(d.gun.arc ?? Math.PI) : d.laser?.arc ? cpArc(d.laser.arc) : d.rail || d.laser ? SWING : Math.PI;
+      const arc = turns(b.t) ? traverse(b.t).arc : d.gun ? cpArc(d.gun.arc ?? Math.PI) : d.laser?.arc ? cpArc(d.laser.arc) : d.rail || d.laser ? SWING : Math.PI;
       ctx.strokeStyle = ctx.fillStyle = col;
       if (arc >= Math.PI - .01){
         if (seen.has(b.t)) continue; seen.add(b.t);
@@ -947,7 +969,7 @@ export function rayOut(i: number, j: number, a: number, R: number){
   return Infinity;
 }
 /** The turret's arc swing, for a block that has a gun. */
-const arcOf = (t: Cell) => cpArc(def(t)?.gun?.arc || def(t)?.laser?.arc || 0);
+const arcOf = (t: Cell) => turns(t) ? traverse(t).arc : cpArc(def(t)?.gun?.arc || def(t)?.laser?.arc || 0);
 export const ARC_N = 16, arcRays = (o: Facing, t: Cell) => Array.from({length:ARC_N}, (_,n) => FA[o] - arcOf(t) + 2*arcOf(t)*n/(ARC_N-1));
 export function arcClear(i: number, j: number, o: Facing, t: Cell){
   if (def(t)?.gun?.over) return 1;
