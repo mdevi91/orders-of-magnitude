@@ -27,7 +27,7 @@ export function openShop(n: MapNode){
     const pool = lootPool();
     for (let q=0; q<5; q++){ const t = rollBlock(1.6, pool), o = offers.find(x => x.t===t); if (o) o.n++; else offers.push({t, n:1}); }
   }
-  const ups = PAL.filter(t => t!=='sell' && (onShip(t) || (G.inv[t] || 0) > 0)), rep = repTotal(.5), stock = offers.reduce((a, o) => a + o.n, 0), cargo = cargoTypes();
+  const ups = PAL.filter(t => t!=='sell' && !T[t].mount && (onShip(t) || (G.inv[t] || 0) > 0)), rep = repTotal(.5), stock = offers.reduce((a, o) => a + o.n, 0), cargo = cargoTypes();
   // full screen: title and hexagon readouts across the top, stock on the left, repair, upgrades and selling on the right
   const tag = (t: string, cls = '') => `<span class="stag ${cls}">${t}</span>`, low = (t: BlockType) => T[t].name.toLowerCase();
   let s = `<div class="scr-head"><div class="scr-title">${tag('Trading post', 'fill')}${tag(`Sector ${pad2(G.stage)}`)}<h2>Shop</h2></div>` +

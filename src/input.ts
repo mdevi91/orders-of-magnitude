@@ -23,10 +23,10 @@ export function zoomAt(x: number, y: number, f: number){
   const M = layoutBuild(); G.bpx += x - (M.cx + u*M.cs); G.bpy += y - (M.cy + v*M.cs);
 }
 // Undo: one entry per press-drag-release in the drydock (design, facings and credits).
-interface Snap { d: [Key, BlockType][]; o: [Key, Facing][]; c: number; inv: typeof G.inv; br: Key[] }
+interface Snap { d: [Key, BlockType][]; o: [Key, Facing][]; c: number; inv: typeof G.inv; br: Key[]; m: typeof G.mnt; a: typeof G.ang }
 export const undoStack: Snap[] = [];
-export const snap = (): Snap => ({d:[...G.design], o:[...G.dirs], c:G.credits, inv:{...G.inv}, br:[...G.broken]});
-export const sameSnap = (a: Snap, b: Snap) => JSON.stringify([a.d,a.o]) === JSON.stringify([b.d,b.o]);
+export const snap = (): Snap => ({d:[...G.design], o:[...G.dirs], c:G.credits, inv:{...G.inv}, br:[...G.broken], m:{...G.mnt}, a:{...G.ang}});
+export const sameSnap = (a: Snap, b: Snap) => JSON.stringify([a.d,a.o,a.m,a.a]) === JSON.stringify([b.d,b.o,b.m,b.a]);
 export function dropUndoMark(){ undoMark = null; }
 export function commitUndoMark(){
   if (undoMark && !sameSnap(undoMark, snap())){ undoStack.push(undoMark); if (undoStack.length > 60) undoStack.shift(); }
@@ -34,7 +34,7 @@ export function commitUndoMark(){
 }
 export function undo(){
   const u = undoStack.pop(); if (!u){ toast('Nothing to undo'); return; }
-  G.design = new Map(u.d); G.dirs = new Map(u.o); G.credits = u.c; G.inv = u.inv; G.broken = new Set(u.br); sfx('place'); syncUI();
+  G.design = new Map(u.d); G.dirs = new Map(u.o); G.credits = u.c; G.inv = u.inv; G.broken = new Set(u.br); G.mnt = u.m; G.ang = u.a; sfx('place'); syncUI();
 }
 export const ptrs = new Map<number, {x: number; y: number}>();
 export let pinch: {d: number; mx: number; my: number} | null = null, panning: {x: number; y: number; bpx: number; bpy: number} | null = null,

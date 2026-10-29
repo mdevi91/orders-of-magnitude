@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { ewOf, pickWeapon, tierOf } from './catalog';
+import { angAt, ewOf, pickWeapon, tierOf } from './catalog';
 import { CORE, K, KI, KJ, NB, TAU, clamp, rand } from './grid';
 import { abandon } from './controls';
 import { undoStack } from './input';
@@ -192,6 +192,8 @@ export function startFight(kind: FightKind){
   if (G.stats) G.stats.peak = Math.max(G.stats.peak || 0, blockCount());
   G.S = scaleOf(G.stage); G.SC = Math.pow(G.S,.8);
   const p = G.player = makeShip(flyDesign(),'p',0,0,1,G.dirs);
+  // fitted mounts and angled arcs ride on the weapon blocks
+  for (const b of p.blocks.values()){ const k = K(b.i, b.j); if (G.mnt[k]) b.mk = G.mnt[k]; if (G.ang[k]) b.ao = angAt(k); }
   // every sector opens on last sector's view and slowly pulls back to a wider one, even if the hull didn't grow
   if (G.spanStage !== G.stage){ G.span0 = G.spanT ? G.spanT : spanFor(p.r, G.S)*.6; G.spanStage = G.stage; }
   G.spanT = Math.max(spanFor(p.r, G.S), G.span0*1.15); G.span = G.span0; G.fit = 0; G.spanAt = 0; G.swarmT = 4;

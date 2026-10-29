@@ -17,7 +17,7 @@ export const RUN = 'oom-run-v1', METAK = 'oom-meta-v1';
 /** What a run looks like in localStorage and in exported save files. */
 export interface SaveData {
   v: 3; stage: number; credits: number; design: [Key, BlockType][]; dirs: [Key, Facing][]; lv: typeof G.lv; mir: number;
-  spanT: number; span0: number; spanStage: number | null; inv: typeof G.inv; dmg?: typeof G.dmg; grp?: typeof G.grp; auto?: boolean[];
+  spanT: number; span0: number; spanStage: number | null; inv: typeof G.inv; dmg?: typeof G.dmg; grp?: typeof G.grp; mnt?: typeof G.mnt; ang?: typeof G.ang; auto?: boolean[];
   broken?: Key[]; map: StarMap; stats: RunStats; cockpit?: CockpitId; paint?: string;
 }
 export function save(){
@@ -31,7 +31,7 @@ export function load(from?: SaveData){
     G.stage = d.stage; G.credits = d.credits; G.design = new Map(d.design); G.dirs = new Map(d.dirs); G.lv = d.lv || {};
     pruneParts();
     G.mir = d.mir ?? 1; G.spanT = d.spanT || 0; G.span0 = d.span0 || 0; G.spanStage = d.spanStage;
-    G.inv = d.inv || {}; G.dmg = d.dmg || {}; G.grp = d.grp || {}; G.auto = d.auto || [false,false,false,true,false]; G.broken = new Set(d.broken || []); G.map = d.map; G.stats = d.stats; G.cockpit = d.cockpit && cpUnlocked(d.cockpit) ? d.cockpit : 'std'; G.paint = d.paint || 'steel'; G.outfit = false; G.node = curNode();
+    G.inv = d.inv || {}; G.dmg = d.dmg || {}; G.grp = d.grp || {}; G.mnt = d.mnt || {}; G.ang = d.ang || {}; G.auto = d.auto || [false,false,false,true,false]; G.broken = new Set(d.broken || []); G.map = d.map; G.stats = d.stats; G.cockpit = d.cockpit && cpUnlocked(d.cockpit) ? d.cockpit : 'std'; G.paint = d.paint || 'steel'; G.outfit = false; G.node = curNode();
     return true;
   } catch { return false; }
 }
@@ -50,7 +50,7 @@ function pruneParts(){
   }
 }
 export const saveData = (): SaveData => ({v:3, stage:G.stage, credits:G.credits, design:[...G.design], dirs:[...G.dirs], lv:G.lv, mir:G.mir, spanT:G.spanT, span0:G.span0, spanStage:G.spanStage,
-  inv:G.inv, dmg:G.dmg, grp:G.grp, auto:G.auto, broken:[...G.broken], map:G.map!, stats:G.stats!, cockpit:G.cockpit, paint:G.paint});
+  inv:G.inv, dmg:G.dmg, grp:G.grp, mnt:G.mnt, ang:G.ang, auto:G.auto, broken:[...G.broken], map:G.map!, stats:G.stats!, cockpit:G.cockpit, paint:G.paint});
 export function clearRun(){ G.stats = null; try { localStorage.removeItem(RUN); } catch {} }
 export function saveMeta(){ try { localStorage.setItem(METAK, JSON.stringify(G.meta)); } catch {} }
 // Wipes everything this game keeps in the browser (run, hangar, blueprints, tutorial, settings) and starts over.

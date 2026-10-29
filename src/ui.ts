@@ -1,6 +1,6 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpPerks, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvHave, lvOf, outfitPrice, rangeMul, owned, partOffsets, rarOf } from './catalog';
+import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpPerks, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvHave, lvOf, mountFor, mountText, outfitPrice, rangeMul, turns, owned, partOffsets, rarOf } from './catalog';
 import { PAINTS, aimsOut, arcClear, designType, drawBlock } from './draw';
 import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
@@ -18,7 +18,7 @@ import { $ } from './view';
 
 // ---------- UI ----------
 // The parts palette, in groups; a group's heading hides while none of its blocks are available.
-const GROUPS = [['Structure', (t: BlockType) => t==='sell' || PLATE(t)], ['Weapons', (t: BlockType) => isWeapon(t)], ['Hangars', (t: BlockType) => isCraft(t)], ['Systems', () => true]] as const;
+const GROUPS = [['Structure', (t: BlockType) => t==='sell' || PLATE(t)], ['Weapons', (t: BlockType) => isWeapon(t)], ['Mounts', (t: BlockType) => !!T[t].mount], ['Hangars', (t: BlockType) => isCraft(t)], ['Systems', () => true]] as const;
 const groupOf = (t: BlockType) => GROUPS.findIndex(([,f]) => f(t));
 export function buildPalette(){
   const root = $('palette');
@@ -64,7 +64,8 @@ function syncSelCard(S: number){
     row('Source', plate ? `${d.cost} cr each` : have ? `${have} in cargo` + (dmgOf(t) ? ` (${dmgOf(t)} damaged)` : '') : canBuyHere(t) ? `${outfitPrice(t)} cr each` : 'none in cargo') +
     (d.hp ? row('Hit points', String(Math.round(d.hp*LV(t)*HM.hp()))) : '') +
     (rg ? row('Range', `${Math.round(rg*rangeMul(t)*Math.pow(S,.8)/BS)} m`) : '') +
-    row('Level', `${L} / ${MAXLV}` + (L > 1 ? `: ${lvHave(t)}` : L < MAXLV ? ': upgrade at shops' : '')) +
+    (d.mount ? '' : row('Level', `${L} / ${MAXLV}` + (L > 1 ? `: ${lvHave(t)}` : L < MAXLV ? ': upgrade at shops' : ''))) +
+    (turns(t) ? row('Stock mount', mountText(t, mountFor(t))) : '') +
     (PARTS[t] ? row('Size', `${partOffsets(PARTS[t]!).length} cells`) : '');
 }
 export function select(t: BlockType){

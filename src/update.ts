@@ -256,7 +256,7 @@ export function update(dt: number){
     // Fire control speeds every weapon's cycle; a Cruiser reloads its launchers faster; a Salvo fires them on its own
     const RATE = (G.fireT > G.time ? 1.5 : 1)*slow.fire, salvo = G.salvoT > G.time;
     for (const g of p.guns){
-      const ms = missileGun(g), self = salvo && ms, B = boost(p, g), RG = rangeMul(g.t)*B.rng;
+      const ms = missileGun(g), self = salvo && ms, B = boost(p, g), MV = turns(g.t) ? traverse(g.t, g.mk) : null, RG = rangeMul(g.t)*B.rng*(MV ? MV.rng : 1), DM = LV(g.t)*HM.dmg()*B.dmg*(MV ? MV.dmg : 1);
       // reloads run all the time, firing or not
       if (g.cd > 0) g.cd -= dt*RATE*B.rate*(ms ? cockpit().mrl || 1 : 1);
       // a ripple-fire pod launches its whole volley in 0.6 s, each warhead at random within 115° either side of the target
@@ -264,11 +264,11 @@ export function update(dt: number){
         g.ripT = (g.ripT || 0) - dt;
         while (g.rip > 0 && g.ripT <= 0){
           const [rx,ry] = wpos(p,g), tg = g.ripTg?.alive ? g.ripTg : tgtM, a = tg ? Math.atan2(tg.y-ry, tg.x-rx) : g.ripA || 0;
-          pBullet(rx, ry, a + rand(-1,1)*115*Math.PI/180, def(g.t)!.gun!, tg, LV(g.t)*HM.dmg()*B.dmg, RG);
+          pBullet(rx, ry, a + rand(-1,1)*115*Math.PI/180, def(g.t)!.gun!, tg, DM, RG);
           sfx('missile', .5); g.rip--; g.ripT += .6/12;
         }
       }
-      const gun = def(g.t)!.gun!, TV = turns(g.t) ? traverse(g.t) : null, arc = TV ? TV.arc : cpArc(gun.arc || 0), face = p.a + FA[g.o];
+      const gun = def(g.t)!.gun!, TV = turns(g.t) ? traverse(g.t, g.mk) : null, arc = TV ? TV.arc : cpArc(gun.arc || 0), face = p.a + FA[g.o] + (g.ao || 0);
       // a turret swings toward what it aims at, at its mount's speed, reloading or not: on auto the ship it last picked
       // (before its first pick, the lock or the enemy nearest the cursor), by hand the cursor
       if (TV){
@@ -281,7 +281,7 @@ export function update(dt: number){
       // missiles launched by hand home on the lock, if there is one
       let tg = gun.homing && lock ? lock : tgtM, tx = aimX(g), ty = aimY(g);
       if (isAuto(g) || self){
-        const P = pick(wx, wy, p.a + FA[g.o], arc, (gun.range || 1e4)*SC*RG, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak', !!gun.aa, wseed(g));
+        const P = pick(wx, wy, face, arc, (gun.range || 1e4)*SC*RG, gun.homing || gun.lob ? 0 : gun.spd*SC, gun.spd >= 600 || gun.fx==='flak', !!gun.aa, wseed(g));
         if (!P){ g.cd = .15; continue; }
         [tg, tx, ty] = P;
       }
@@ -293,12 +293,12 @@ export function update(dt: number){
       if (Math.abs(angDiff(ang, face)) > arc) continue;
       // a turret fires only once it has swung onto the shot
       if (TV && Math.abs(angDiff(ang, face + (g.tr || 0))) > .08) continue;
-      if (!gun.homing && !gun.lob && !gun.over && !laneClear(p,g,ang)) continue;
+      if (!gun.homing && !gun.lob && !(TV ? TV.over : gun.over) && !laneClear(p,g,ang)) continue;
       if (!spend((gun.en || 0)*B.en)){ sfx('lowEn'); continue; }
       g.cd += gun.cd; if (g.cd < 0) g.cd = 0;
       const n = gun.pellets || 1;
       if (gun.weave){ g.rip = n; g.ripT = 0; g.ripTg = tg; g.ripA = ang; continue; }
-      for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread, gun, tg, LV(g.t)*HM.dmg()*B.dmg, RG);
+      for (let q=0; q<n; q++) pBullet(wx, wy, ang + (n > 1 ? (q/(n-1) - .5)*(gun.fan || 0) : 0) + (Math.random()-.5)*2*gun.spread*(TV ? TV.spread : 1), gun, tg, DM, RG);
       sfx(gun.homing || gun.fx==='torp' ? 'missile' : gun.fx==='line' ? 'gatling' : gun.fx==='slug' ? 'goliath' : gun.fx==='oval' || gun.fx==='pellet' ? 'cannon' : 'shot');
       if (gun.fx==='slug'){
         // a big muzzle blast, and the recoil shoves your own ship back
@@ -329,21 +329,21 @@ export function update(dt: number){
   updateSlugs(dt);
   // lasers: continuous beam on whatever is first along their line within range; turret beams swing through their arc
   if (p.alive) for (const h of p.lasers){
-    const L = def(h.t)!.laser!, TV = turns(h.t) ? traverse(h.t) : null, arc = TV ? TV.arc : L.arc ? cpArc(L.arc) : SWING, B = boost(p, h);
+    const L = def(h.t)!.laser!, TV = turns(h.t) ? traverse(h.t, h.mk) : null, arc = TV ? TV.arc : L.arc ? cpArc(L.arc) : SWING, B = boost(p, h);
     h.beam = null; if ((!L.arc && !h.lane) || !may(h)) continue;
-    const [wx,wy] = wpos(p,h), base = p.a + FA[h.o];
-    const P = isAuto(h) ? pick(wx, wy, base, arc, L.range*SC*rangeMul(h.t)*B.rng, 0, true, false, wseed(h)) : null;
+    const [wx,wy] = wpos(p,h), base = p.a + FA[h.o] + (h.ao || 0), MR = TV ? TV.rng : 1;
+    const P = isAuto(h) ? pick(wx, wy, base, arc, L.range*SC*rangeMul(h.t)*B.rng*MR, 0, true, false, wseed(h)) : null;
     if (isAuto(h) && !P) continue;
     let off = clamp(angDiff(Math.atan2((P ? P[2] : aimY(h))-wy, (P ? P[1] : aimX(h))-wx), base), -arc, arc);
     // a turret beam swings at its mount's speed, burning whatever it sweeps across on the way
     if (TV){ const cur = h.tr || 0, step = TV.turn*dt; off = h.tr = cur + clamp(off - cur, -step, step); }
     const face = base + off, dx = Math.cos(face), dy = Math.sin(face);
-    if (L.arc && !laneClear(p,h,face)) continue;
-    const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC*rangeMul(h.t)*B.rng;
+    if (L.arc && !TV?.over && !laneClear(p,h,face)) continue;
+    const ox = wx + dx*BS*.5, oy = wy + dy*BS*.5, range = L.range*SC*rangeMul(h.t)*B.rng*MR;
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
     if (hit && spend(L.en*B.en*dt)){
       sfx('laser');
-      damage(hit.e, hit.k, L.dps*LV(h.t)*HM.dmg()*B.dmg*B.rate*(1 - (L.fall ?? .75)*hit.t/range)*dt);
+      damage(hit.e, hit.k, L.dps*LV(h.t)*HM.dmg()*B.dmg*B.rate*(TV ? TV.dmg : 1)*(1 - (L.fall ?? .75)*hit.t/range)*dt);
       h.beam = [ox, oy, ox + dx*hit.t, oy + dy*hit.t];
       if (Math.random() < .35) sparks(ox + dx*hit.t, oy + dy*hit.t, face+Math.PI, 1, 140*SC, L.arc ? ['#d0f5c8','#ffffff'] : ['#9dff8a','#ffffff']);
     } else if (!hit && held && spend(L.en*B.en*dt)){ sfx('laser'); h.beam = [ox, oy, ox + dx*range, oy + dy*range]; }

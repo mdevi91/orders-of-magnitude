@@ -40,6 +40,12 @@ export const BLOCKS = {
   rmod:   {name:'Longsight Rangefinder', make:'Nakamura Kinetics', unlock:2, rar:1, cost:50, hp:14, mass:1, mod:{rng:.2, en:.3}, desc:'Support module. Every weapon touching it, corners included, reaches 20% further but uses 30% more energy per shot. Several add up.'},
   dmod:   {name:'Overcharge Coupler', make:'Lumen Industries', key:'d', unlock:3, rar:1, cost:60, hp:14, mass:1, mod:{dmg:.2, en:.3}, desc:'Support module. Every weapon touching it, corners included, hits 20% harder but uses 30% more energy per shot. Several add up.'},
   cmod:   {name:'Quickfeed Autoloader', make:'Kessler Arms', key:'m', unlock:3, rar:1, cost:60, hp:14, mass:1, mod:{rate:.2, en:.3}, desc:'Support module. Every weapon touching it, corners included, reloads 20% faster (a beam burns 20% hotter) but uses 30% more energy per shot. Several add up.'},
+  // mounts: cargo items fitted onto placed weapons, never placed as blocks (see the hardpoints section)
+  mfixed:   {name:'Fixed mount', unlock:1, rar:0, cost:15, mount:'fixed', desc:'Mount. Locks a weapon on its facing (±3°): it can’t turn, but hits 15% harder, reaches 15% further and spreads less. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
+  mgimbal:  {name:'Gimbal', unlock:1, rar:0, cost:25, mount:'gimbal', desc:'Mount. A quick, narrow swivel: ±20°, turning 140°/s. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
+  mring:    {name:'Turret ring', unlock:2, rar:1, cost:45, mount:'ring', desc:'Mount. ±60°, turning 100°/s. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
+  mbarbette:{name:'Barbette', unlock:4, rar:2, cost:80, mount:'barbette', desc:'Mount. ±90°, turning 75°/s, raised so the weapon fires over your own hull. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
+  mdome:    {name:'Dome', unlock:6, rar:3, cost:130, mount:'dome', desc:'Mount. All round, turning 50°/s, and fires over your own hull. Small weapons only. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
   battery:{name:'Battery', key:'b', unlock:1, rar:0, cost:15, hp:12, mass:1.5, en:{cap:60}, desc:'Stores 60 energy for bursts of fire. Safe deep inside the hull.'},
   fbay:   {name:'Wasp Fighter Bay', make:'Orion Dynamics', key:'h', unlock:4, rar:2, cost:95, hp:20, mass:1.5, rot:true, desc:'1×4 hangar. Launches a fighter out of its front end that dogfights nearby enemies. Every 30 s it docks to rearm and repair, then flies out again. A lost fighter takes 15 s to replace.'},
   bbay:   {name:'Albatross Bomber Bay', make:'Orion Dynamics', key:'j', unlock:7, rar:4, cost:240, hp:24, mass:2, rot:true, desc:'2×6 hangar. Launches a slow, tough bomber that passes over enemy hulls dropping heavy area bombs. Every 30 s it docks to rearm and repair, then flies out again. A lost bomber takes 25 s to replace.'},
@@ -121,7 +127,7 @@ export function pickWeapon(sector: number): EnemyGun {
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','goo','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','rmod','dmod','cmod','sell'];
+export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','goo','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','rmod','dmod','cmod','mfixed','mgimbal','mring','mbarbette','mdome','sell'];
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', glimmer:'#d0f5c8', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
@@ -137,7 +143,10 @@ export const WEDGE = (t: Cell) => t==='hullc' || t==='armorc';
 /** The facing a block is placed with: 0 for blocks that don't turn, a diagonal for corner plating. */
 export const faceFor = (t: Cell, o: Facing): Facing => !T[t as BlockType]?.rot ? 0 : WEDGE(t) ? (o | 1) as Facing : o;
 export const onShip = (t: BlockType) => { for (const v of G.design.values()) if (v===t) return true; return false; };
-export const owned = (t: BlockType) => t==='sell' || PLATE(t) || (G.inv[t]||0) > 0 || onShip(t) || (G.outfit && unlocked(t));
+// a mount stays selectable while any weapon on the ship sits on that kind (stock or fitted), so its arc can be angled
+export const owned = (t: BlockType) => t==='sell' || PLATE(t) || (G.inv[t]||0) > 0 || onShip(t) || (G.outfit && unlocked(t)) || (!!T[t].mount && mountUsed(T[t].mount!));
+/** Whether a weapon on the ship being built sits on a mount of kind mk. */
+export const mountUsed = (mk: MountKind) => { for (const [k,t] of G.design) if (!HEAD_OF[t] && turns(t) && mountAt(k,t)===mk) return true; return false; };
 // Outfitting: before the first jump of a run, any unlocked block can be bought straight onto the ship with the starting budget.
 export const outfitPrice = (t: BlockType) => Math.round(T[t].cost*priceMul());
 export const canBuyHere = (t: BlockType) => G.outfit && !PLATE(t) && unlocked(t);
@@ -248,8 +257,8 @@ export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
 export type MountKind = 'fixed' | 'gimbal' | 'ring' | 'barbette' | 'dome';
 /** Mount footprints: 1 cell, 2 (1×2) or 4 (2×2). Bigger mounts cost more, turn slower and unlock later. */
 export type MountSize = 1 | 2 | 4;
-export const MOUNTS: Record<MountKind, {name: string; arc: number; turn: number; over: boolean; cost: number; unlock: number; sizes: MountSize[]; dmg?: number; spread?: number}> = {
-  fixed:   {name:'Fixed mount', arc:3*Math.PI/180, turn:0, over:false, cost:6, unlock:1, sizes:[1,2,4], dmg:1.15, spread:.8},
+export const MOUNTS: Record<MountKind, {name: string; arc: number; turn: number; over: boolean; cost: number; unlock: number; sizes: MountSize[]; dmg?: number; spread?: number; rng?: number}> = {
+  fixed:   {name:'Fixed mount', arc:3*Math.PI/180, turn:0, over:false, cost:6, unlock:1, sizes:[1,2,4], dmg:1.15, spread:.8, rng:1.15},
   gimbal:  {name:'Gimbal', arc:20*Math.PI/180, turn:140*Math.PI/180, over:false, cost:18, unlock:1, sizes:[1,2,4]},
   ring:    {name:'Turret ring', arc:60*Math.PI/180, turn:100*Math.PI/180, over:false, cost:35, unlock:2, sizes:[1,2,4]},
   barbette:{name:'Barbette', arc:90*Math.PI/180, turn:75*Math.PI/180, over:true, cost:65, unlock:4, sizes:[1,2,4]},
@@ -276,7 +285,30 @@ export function mountFor(t: Cell): MountKind {
 /** Whether a player's weapon swings on its mount to aim; guided launchers and lobbed mines just launch, coils just zap. */
 export const turns = (t: Cell) => { const d = def(t); return isArm(t) && (!!d?.laser?.arc || (!!d?.gun && !d.gun.homing && !d.gun.lob)); };
 /** How a player's turret aims on its mount: how far either side of its facing (rad) and how fast it swings (rad/s). */
-export function traverse(t: Cell){ const M = MOUNTS[mountFor(t)]; return {arc: cpArc(M.arc), turn: M.turn*MSIZE[WSIZE[HEAD_OF[t] || t] || 1].turn}; }
+export function traverse(t: Cell, mk?: MountKind){
+  const M = MOUNTS[mk || mountFor(t)];
+  return {arc: cpArc(M.arc), turn: M.turn*MSIZE[WSIZE[HEAD_OF[t] || t] || 1].turn, over: M.over, dmg: M.dmg || 1, spread: M.spread || 1, rng: M.rng || 1};
+}
+// Stage 3: every weapon comes on its stock mount (mountFor); a mount from cargo replaces it, and the arc can be angled
+// off the weapon's facing in 15° steps. G.mnt and G.ang hold both per weapon head; a fight copies them onto the blocks.
+export const MOUNT_ITEM: Record<MountKind, BlockType> = {fixed:'mfixed', gimbal:'mgimbal', ring:'mring', barbette:'mbarbette', dome:'mdome'};
+export const ANG_STEP = 15*Math.PI/180, ANG_MAX = 3;
+/** The mount on the player's weapon at k: one fitted from cargo, or its stock one. */
+export const mountAt = (k: Key, t: Cell): MountKind => G.mnt[k] || mountFor(t);
+/** How far the arc of the player's weapon at k is angled off its facing (rad). */
+export const angAt = (k: Key) => (G.ang[k] || 0)*ANG_STEP;
+/** Whether a mount can carry weapon t: true, or why not. */
+export function mountFits(t: Cell, mk: MountKind): true | string {
+  if (!turns(t)) return `${T[t as BlockType]?.name || t} aims itself and needs no mount`;
+  if (!MOUNTS[mk].sizes.includes(WSIZE[t] || 1)) return `A ${MOUNTS[mk].name.toLowerCase()} only takes small weapons`;
+  return true;
+}
+/** A mount in words: "Turret ring · ±60° · turns 100°/s". */
+export function mountText(t: Cell, mk: MountKind, ang = 0){
+  const V = traverse(t, mk), deg = (a: number) => Math.round(a*180/Math.PI);
+  return [MOUNTS[mk].name, V.arc >= Math.PI - .01 ? 'all round' : `±${deg(V.arc)}°`, V.turn ? `turns ${deg(V.turn)}°/s` : 'fixed', V.over ? 'over hull' : '',
+    ang ? `angled ${ang > 0 ? '+' : ''}${deg(ang)}°` : ''].filter(Boolean).join(' · ');
+}
 export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t] && (t!=='core' || !!cockpit().gun);
 /** What a bay launches: a hangar bay's craft, or a fighter from the Carrier deck's core. */
 export const bayKind = (b: {t: Cell}): CraftKind | null => isCraft(b.t) ? b.t : b.t==='core' && cockpit().deck ? 'fbay' : null;

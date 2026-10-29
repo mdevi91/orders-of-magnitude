@@ -66,7 +66,7 @@ export function damageRandom(n: number){
   return c;
 }
 export function upgradeRandom(){
-  const ts = PAL.filter(t => t!=='sell' && (onShip(t) || (G.inv[t] || 0) > 0) && lvOf(t) < MAXLV);
+  const ts = PAL.filter(t => t!=='sell' && !T[t].mount && (onShip(t) || (G.inv[t] || 0) > 0) && lvOf(t) < MAXLV);
   if (!ts.length) return null;
   const t = ts[(Math.random()*ts.length)|0]; G.lv[t] = lvOf(t) + 1; return t;
 }

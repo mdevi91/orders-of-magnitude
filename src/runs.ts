@@ -106,7 +106,7 @@ let engRun = false;
 export function enterEngineering(){
   engRun = !!G.stats; save();
   const st = startDesign();
-  G.stats = null; G.stage = 1; G.lv = {}; G.inv = {}; G.dmg = {}; G.broken = new Set(); G.fresh = new Set(); G.grp = {...(st.g || {})};
+  G.stats = null; G.stage = 1; G.lv = {}; G.inv = {}; G.dmg = {}; G.broken = new Set(); G.fresh = new Set(); G.grp = {...(st.g || {})}; G.mnt = {}; G.ang = {};
   G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std'; G.paint = st.p || 'steel'; fitCockpit();
   G.credits = budget() - designCost(G.design); G.outfit = true; undoStack.length = 0;
   toDrydock(); tut('eng');
@@ -126,7 +126,7 @@ export function switchCockpit(id: CockpitId){
   const m = G.meta, builds = m.builds ??= {};
   builds[G.cockpit] = shipNow(); G.cockpit = id;
   const b = builds[id];
-  if (b){ const f = keepUnlocked(b); G.design = new Map(f.d); G.dirs = new Map(f.o); G.grp = {...(f.g || {})}; }
+  if (b){ const f = keepUnlocked(b); G.design = new Map(f.d); G.dirs = new Map(f.o); G.grp = {...(f.g || {})}; G.mnt = {}; G.ang = {}; }
   fitCockpit();
   G.credits = budget() - designCost(G.design); undoStack.length = 0; saveMeta();
   toast(b ? `Your ${COCKPITS[id].name} ship` : `First ${COCKPITS[id].name} ship: starting from the last one`); syncUI();
@@ -141,7 +141,7 @@ export function newRun(){
   const st = startDesign();
   G.stage = 1; G.pendingNode = null; G.bounty = 0; G.lv = {}; G.broken = new Set(); G.fresh = new Set(); G.spanT = G.span0 = 0; G.spanStage = null;
   G.design = new Map(st.d); G.dirs = new Map(st.o); G.cockpit = st.c || 'std'; G.paint = st.p || 'steel'; fitCockpit();
-  G.inv = {}; G.dmg = {}; G.grp = {...(st.g || {})}; G.auto = [false,false,false,true,false];
+  G.inv = {}; G.dmg = {}; G.grp = {...(st.g || {})}; G.mnt = {}; G.ang = {}; G.auto = [false,false,false,true,false];
   const arms = (['cannon','scatter','gatling','missile','flak'] as BlockType[]).filter(unlocked);
   for (let q=0; q<metaLv('arms'); q++){ const t = arms[(Math.random()*arms.length)|0]; G.inv[t] = (G.inv[t]||0) + 1; }
   G.credits = Math.max(0, budget() - designCost(G.design)); G.outfit = false;

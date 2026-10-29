@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { COL, ESH, ET, HM, LV, PARTS, T, cockpit, cpGuard, def, ewOf, isCraft, pickWeapon } from './catalog';
+import { COL, ESH, ET, HEAD_OF, HM, LV, PARTS, T, cockpit, cpGuard, def, ewOf, isCraft, pickWeapon } from './catalog';
 import { BS, CORE, FA, K, KI, KJ, NB, SWING, angDiff, rand } from './grid';
 import { laneFwd, partComplete, physics } from './physics';
 import { metaLv } from './runs';
@@ -200,15 +200,45 @@ export function wpos(s: Ship, b: {i: number; j: number}): [number, number] { con
 // Support modules: each one touching a weapon, corners included, adds its share to the weapon's range, damage or reload
 // speed, and to its energy use. Worked out once, then again whenever the ship loses a block.
 const NB8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-export function boost(s: Ship, b: Block): Boost {
-  if (b.bst && b.bst.n === s.blocks.size) return b.bst;
-  const r = {rng:1, dmg:1, rate:1, en:1, n:s.blocks.size}, cs = cellsFor(b.i, b.j, b.t, b.o), own = new Set(cs.map(([i,j]) => K(i,j))), seen = new Set<Key>();
+type TypeAt = (k: Key) => Cell | undefined;
+/** What support modules boost: anything that shoots. */
+export const boostable = (t: Cell) => { const d = def(t); return !!d && !!(d.gun || d.laser || d.rail || d.tesla); };
+/** The support modules touching a weapon's cells cs: each module once, with the weapon's own cell it touches. */
+export function feeds(cs: readonly (readonly [number, number, ...unknown[]])[], typeAt: TypeAt): [Key, Key][] {
+  const own = new Set(cs.map(([i,j]) => K(i,j))), seen = new Set<Key>(), out: [Key, Key][] = [];
   for (const [i,j] of cs) for (const [di,dj] of NB8){
-    const k = K(i+di, j+dj); if (own.has(k) || seen.has(k)) continue; seen.add(k);
-    const m = s.blocks.get(k), M = m && def(m.t)?.mod; if (!M) continue;
-    r.rng += M.rng || 0; r.dmg += M.dmg || 0; r.rate += M.rate || 0; r.en += M.en;
+    const k = K(i+di, j+dj); if (own.has(k) || seen.has(k)) continue;
+    const t = typeAt(k); if (!t || !def(t)?.mod) continue;
+    seen.add(k); out.push([k, K(i,j)]);
   }
-  return b.bst = r;
+  return out;
+}
+/** What the modules at keys ms add up to. */
+function addUp(ms: Key[], typeAt: TypeAt): Boost {
+  const r = {rng:1, dmg:1, rate:1, en:1};
+  for (const k of ms){ const M = def(typeAt(k)!)!.mod!; r.rng += M.rng || 0; r.dmg += M.dmg || 0; r.rate += M.rate || 0; r.en += M.en; }
+  return r;
+}
+export function boost(s: Ship, b: Block): Boost & {n: number} {
+  if (b.bst && b.bst.n === s.blocks.size) return b.bst;
+  const typeAt = (k: Key) => s.blocks.get(k)?.t;
+  return b.bst = {...addUp(feeds(cellsFor(b.i, b.j, b.t, b.o), typeAt).map(f => f[0]), typeAt), n:s.blocks.size};
+}
+/** Every weapon on the ship being built that support modules feed: where it is, the modules (with the cell each
+ *  touches) and what they add up to. Damaged blocks feed nothing and get nothing. */
+export function designFeeds(typeAt: TypeAt = k => G.broken.has(k) ? undefined : G.design.get(k)){
+  const out: {k: Key; t: Cell; mods: [Key, Key][]; B: Boost}[] = [];
+  for (const [k,t] of G.design){
+    if (!typeAt(k) || HEAD_OF[t] || !boostable(t)) continue;
+    const mods = feeds(cellsFor(KI(k), KJ(k), t, G.dirs.get(k) || 0), typeAt);
+    if (mods.length) out.push({k, t, mods, B:addUp(mods.map(f => f[0]), typeAt)});
+  }
+  return out;
+}
+/** A boost in words: "+40% range, +20% damage · +90% energy per shot". */
+export function boostText(B: Boost){
+  const p = (x: number) => Math.round((x - 1)*100);
+  return [B.rng > 1 ? `+${p(B.rng)}% range` : '', B.dmg > 1 ? `+${p(B.dmg)}% damage` : '', B.rate > 1 ? `+${p(B.rate)}% reload speed` : ''].filter(Boolean).join(', ') + ` · +${p(B.en)}% energy per shot`;
 }
 // Goo and hacking modules stick where they hit, riding the block until they wear off or it is shot away.
 // Each goo blob takes 5% off speed and turning (down to 45%); each hacking module, up to 3, takes 15% off speed,

@@ -1,5 +1,5 @@
 import { sfx } from './audio';
-import { HEAD_OF, PARTS, PLATE, T, WEDGE, canBuyHere, def, faceFor, isPart, outfitPrice, partOffsets, repCost } from './catalog';
+import { ANG_MAX, HEAD_OF, MOUNT_ITEM, PARTS, PLATE, T, WEDGE, canBuyHere, def, faceFor, isPart, mountFits, mountFor, outfitPrice, partOffsets, repCost } from './catalog';
 import { layoutBuild } from './draw';
 import { CORE, FACE, K, NB, flipO, mirrorO } from './grid';
 import { assignAt } from './groups';
@@ -90,6 +90,7 @@ export function headOf(i: number, j: number): [number, number] {
 export function removeCell(k: Key){
   const t = G.design.get(k); if (!t) return;
   const was = G.broken.delete(k); G.design.delete(k); G.dirs.delete(k); delete G.grp[k];
+  unmount(k);
   if (HEAD_OF[t]) return;
   if (PLATE(t)) G.credits += was ? Math.max(0, T[t].cost - repCost(t)) : T[t].cost;
   else if (G.outfit) G.credits += outfitPrice(t); // Engineering: blocks are bought on the spot, so taking one off refunds it
@@ -118,8 +119,54 @@ export function spinAt(i: number, j: number){
   for (const [a,b,mo] of mirrorSpots(i,j,o).slice(1)) if (G.design.get(K(a,b))===t) G.dirs.set(K(a,b), mo);
   return true;
 }
+/** Takes the fitted mount off the weapon head at k, back into cargo (or refunded in Engineering); the weapon is on its stock mount again. */
+function unmount(k: Key){
+  const mk = G.mnt[k]; delete G.ang[k]; if (!mk) return;
+  delete G.mnt[k]; const it = MOUNT_ITEM[mk];
+  if (G.outfit) G.credits += outfitPrice(it); else G.inv[it] = (G.inv[it] || 0) + 1;
+}
+// Mirror twins of a cell for mounts, with the sign their arc angle takes: a left/right or fore/aft mirror flips it.
+function mountTwins(i: number, j: number): [number, number, number][] {
+  const m = G.mir, out: [number, number, number][] = [[i,j,1]];
+  if (m===1 || m===3) out.push([-i,j,-1]);
+  if (m===2 || m===3) out.push([i,-j,-1]);
+  if (m===3) out.push([-i,-j,1]);
+  return out.filter(([a,b], n) => out.findIndex(([c,d]) => c===a && d===b) === n);
+}
+/** With a mount selected: fits it onto the weapon at (i,j) and its mirror twins, or on a tap of a weapon already on it,
+ *  angles the arc another 15° (wrapping from +45° to -45°). Fitting a weapon's stock mount kind just takes the fitted one off. */
+export function mountAction(i: number, j: number, tap: boolean): true | string {
+  const mt = G.sel, mk = T[mt].mount!; let res: true | string = true, step: number | null = null;
+  for (const [n, [a,b,sg]] of mountTwins(i,j).entries()){
+    const [hi,hj] = headOf(a,b), k = K(hi,hj), t = G.design.get(k);
+    if (!t){ if (!n) res = 'Click a placed weapon to fit the mount'; continue; }
+    const fit = mountFits(t, mk); if (fit !== true){ if (!n) res = fit; continue; }
+    const cur = G.mnt[k] || mountFor(t);
+    if (cur===mk){
+      // already on it: a tap angles the arc; the twins follow, mirrored
+      if (!tap){ if (!n) res = 'Already placed'; continue; }
+      if (step == null){ const v = (G.ang[k] || 0) + 1; step = v > ANG_MAX ? -ANG_MAX : v; }
+      G.ang[k] = step*sg; if (!G.ang[k]) delete G.ang[k];
+      continue;
+    }
+    if (mk===mountFor(t)){ unmount(k); continue; }
+    if (!((G.inv[mt] || 0) > 0)){
+      if (!canBuyHere(mt)){ if (!n) res = `No ${T[mt].name.toLowerCase()} left in cargo`; continue; }
+      if (outfitPrice(mt) > G.credits){ if (!n) res = `Not enough credits for ${T[mt].name.toLowerCase()}`; continue; }
+      G.credits -= outfitPrice(mt); G.inv[mt] = 1; // outfitting: bought on the spot
+    }
+    const ang = G.ang[k]; unmount(k); if (ang) G.ang[k] = ang;
+    G.inv[mt] = (G.inv[mt] || 0) - 1; G.mnt[k] = mk;
+  }
+  return res;
+}
 export function buildAction(i: number, j: number, mode: 'place' | 'sell', tap = false){
   if (G.grpBrush){ assignAt(i,j); syncUI(); return; }
+  if (mode!=='sell' && T[G.sel].mount){
+    sfx('place'); const r = mountAction(i, j, tap);
+    if (r !== true && r !== 'Already placed') toast(r);
+    syncUI(); return;
+  }
   sfx('place');
   if (mode!=='sell' && tap && spinAt(i,j)){ G.drag = null; syncUI(); return; }
   if (mode==='sell'){ for (const [a,b] of mirrorSpots(i,j,0)) sellAt(a,b); }

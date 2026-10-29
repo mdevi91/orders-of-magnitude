@@ -1,5 +1,5 @@
 // Shared shapes for the whole game. Runtime data lives in the modules; this file only describes it.
-import type { BLOCKS, CRAFT, CockpitId, ET, EW } from './catalog';
+import type { BLOCKS, CRAFT, CockpitId, ET, EW, MountKind } from './catalog';
 import type { NODE } from './starmap';
 
 /** Grid key from K(i,j): one number per cell. */
@@ -46,6 +46,8 @@ export interface BlockDef {
   name: string; make?: string; cost: number; desc?: string;
   /** unlock: the sector a run must reach for the block to join loot and shops; rar: rarity 0 (common) to 4 (legendary) */
   /** off: shelved for now, kept out of the palette, loot, shops and enemy loadouts */
+  /** mount: a mount item, fitted onto placed weapons from cargo */
+  mount?: MountKind;
   key?: string; off?: boolean; unlock?: number; rar?: number; hp?: number; mass?: number; rot?: boolean; thrust?: number; torque?: number;
   gun?: GunDef;
   /** arc: a turret beam's swing either side of its facing (fixed beams swing SWING); fall: share of damage lost at full range (default .75) */
@@ -89,6 +91,8 @@ export interface Block {
   cd: number;
   /** a player's turret: where it has swung to, off its facing (rad), and the ship it last picked to shoot at */
   tr?: number; tgt?: Ship | null;
+  /** a player's weapon: its mount (stock if unset) and how far its arc is angled off its facing (rad) */
+  mk?: MountKind; ao?: number;
   /** the support modules' boost on this weapon, worked out while the ship has bst.n blocks */
   bst?: Boost & { n: number };
   /** time it was last hit, for the white flash */
@@ -227,6 +231,8 @@ export interface GameState {
   paint: string;
   stage: number; credits: number; design: Map<Key, BlockType>; dirs: Map<Key, Facing>; lv: Partial<Record<BlockType, number>>;
   inv: Partial<Record<BlockType, number>>; dmg: Partial<Record<BlockType, number>>; grp: Record<Key, number>; auto: boolean[];
+  /** mounts fitted from cargo, and arcs angled off the facing in 15° steps, per weapon head */
+  mnt: Record<Key, MountKind>; ang: Record<Key, number>;
   broken: Set<Key>; lost: Set<Key>; fresh: Set<BlockType>;
   map: StarMap | null; node: MapNode | null; pendingNode: MapNode | null; shopNode: MapNode | null; mapHover: MapNode | null;
   stats: RunStats | null; meta: Meta; bounty: number;
