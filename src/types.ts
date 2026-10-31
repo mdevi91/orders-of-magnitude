@@ -122,6 +122,8 @@ export interface Physics {
 }
 
 export interface Ship {
+  /** how many weapons share each support module, worked out while the ship has shr.n blocks */
+  shr?: { n: number; m: Map<Key, number> };
   team: Team; x: number; y: number; vx: number; vy: number;
   /** heading, and its cosine and sine */
   a: number; c: number; sn: number;

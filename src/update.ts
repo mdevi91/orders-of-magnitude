@@ -6,7 +6,7 @@ import { cellsFor } from './editor';
 import { craftCap, fightWon, fodderCap, playerDied, spawnSwarm, spawnWave } from './fights';
 import { BS, FA, K, NB, SWING, TAU, angDiff, clamp, rand } from './grid';
 import { dirSpeed } from './physics';
-import { boomAt, boost, broadside, damage, drag, hitShip, impact, killShip, laneClear, rayHits, sparks, stick, wpos } from './ships';
+import { boomAt, boost, broadside, damage, drag, hitShip, impact, killShip, laneClear, punch, rayHits, sparks, stick, wpos } from './ships';
 import { G, turnOf } from './state';
 import { tut, tutTick } from './tutorial';
 import type { Block, Key, Ship } from './types';
@@ -258,7 +258,7 @@ export function update(dt: number){
     for (const g of p.guns){
       const ms = missileGun(g), self = salvo && ms, B = boost(p, g), MV = turns(g.t) ? traverse(g.t, g.mk) : null, RG = rangeMul(g.t)*B.rng*(MV ? MV.rng : 1), DM = LV(g.t)*HM.dmg()*B.dmg*(MV ? MV.dmg : 1);
       // reloads run all the time, firing or not
-      if (g.cd > 0) g.cd -= dt*RATE*B.rate*(ms ? cockpit().mrl || 1 : 1);
+      if (g.cd > 0) g.cd -= dt*RATE*B.rate*(MV ? MV.rate : 1)*(ms ? cockpit().mrl || 1 : 1);
       // a ripple-fire pod launches its whole volley in 0.6 s, each warhead at random within 115° either side of the target
       if (g.rip){
         g.ripT = (g.ripT || 0) - dt;
@@ -268,7 +268,8 @@ export function update(dt: number){
           sfx('missile', .5); g.rip--; g.ripT += .6/12;
         }
       }
-      const gun = def(g.t)!.gun!, TV = turns(g.t) ? traverse(g.t, g.mk) : null, arc = TV ? TV.arc : cpArc(gun.arc || 0), face = p.a + FA[g.o] + (g.ao || 0);
+      // a mount that speeds the shots up hands the weapon a copy of its gun with the faster shot
+      const gun0 = def(g.t)!.gun!, gun = MV && MV.spd !== 1 ? {...gun0, spd:gun0.spd*MV.spd} : gun0, TV = MV, arc = TV ? TV.arc : cpArc(gun.arc || 0), face = p.a + FA[g.o] + (g.ao || 0);
       // a turret swings toward what it aims at, at its mount's speed, reloading or not: on auto the ship it last picked
       // (before its first pick, the lock or the enemy nearest the cursor), by hand the cursor
       if (TV){
@@ -343,7 +344,7 @@ export function update(dt: number){
     const hit = rayHits(ox, oy, dx, dy, range, true)[0];
     if (hit && spend(L.en*B.en*dt)){
       sfx('laser');
-      damage(hit.e, hit.k, L.dps*LV(h.t)*HM.dmg()*B.dmg*B.rate*(TV ? TV.dmg : 1)*(1 - (L.fall ?? .75)*hit.t/range)*dt);
+      damage(hit.e, hit.k, L.dps*LV(h.t)*HM.dmg()*B.dmg*B.rate*(TV ? TV.dmg*TV.rate : 1)*(1 - (L.fall ?? .75)*hit.t/range)*dt);
       h.beam = [ox, oy, ox + dx*hit.t, oy + dy*hit.t];
       if (Math.random() < .35) sparks(ox + dx*hit.t, oy + dy*hit.t, face+Math.PI, 1, 140*SC, L.arc ? ['#d0f5c8','#ffffff'] : ['#9dff8a','#ffffff']);
     } else if (!hit && held && spend(L.en*B.en*dt)){ sfx('laser'); h.beam = [ox, oy, ox + dx*range, oy + dy*range]; }
@@ -513,7 +514,7 @@ export function update(dt: number){
         const burst = b.kind==='flak' || b.kind==='plasma' || b.kind==='mine', k = hitShip(e,b.x,b.y,burst ? b.fuse || 0 : b.r);
         if (k >= 0 && burst){ flakBurst(b); break; }
         if (k >= 0){
-          const hb = e.blocks.get(k)!; if (b.stick) stick(e, k, b.x, b.y, b.stick); b.dmg *= fallOff(b)*(b.aa && e.craft ? 2 : 1); damage(e,k,b.dmg); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.kind==='slug') impact(b,e,k, false, true); if (b.homing) missileBlast(b,e,k);
+          const hb = e.blocks.get(k)!; if (b.stick) stick(e, k, b.x, b.y, b.stick); b.dmg *= fallOff(b)*(b.aa && e.craft ? 2 : 1); punch(e, k, b.dmg, b.x, b.y, b.vx/(Math.hypot(b.vx,b.vy) || 1), b.vy/(Math.hypot(b.vx,b.vy) || 1)); b.dead = true; if (b.kind==='oval') impact(b,e,k, b.r < 3.5*G.SC); if (b.kind==='slug') impact(b,e,k, false, true); if (b.homing) missileBlast(b,e,k);
           if (b.kind==='torp'){ missileBlast(b,e,k); impact(b,e,k); }
           if (b.ion){ ionJam(e, hb); sparks(b.x, b.y, 0, 8, 140*SC, ['#a070ff','#e8dcff','#ffffff']); } G.fx.push({k:'spk', x:b.x, y:b.y, vx:-b.vx*.1, vy:-b.vy*.1, life:.18, max:.18, col:'#ffffff'}); break; }
       }

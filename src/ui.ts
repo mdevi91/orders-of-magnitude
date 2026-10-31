@@ -1,15 +1,15 @@
 import { renderBps } from './blueprints';
 import { rangeOf } from './bullets';
-import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpPerks, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvHave, lvOf, mountFor, mountFits, mountText, outfitPrice, rangeMul, turns, ANG_MAX, ANG_STEP, MOUNTS, MOUNT_ITEM, unlocked, type MountKind, owned, partOffsets, rarOf } from './catalog';
+import { BEAM, COCKPITS, CRAFT, HM, LV, MAXLV, WEDGE, cockpit, cpSpeed, cpTurn, cpPerks, cpUnlocked, faceFor, smallK, type CockpitId, PAL, PARTS, PLATE, RARITY, T, blurb, canBuyHere, isCraft, isWeapon, lvHave, lvOf, mountFor, mountFits, mountText, outfitPrice, rangeMul, traverse, turns, dist, M_PER_BLOCK, ANG_MAX, ANG_STEP, MOUNTS, MOUNT_ITEM, unlocked, type MountKind, owned, partOffsets, rarOf } from './catalog';
 import { PAINTS, aimsOut, arcClear, designType, drawBlock } from './draw';
-import { ARROW, BS, CORE, FA, FACING, KI, KJ, MIRROR } from './grid';
+import { ARROW, BS, CORE, FA, FACING, K, KI, KJ, MIRROR } from './grid';
 import { renderGroups } from './groups';
 import { undoStack } from './input';
 import { dmgOf, repTotal } from './loot';
 import { dirSpeed, laneFwd, physics } from './physics';
 import { save } from './save';
 import { switchCockpit } from './runs';
-import { LIFE } from './ships';
+import { LIFE, designFeeds } from './ships';
 import { ACT, canRepair, openShop } from './shop';
 import { NODE, canJump, curNode, exitNode, nodeDef } from './starmap';
 import { G, blockCount, buildR, scaleOf, turnOf } from './state';
@@ -84,11 +84,33 @@ function syncSelCard(S: number){
   $('selStats').innerHTML = t==='sell' ? '' :
     row('Source', plate ? `${d.cost} cr each` : have ? `${have} in cargo` + (dmgOf(t) ? ` (${dmgOf(t)} damaged)` : '') : canBuyHere(t) ? `${outfitPrice(t)} cr each` : 'none in cargo') +
     (d.hp ? row('Hit points', String(Math.round(d.hp*LV(t)*HM.hp()))) : '') +
-    (rg ? row('Range', `${Math.round(rg*rangeMul(t)*Math.pow(S,.8)/BS)} m`) : '') +
+    (rg && !turns(t) ? row('Range', dist(rg*rangeMul(t)*Math.pow(S,.8)/BS)) : '') +
+    (turns(t) ? mountRows(t, S, row) : '') +
     (d.mount ? '' : row('Level', `${L} / ${MAXLV}` + (L > 1 ? `: ${lvHave(t)}` : L < MAXLV ? ': upgrade at shops' : ''))) +
-    (turns(t) ? row('Stock mount', mountText(t, mountFor(t))) : '') +
     (PARTS[t] ? row('Size', `${partOffsets(PARTS[t]!).length} cells`) : '');
   syncMountPick(t);
+}
+// A weapon's damage per second at its level, before mounts and support modules.
+function baseDps(t: BlockType){
+  const d = T[t], v = d.gun ? d.gun.dmg*(d.gun.mirv || 1)*(d.gun.pellets || 1)/d.gun.cd : d.laser ? d.laser.dps : d.tesla ? d.tesla.dmg*d.tesla.jumps/d.tesla.cd : d.rail ? d.rail.pool/d.rail.cd : 0;
+  return v*LV(t)*HM.dmg();
+}
+// A turret's card rows on the mount picked for it, each with how it differs from the stock mount.
+function mountRows(t: BlockType, S: number, row: (k: string, v: string) => string){
+  const stock = mountFor(t), mk = G.selMk && mountFits(t, G.selMk) === true ? G.selMk : stock, V = traverse(t, mk), V0 = traverse(t, stock);
+  const deg = (a: number) => Math.round(a*180/Math.PI);
+  const vs = (a: number, b: number, more = true) => { const r = a/b - 1; if (!isFinite(r) || Math.abs(r) < .005) return ''; const good = (r > 0) === more; return ` <span class="${good ? 'up' : 'down'}">${r > 0 ? '+' : ''}${Math.round(r*100)}%</span>`; };
+  const was = (a: string, b: string) => a===b ? '' : ` <span class="was">(stock ${b})</span>`;
+  const arcS = (v: typeof V) => v.arc >= Math.PI - .01 ? 'all round' : `±${deg(v.arc)}°`, turnS = (v: typeof V) => v.turn ? `${deg(v.turn)}°/s` : 'fixed';
+  const rg = rangeOf(t)*rangeMul(t)*Math.pow(S,.8)/BS;
+  return row('Firepower', `${(baseDps(t)*V.dmg*V.rate).toFixed(1)} dmg/s${vs(V.dmg*V.rate, V0.dmg*V0.rate)}`) +
+    row('Range', `${dist(rg*V.rng)}${vs(V.rng, V0.rng)}`) +
+    row('Arc', arcS(V) + (G.selAng ? ` · angled ${G.selAng > 0 ? '+' : ''}${G.selAng*15}°` : '') + was(arcS(V), arcS(V0))) +
+    row('Turn speed', turnS(V) + was(turnS(V), turnS(V0))) +
+    (V.rate !== 1 || V0.rate !== 1 ? row('Reload', vs(V.rate, V0.rate).trim() || 'as stock') : '') +
+    (V.spd !== 1 || V0.spd !== 1 ? row('Shot speed', vs(V.spd, V0.spd).trim() || 'as stock') : '') +
+    (V.spread !== 1 || V0.spread !== 1 ? row('Spread', vs(V.spread, V0.spread, false).trim() || 'as stock') : '') +
+    row('Over hull', (V.over ? 'fires over it' : 'needs a clear line') + was(V.over ? 'fires over it' : 'needs a clear line', V0.over ? 'fires over it' : 'needs a clear line'));
 }
 // The mount picker under a turret's card: its stock mount and every mount it fits that is in cargo (or can be bought
 // in Engineering), then the arc angle. The weapon goes down on what is picked here.
@@ -96,11 +118,11 @@ function syncMountPick(t: BlockType){
   const box = $('selMount');
   if (!turns(t)){ box.innerHTML = ''; return; }
   const stock = mountFor(t), cur = G.selMk && mountFits(t, G.selMk) === true ? G.selMk : stock;
-  const kinds = (Object.keys(MOUNTS) as MountKind[]).filter(mk => mk!==stock && mountFits(t, mk) === true && ((G.inv[MOUNT_ITEM[mk]] || 0) > 0 || (G.outfit && unlocked(MOUNT_ITEM[mk]))));
+  const kinds = (Object.keys(MOUNTS) as MountKind[]).filter(mk => { const it = MOUNT_ITEM[mk]; return !!it && mountFits(t, mk) === true && ((G.inv[it] || 0) > 0 || (G.outfit && unlocked(it))); });
   const btn = (mk: MountKind, label: string) => `<button type="button" class="mopt" data-mk="${mk}" aria-pressed="${cur===mk}" title="${mountText(t, mk)}">${label}</button>`;
   const deg = G.selAng*15;
   box.innerHTML = `<div class="mrow"><span>Mount</span>${btn(stock, `${MOUNTS[stock].name} <i>stock</i>`)}` +
-    kinds.map(mk => btn(mk, `${MOUNTS[mk].name} <i>${G.outfit && !(G.inv[MOUNT_ITEM[mk]] || 0) ? outfitPrice(MOUNT_ITEM[mk]) + ' cr' : '×' + G.inv[MOUNT_ITEM[mk]]}</i>`)).join('') + '</div>' +
+    kinds.map(mk => { const it = MOUNT_ITEM[mk]!; return btn(mk, `${MOUNTS[mk].name} <i>${G.outfit && !(G.inv[it] || 0) ? outfitPrice(it) + ' cr' : '×' + G.inv[it]}</i>`); }).join('') + '</div>' +
     `<div class="mrow"><span>Arc angle</span><button type="button" class="mstep" data-ang="-1" aria-label="Angle the arc 15° to port"${G.selAng <= -ANG_MAX ? ' disabled' : ''}>◀</button>` +
     `<b>${deg > 0 ? '+' : ''}${deg}°</b><button type="button" class="mstep" data-ang="1" aria-label="Angle the arc 15° to starboard"${G.selAng >= ANG_MAX ? ' disabled' : ''}>▶</button></div>` +
     `<p class="mnote">${mountText(t, cur, G.selAng*ANG_STEP)}. Placed weapons of this type: click one to move it onto this.</p>`;
@@ -118,13 +140,15 @@ export function designStats(){
   const cells = [...G.design].map(([k,t]) => ({t, i:KI(k), j:KJ(k), o:G.dirs.get(k)||0}));
   const ph = physics(cells, designType);
   let dps = 0, hp = 0, pd = 0, sh = 0, fb = 0, bb = 0, badW = 0, badT = 0, weakT = 0, eGen = 6*cockpit().en, eCap = 40*cockpit().en, eUse = 0;
+  // a weapon's fitted mount and the support modules feeding it scale its damage, and the modules its energy use
+  const fed = new Map(designFeeds().map(f => [f.k, f.B]));
   for (const c of cells){
-    const d = T[c.t], m = LV(c.t); hp += (d.hp || 0)*m;
-    if (aimsOut(c.t)){ const fc = arcClear(c.i, c.j, c.o, c.t); if (fc === 0) badT++; else if (fc < .4) weakT++; }
+    const d = T[c.t], k = K(c.i, c.j), B = fed.get(k), MV = turns(c.t) ? traverse(c.t, G.mnt[k]) : null, m = LV(c.t)*(MV ? MV.dmg*MV.rate : 1)*(B ? B.dmg*B.rate : 1), en = B ? B.en*B.rate : 1; hp += (d.hp || 0)*LV(c.t);
+    if (aimsOut(c.t)){ const fc = arcClear(c.i, c.j, c.o, c.t, k); if (fc === 0) badT++; else if (fc < .4) weakT++; }
     if (d.gun) dps += d.gun.dmg*(d.gun.mirv || 1)*(d.gun.pellets || 1)*m/d.gun.cd;
-    if (d.tesla){ dps += d.tesla.dmg*d.tesla.jumps*m/d.tesla.cd; eUse += d.tesla.en/d.tesla.cd; }
-    if (d.gun && d.gun.en) eUse += d.gun.en/d.gun.cd;
-    if (d.laser) eUse += d.laser.en; if (d.laser?.arc) dps += d.laser.dps*.6*m; if (d.rail) eUse += d.rail.en/d.rail.cd; if (d.pd) eUse += d.pd.en/d.pd.cd*m;
+    if (d.tesla){ dps += d.tesla.dmg*d.tesla.jumps*m/d.tesla.cd; eUse += d.tesla.en/d.tesla.cd*en; }
+    if (d.gun && d.gun.en) eUse += d.gun.en/d.gun.cd*en;
+    if (d.laser) eUse += d.laser.en*en; if (d.laser?.arc) dps += d.laser.dps*.6*m; if (d.rail) eUse += d.rail.en/d.rail.cd; if (d.pd) eUse += d.pd.en/d.pd.cd*m;
     if (d.en?.regen) eGen += d.en.regen*m; if (d.en?.cap) eCap += d.en.cap*m;
     if (d.pd) pd++;
     if (c.t==='shield') sh++;
@@ -170,7 +194,7 @@ export function syncUI(){
   rb.hidden = !G.broken.size; rb.disabled = !canRepair(1);
   rb.innerHTML = `Repair ${G.broken.size} damaged · ${repTotal()} cr`;
   $('gridInfo').innerHTML = G.outfit ? `Starting ship · <b class="gold">${Math.round(G.credits)} cr</b> budget left` : '';
-  const st = designStats(), ms = (v: number) => (v/BS).toFixed(1);
+  const st = designStats(), ms = (v: number) => Math.round(v/BS*M_PER_BLOCK);
   const warn = [st.badE ? `${st.badE} engine${st.badE>1?'s':''}` : '', st.badW ? `${st.badW} beam weapon${st.badW>1?'s':''}` : '', st.badT ? `${st.badT} turret${st.badT>1?'s':''}` : ''].filter(Boolean).join(', ');
   $('stats').innerHTML =
     `<dt>Cockpit</dt><dd>${cockpit().name.replace(' cockpit', '')}</dd>` +

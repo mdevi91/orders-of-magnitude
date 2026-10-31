@@ -197,12 +197,13 @@ export function broadside(s: Ship){
 }
 /** World position of a block on a ship. */
 export function wpos(s: Ship, b: {i: number; j: number}): [number, number] { const lx=b.i*BS, ly=b.j*BS; return [s.x + lx*s.c - ly*s.sn, s.y + lx*s.sn + ly*s.c]; }
-// Support modules: each one touching a weapon, corners included, adds its share to the weapon's range, damage or reload
-// speed, and to its energy use. Worked out once, then again whenever the ship loses a block.
+// Support modules: a module splits its bonus and its energy cost evenly between the weapons touching it, corners included,
+// so one weapon ringed with modules gets all of each and a crowd of guns round one module a sliver each. A weapon adds up
+// its shares of range, damage, reload speed and energy use. Worked out once, then again whenever the ship loses a block.
 const NB8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 type TypeAt = (k: Key) => Cell | undefined;
-/** What support modules boost: anything that shoots. */
-export const boostable = (t: Cell) => { const d = def(t); return !!d && !!(d.gun || d.laser || d.rail || d.tesla); };
+/** What support modules boost: anything that shoots, except the cockpit's own gun. */
+export const boostable = (t: Cell) => { const d = def(t); return t!=='core' && !!d && !!(d.gun || d.laser || d.rail || d.tesla); };
 /** The support modules touching a weapon's cells cs: each module once, with the weapon's own cell it touches. */
 export function feeds(cs: readonly (readonly [number, number, ...unknown[]])[], typeAt: TypeAt): [Key, Key][] {
   const own = new Set(cs.map(([i,j]) => K(i,j))), seen = new Set<Key>(), out: [Key, Key][] = [];
@@ -213,25 +214,33 @@ export function feeds(cs: readonly (readonly [number, number, ...unknown[]])[], 
   }
   return out;
 }
-/** What the modules at keys ms add up to. */
-function addUp(ms: Key[], typeAt: TypeAt): Boost {
+/** How many weapons touch each module, of the parts ws. */
+function moduleShares(ws: Iterable<{t: Cell; i: number; j: number; o: Facing}>, typeAt: TypeAt){
+  const n = new Map<Key, number>();
+  for (const w of ws) if (!HEAD_OF[w.t] && boostable(w.t)) for (const [m] of feeds(cellsFor(w.i, w.j, w.t, w.o), typeAt)) n.set(m, (n.get(m) || 0) + 1);
+  return n;
+}
+/** What a weapon's share of the modules at keys ms adds up to. */
+function addUp(ms: Key[], typeAt: TypeAt, shares: Map<Key, number>): Boost {
   const r = {rng:1, dmg:1, rate:1, en:1};
-  for (const k of ms){ const M = def(typeAt(k)!)!.mod!; r.rng += M.rng || 0; r.dmg += M.dmg || 0; r.rate += M.rate || 0; r.en += M.en; }
+  for (const k of ms){ const M = def(typeAt(k)!)!.mod!, n = shares.get(k) || 1; r.rng += (M.rng || 0)/n; r.dmg += (M.dmg || 0)/n; r.rate += (M.rate || 0)/n; r.en += M.en/n; }
   return r;
 }
 export function boost(s: Ship, b: Block): Boost & {n: number} {
   if (b.bst && b.bst.n === s.blocks.size) return b.bst;
   const typeAt = (k: Key) => s.blocks.get(k)?.t;
-  return b.bst = {...addUp(feeds(cellsFor(b.i, b.j, b.t, b.o), typeAt).map(f => f[0]), typeAt), n:s.blocks.size};
+  if (!s.shr || s.shr.n !== s.blocks.size) s.shr = {n:s.blocks.size, m:moduleShares(s.blocks.values(), typeAt)};
+  return b.bst = {...addUp(boostable(b.t) ? feeds(cellsFor(b.i, b.j, b.t, b.o), typeAt).map(f => f[0]) : [], typeAt, s.shr.m), n:s.blocks.size};
 }
 /** Every weapon on the ship being built that support modules feed: where it is, the modules (with the cell each
  *  touches) and what they add up to. Damaged blocks feed nothing and get nothing. */
 export function designFeeds(typeAt: TypeAt = k => G.broken.has(k) ? undefined : G.design.get(k)){
   const out: {k: Key; t: Cell; mods: [Key, Key][]; B: Boost}[] = [];
-  for (const [k,t] of G.design){
-    if (!typeAt(k) || HEAD_OF[t] || !boostable(t)) continue;
-    const mods = feeds(cellsFor(KI(k), KJ(k), t, G.dirs.get(k) || 0), typeAt);
-    if (mods.length) out.push({k, t, mods, B:addUp(mods.map(f => f[0]), typeAt)});
+  const ws = [...G.design].filter(([k]) => typeAt(k)).map(([k,t]) => ({k, t, i:KI(k), j:KJ(k), o:(G.dirs.get(k) || 0) as Facing})), shares = moduleShares(ws, typeAt);
+  for (const {k,t,i,j,o} of ws){
+    if (HEAD_OF[t] || !boostable(t)) continue;
+    const mods = feeds(cellsFor(i, j, t, o), typeAt);
+    if (mods.length) out.push({k, t, mods, B:addUp(mods.map(f => f[0]), typeAt, shares)});
   }
   return out;
 }
@@ -311,6 +320,21 @@ export function damage(s: Ship, k: Key, dmg: number){
   if (G.stats){ if (s.team==='e') G.stats.dealt = (G.stats.dealt || 0) + took; else if (s.team==='p') G.stats.taken = (G.stats.taken || 0) + took; }
   if (b.hp <= 0) destroyBlock(s,k,b);
   if (s.alive && s.life <= 0) killShip(s);
+}
+/** How much incoming damage it takes to break block b. */
+export const soak = (b: Block) => b.hp/(b.t==='armor' || b.t==='armorc' ? 1 - ARMOR_DR : 1);
+/** A direct hit that breaks a block: the damage left over carries on along the shot into the blocks behind it. */
+export function punch(s: Ship, k: Key, dmg: number, x: number, y: number, dx: number, dy: number){
+  let left = dmg, last = k;
+  for (let q = 0; q <= s.r*2 + BS; q += BS*.4){
+    const at = q ? hitShip(s, x + dx*q, y + dy*q, .1) : k;
+    if (at < 0 || (q && at===last)) continue;
+    const b = s.blocks.get(at); if (!b) continue;
+    const took = soak(b);
+    damage(s, at, left); last = at; left -= took;
+    if (left <= 0 || !s.alive) return;
+    G.fx.push({k:'spk', x:x + dx*q, y:y + dy*q, vx:dx*60, vy:dy*60, life:.18, max:.18, col:'#ffffff'});
+  }
 }
 export function destroyBlock(s: Ship, k: Key, b: Block){
   s.blocks.delete(k); debris(s,b,true);

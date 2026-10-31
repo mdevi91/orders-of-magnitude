@@ -94,7 +94,7 @@ export function fitMount(k: Key, t: Cell, mk: MountKind): true | string {
   const fit = mountFits(t, mk); if (fit !== true) return fit;
   if (mountAt(k, t)===mk) return true;
   const ang = G.ang[k];
-  if (mk !== mountFor(t)){ const r = takeMount(MOUNT_ITEM[mk]); if (r !== true) return r; }
+  if (mk !== mountFor(t)){ const it = MOUNT_ITEM[mk]; if (!it) return `${T[t as BlockType]?.name || t} can’t take that mount`; const r = takeMount(it); if (r !== true) return r; }
   unmount(k); if (ang) G.ang[k] = ang;
   if (mk !== mountFor(t)) G.mnt[k] = mk;
   return true;
@@ -147,7 +147,7 @@ export function spinAt(i: number, j: number){
 /** Takes the fitted mount off the weapon head at k, back into cargo (or refunded in Engineering); the weapon is on its stock mount again. */
 function unmount(k: Key){
   const mk = G.mnt[k]; delete G.ang[k]; if (!mk) return;
-  delete G.mnt[k]; const it = MOUNT_ITEM[mk];
+  delete G.mnt[k]; const it = MOUNT_ITEM[mk]; if (!it) return;
   if (G.outfit) G.credits += outfitPrice(it); else G.inv[it] = (G.inv[it] || 0) + 1;
 }
 // Mirror twins of a cell for mounts, with the sign their arc angle takes: a left/right or fore/aft mirror flips it.
@@ -168,15 +168,25 @@ export function mountAction(i: number, j: number, tap: boolean): true | string {
     const fit = mountFits(t, mk); if (fit !== true){ if (!n) res = fit; continue; }
     const cur = G.mnt[k] || mountFor(t);
     if (cur===mk){
-      // already on it: a tap angles the arc; the twins follow, mirrored
-      if (!tap){ if (!n) res = 'Already placed'; continue; }
-      if (step == null){ const v = (G.ang[k] || 0) + 1; step = v > ANG_MAX ? -ANG_MAX : v; }
-      G.ang[k] = step*sg; if (!G.ang[k]) delete G.ang[k];
-      continue;
+      // already on it: a tap angles the arc
+      if (!n){
+        if (!tap) res = 'Already placed';
+        const v = (G.ang[k] || 0) + (tap ? 1 : 0); step = v > ANG_MAX ? -ANG_MAX : v;
+      }
+    } else {
+      const r = fitMount(k, t, mk); if (r !== true){ if (!n) res = r; continue; }
+      if (!n) step = G.ang[k] || 0;
     }
-    const r = fitMount(k, t, mk); if (r !== true && !n) res = r;
+    // the twins take the clicked weapon's angle, mirrored
+    if (step != null){ G.ang[k] = step*sg; if (!G.ang[k]) delete G.ang[k]; }
   }
   return res;
+}
+/** Puts the weapon head at k on the mount and arc angle picked on its card; sg: the sign the angle takes there. */
+function applyPick(k: Key, t: Cell, sg: number): true | string {
+  const r = fitMount(k, t, G.selMk && mountFits(t, G.selMk) === true ? G.selMk : mountFor(t));
+  if (G.selAng) G.ang[k] = G.selAng*sg; else delete G.ang[k];
+  return r;
 }
 /** With a weapon type selected, a tap on a placed one of that type moves it onto the picked mount and arc angle (and its
  *  mirror twins); false if it already matches, so the tap turns it instead. */
@@ -184,12 +194,9 @@ export function refitAt(i: number, j: number){
   const [hi,hj] = headOf(i,j), k = K(hi,hj), t = G.design.get(k);
   if (!t || t!==G.sel || !turns(t)) return false;
   const want = G.selMk && mountFits(t, G.selMk) === true ? G.selMk : mountFor(t);
-  if (mountAt(k, t)===want && (G.ang[k] || 0)===G.selAng) return false;
-  for (const [a,b,sg] of mountTwins(i,j)){
-    const [ti,tj] = headOf(a,b), tk = K(ti,tj); if (G.design.get(tk)!==t) continue;
-    const r = fitMount(tk, t, want); if (r !== true && tk===k) toast(r);
-    if (G.selAng) G.ang[tk] = G.selAng*sg; else delete G.ang[tk];
-  }
+  const twins = mountTwins(i,j).map(([a,b,sg]) => { const [ti,tj] = headOf(a,b); return [K(ti,tj), sg] as const; }).filter(([tk]) => G.design.get(tk)===t);
+  if (twins.every(([tk,sg]) => mountAt(tk, t)===want && (G.ang[tk] || 0)===G.selAng*sg)) return false;
+  for (const [tk,sg] of twins){ const r = applyPick(tk, t, sg); if (r !== true && tk===k) toast(r); }
   return true;
 }
 export function buildAction(i: number, j: number, mode: 'place' | 'sell', tap = false){
@@ -206,7 +213,11 @@ export function buildAction(i: number, j: number, mode: 'place' | 'sell', tap = 
     // a mirror twin's arc angle is mirrored once for each axis it is flipped across
     const sgn = (a: number, b: number) => (Math.sign(a)===Math.sign(i) ? 1 : -1)*(Math.sign(b)===Math.sign(j) ? 1 : -1);
     const [first, ...rest] = placeSpots(i,j,G.rot,G.sel), r = tryPlace(first[0],first[1],G.sel,first[2]);
-    for (const [a,b,mo] of rest) tryPlace(a,b,G.sel,mo,sgn(a,b));
+    for (const [a,b,mo] of rest){
+      // a twin already down moves onto what was picked, so the pair stays matched
+      const rt = tryPlace(a,b,G.sel,mo,sgn(a,b));
+      if (r===true && rt==='Already placed' && turns(G.sel)) applyPick(K(a,b), G.sel, sgn(a,b));
+    }
     if (r !== true && r !== 'Already placed') toast(r);
   }
   syncUI();

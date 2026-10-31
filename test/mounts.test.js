@@ -5,7 +5,7 @@ startFight('fight'); G.waves = []; G.ships = [G.player];
 G.auto = [true,true,true,true,true]; G.fireHeld = false; G.aimJoy = null;
 const p = G.player; p.guns = p.guns.filter(g => g.t!=='core');
 const g = p.guns[0], TV = traverse('cannon'), d = 200*G.SC, a = 50*Math.PI/180;
-ok('the cannon sits on a turret ring', mountFor('cannon') === 'ring' && Math.abs(TV.arc - cpArc(MOUNTS.ring.arc)) < 1e-9, TV.arc);
+ok('the cannon sits on a turret ring', mountFor('cannon') === 'ring0' && Math.abs(TV.arc - cpArc(MOUNTS.ring0.arc)) < 1e-9, TV.arc);
 const e = dummy(d); e.wob = 0;
 const place = () => { p.vx = p.vy = 0; p.a = 0; p.av = 0; e.x = p.x + Math.sin(a)*d; e.y = p.y - Math.cos(a)*d; };
 place();

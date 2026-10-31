@@ -1,7 +1,7 @@
 // ---------- grid keys ----------
 import type { Facing, Key } from './types';
 
-export const BS = 10; // world units per block; 1 block = 1 m
+export const BS = 10; // world units per block; 1 block reads as 10 m (M_PER_BLOCK)
 export const K = (i: number, j: number): Key => (i+512)*1024 + (j+512);
 export const KI = (k: Key) => Math.floor(k/1024) - 512, KJ = (k: Key) => k%1024 - 512;
 export const CORE = K(0,0), NB = [1024,-1024,1,-1];

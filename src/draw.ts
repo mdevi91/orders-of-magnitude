@@ -1,4 +1,4 @@
-import { BCOL, BEAM, COCKPITS, ESH, GCOL, HEAD_OF, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isArm, isWeapon, lvOf, mountFor, rangeMul, traverse, turns, angAt, mountAt, mountFits, mountText, MOUNTS, ANG_STEP, shRad, type MountKind } from './catalog';
+import { BCOL, BEAM, COCKPITS, ESH, GCOL, HEAD_OF, MAXLV, T, WEDGE, cockpit, cpArc, def, faceFor, grpOf, isArm, isWeapon, lvOf, mountFor, rangeMul, traverse, turns, angAt, mountAt, mountFits, mountText, MOUNTS, ANG_STEP, M_PER_BLOCK, shRad, type MountKind, type MountLook } from './catalog';
 import { rangeOf } from './bullets';
 import { cellsFor, headOf, placeCheck, placeSpots } from './editor';
 import { WARP } from './fights';
@@ -76,7 +76,7 @@ export function barrel(X: Ctx, x: number, y: number, ca: number, sa: number, len
   X.fillStyle = m[0]; X.beginPath(); X.moveTo(x+px*.3,y+py*.3); X.lineTo(x+px*.3+ca*len,y+py*.3+sa*len); X.lineTo(x-px*.4+ca*len,y-py*.4+sa*len); X.lineTo(x-px*.4,y-py*.4); X.closePath(); X.fill();
 }
 /** The mount a weapon sits on, drawn under it: a braced bracket, a gimbal, a turret ring, a raised barbette or a dome. */
-export function drawMount(X: Ctx, kind: MountKind, team: Team, x: number, y: number, rot: number, r = 1){
+export function drawMount(X: Ctx, kind: MountLook, team: Team, x: number, y: number, rot: number, r = 1){
   const dark = '#14171e', [hi, mid] = team==='e' ? ['#c8783a', '#6a3418'] : ['#9aa4b4', '#4a525e'];
   X.save(); X.translate(x, y); X.rotate(rot); X.scale(r, r);
   if (kind==='fixed'){
@@ -111,7 +111,7 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
   if (layer==='arm'){
     const was = BAKE.noPlate; BAKE.noPlate = true;
     try {
-      if (!HEAD_OF[t]) drawMount(X, mk || mountFor(t), team, x, y, (o ? o*Math.PI/4 : 0) + ao);
+      if (!HEAD_OF[t]) drawMount(X, MOUNTS[mk || mountFor(t)].look, team, x, y, (o ? o*Math.PI/4 : 0) + ao);
       drawBlock(X, t, o, team, x, y, aim, false, 1, firing, undefined, mk, ao);
     } finally { BAKE.noPlate = was; }
     if (hit){ X.globalAlpha = .7; X.fillStyle = '#ffffff'; X.beginPath(); X.arc(x, y, 4.6, 0, TAU); X.fill(); X.globalAlpha = 1; }
@@ -321,8 +321,11 @@ export function drawBlock(X: Ctx, t: Cell, o: Facing, team: Team, x: number, y: 
       }
       break;
     }
-    case 'mfixed': case 'mgimbal': case 'mring': case 'mbarbette': case 'mdome':
-      drawMount(X, T[t as BlockType].mount!, team, x, y, 0); break;
+    case 'mfixed': case 'mfixed2': case 'mgimbal': case 'mgimbal2': case 'mring': case 'mring2': case 'mbarbette': case 'mbarbette2': case 'mdome': case 'mdome2':
+      drawMount(X, MOUNTS[T[t as BlockType].mount!].look, team, x, y, 0);
+      // a Mk II wears a gold pip
+      if (MOUNTS[T[t as BlockType].mount!].mk===2){ X.fillStyle = '#ffc46b'; X.fillRect(x+2.6, y-4.4, 1.8, 1.8); }
+      break;
     case 'battery':
       X.fillStyle = '#142a14'; X.fillRect(x-3.6,y-3,7.2,6);
       for (let q=0; q<3; q++){ X.fillStyle = '#3ac84a'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,4.6); X.fillStyle = '#b8ffb0'; X.fillRect(x-2.9+q*2.2,y-2.3,1.6,.9); }
@@ -1032,7 +1035,7 @@ export function renderBuild(){
   // labels
   ctx.fillStyle = '#8497c4'; ctx.font = FONT(8); ctx.textAlign = 'center';
   ctx.fillText('FORE', cx, Tp - 5);
-  ctx.fillText(`${2*R+1} M`, cx, Tp + size + 12);
+  ctx.fillText(`${(2*R+1)*M_PER_BLOCK} M`, cx, Tp + size + 12);
 
   const sc = cs/BS;
   ctx.save(); ctx.translate(cx,cy); ctx.scale(sc,sc); ctx.lineWidth = 1/sc;
@@ -1109,14 +1112,14 @@ export function renderBuild(){
       const now = designFeeds(hyp).filter(f => f.mods.some(([m]) => m===hk));
       for (const f of now) for (const [m,w] of f.mods) if (m===hk) link(m, w, .9);
       tipCol = MODCOL[G.sel];
-      tip = [T[G.sel].name, now.length ? `Would boost ${now.map(f => T[f.t as BlockType]?.name || f.t).join(', ')}` : 'Boosts nothing here: touch a weapon (corners count)'];
+      tip = [T[G.sel].name, now.length ? `Would boost ${now.map(f => T[f.t as BlockType]?.name || f.t).join(', ')}${now.length > 1 ? `, sharing it ${now.length} ways` : ''}` : 'Boosts nothing here: touch a weapon (corners count)'];
     } else if (ht && !G.broken.has(hk)){
       const [hi, hj] = headOf(h.i, h.j), head = K(hi, hj), wt = G.design.get(head)!, f = fed.find(q => q.k===head);
       if (def(ht)?.mod){
         // a placed module: the weapons it feeds
         const ws = fed.filter(q => q.mods.some(([m]) => m===hk));
         tipCol = MODCOL[ht];
-        tip = [T[ht as BlockType].name, ws.length ? `Boosts ${ws.map(q => T[q.t as BlockType]?.name || q.t).join(', ')}` : 'Boosts nothing: touch a weapon (corners count)'];
+        tip = [T[ht as BlockType].name, ws.length ? `Boosts ${ws.map(q => T[q.t as BlockType]?.name || q.t).join(', ')}${ws.length > 1 ? `, sharing it ${ws.length} ways` : ''}` : 'Boosts nothing: touch a weapon (corners count)'];
       } else if (boostable(wt)){
         tip = [`${T[wt as BlockType]?.name || wt}${turns(wt) ? ': ' + mountText(wt, mountAt(head, wt), angAt(head)) : ''}`];
         // the selected weapon type: a click moves it onto the picked mount and angle, or turns it if it already matches

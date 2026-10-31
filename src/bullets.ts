@@ -1,7 +1,7 @@
 import { sfx } from './audio';
 import { ESH, T, cockpit, def, shRad } from './catalog';
 import { BS, TAU, clamp, rand } from './grid';
-import { boomAt, damage, sparks, wpos } from './ships';
+import { boomAt, damage, soak, sparks, wpos } from './ships';
 import { G } from './state';
 import { tut } from './tutorial';
 import type { BlockType, Bullet, BulletKind, GunDef, Key, Ship } from './types';
@@ -16,10 +16,16 @@ export function flakBurst(b: Bullet){
   sparks(b.x, b.y, 0, 8, 160*G.SC, ['#ff9a3a','#ffe08a','#ffffff']);
   for (const e of G.ships){
     if (!e.alive || e.team!=='e' || Math.hypot(e.x-b.x, e.y-b.y) > e.r + blast) continue;
+    // damage past what breaks a block spills onto the nearest blocks left
+    let spill = 0;
     for (const [k,bb] of [...e.blocks]){
       if (!e.alive || !e.blocks.has(k)) continue;
       const [wx,wy] = wpos(e,bb), d = Math.hypot(wx-b.x, wy-b.y);
-      if (d < blast) damage(e, k, b.dmg*(1 - .6*d/blast));
+      if (d < blast){ const v = b.dmg*(1 - .6*d/blast); spill += Math.max(0, v - soak(bb)); damage(e, k, v); }
+    }
+    if (spill > 0 && e.alive){
+      const rest = [...e.blocks].map(([k,bb]) => { const [wx,wy] = wpos(e,bb); return {k, bb, d:Math.hypot(wx-b.x, wy-b.y)}; }).sort((p,q) => p.d - q.d);
+      for (const {k,bb} of rest){ if (spill <= 0 || !e.alive) break; if (!e.blocks.has(k)) continue; const took = soak(bb); damage(e, k, spill); spill -= took; }
     }
   }
   // only bullets near the heart of the burst are wiped out

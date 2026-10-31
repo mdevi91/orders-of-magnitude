@@ -2,9 +2,9 @@
 // selected mount angles its arc 15° at a time; mirror twins follow; taking a weapon off returns its mount.
 fresh(); G.stage = 6; G.outfit = false; G.mir = 1;
 G.design = new Map([[CORE,'core'], [K(-1,-1),'cannon'], [K(1,-1),'cannon'], [K(0,-1),'hull'], [K(-1,0),'hull'], [K(1,0),'hull']]);
-G.dirs = new Map([[K(-1,-1),0], [K(1,-1),0]]); G.broken = new Set(); G.mnt = {}; G.ang = {}; G.inv = {mbarbette:1, mfixed:2, mdome:1};
+G.dirs = new Map([[K(-1,-1),0], [K(1,-1),0]]); G.broken = new Set(); G.mnt = {}; G.ang = {}; G.inv = {mbarbette:1, mfixed:2, mdome:1, mring:1};
 const L = K(-1,-1), R = K(1,-1);
-ok('weapons start on their stock mount', mountAt(L, 'cannon') === 'ring' && !G.mnt[L]);
+ok('weapons start on their stock mount', mountAt(L, 'cannon') === 'ring0' && !G.mnt[L]);
 G.sel = 'mfixed'; buildAction(-1, -1, 'place', true);
 ok('a fixed mount fits both mirror twins from cargo', G.mnt[L] === 'fixed' && G.mnt[R] === 'fixed' && (G.inv.mfixed || 0) === 0, JSON.stringify([G.mnt, G.inv]));
 buildAction(-1, -1, 'place', true);
@@ -16,7 +16,7 @@ ok('dragging over it does not angle it', G.ang[L] === -3);
 G.mir = 0; G.sel = 'mbarbette'; buildAction(-1, -1, 'place', true);
 ok('a new mount swaps in, the old one back to cargo, the angle kept', G.mnt[L] === 'barbette' && G.inv.mfixed === 1 && G.inv.mbarbette === 0 && G.ang[L] === -3, JSON.stringify([G.mnt, G.inv, G.ang]));
 G.sel = 'mring'; buildAction(-1, -1, 'place', true);
-ok('fitting the stock kind takes the fitted mount off for free', !G.mnt[L] && G.inv.mbarbette === 1, JSON.stringify([G.mnt, G.inv]));
+ok('a light turret ring swaps in for the barbette', G.mnt[L] === 'ring' && G.inv.mbarbette === 1 && G.inv.mring === 0, JSON.stringify([G.mnt, G.inv]));
 G.sel = 'mdome'; G.design.set(K(0,-2), 'laser'); for (const [i,j,ct] of cellsFor(0,-2,'laser',0)) G.design.set(K(i,j), ct);
 ok('a dome takes small weapons only', mountFits('laser', 'dome') !== true && mountFits('cannon', 'dome') === true);
 ok('guided launchers need no mount', mountFits('missile', 'ring') !== true);
@@ -30,10 +30,22 @@ G.mnt = {[L]:'fixed'}; G.ang = {[L]:2};
 startFight('fight'); G.waves = []; G.ships = [G.player];
 const g = G.player.guns.find(b => b.i===-1 && b.j===-1);
 ok('the fighting block carries mount and angle', g.mk === 'fixed' && Math.abs(g.ao - 2*ANG_STEP) < 1e-9, `${g.mk} ${g.ao}`);
-const V = traverse('cannon', 'fixed');
-ok('a fixed mount: no turning, more damage and range', V.turn === 0 && V.dmg > 1 && V.rng > 1 && V.spread < 1);
+// a Longbarrel cradle's shells fly 50% faster
+{
+  G.ang = {}; G.mnt = {[L]:'fixed2'}; G.design.delete(R); G.dirs.delete(R);
+  startFight('fight'); G.waves = []; G.ships = [G.player]; G.auto = [true,true,true,true,true]; G.fireHeld = false; G.aimJoy = null;
+  G.player.guns = G.player.guns.filter(b => b.t!=='core');
+  const e = dummy(150); e.wob = 0; let shell = null;
+  sim(4, () => !!shell, () => { G.player.vx = G.player.vy = 0; G.player.a = 0; shell = shell || G.pb[0]; });
+  ok('shot speed from the mount reaches the shells', shell && Math.abs(shell.sp - T.cannon.gun.spd*G.SC*1.5) < 1e-6, shell && `${shell.sp} vs ${T.cannon.gun.spd*G.SC*1.5}`);
+}
+const V = traverse('cannon', 'fixed2'), V1 = traverse('cannon', 'fixed');
+ok('a Longbarrel cradle: no turning, more damage, much more range and shot speed', V.turn === 0 && V.dmg > 1 && V.rng >= 1.5 && V.spd > 1 && V.spread < 1);
+ok('the cheap fixed mount gives less', V1.rng < V.rng && V1.spd < V.spd);
+ok('a bubble dome trades damage and range for all-round aim', traverse('cannon','dome').dmg < 1 && traverse('cannon','dome').rng < 1 && traverse('cannon','dome').arc >= Math.PI - .01);
+ok('every look has a cheap and a dear item', ['fixed','gimbal','ring','barbette','dome'].every(l => MOUNT_ITEM[l] && MOUNT_ITEM[l+'2'] && T[MOUNT_ITEM[l]].cost < T[MOUNT_ITEM[l+'2']].cost));
 ok('a barbette fires over the hull, a ring does not', traverse('cannon','barbette').over && !traverse('cannon','ring').over);
-ok('mounts are in the palette, not upgradable', ['mfixed','mgimbal','mring','mbarbette','mdome'].every(t => PAL.includes(t) && T[t].mount));
+ok('mounts are in the palette', Object.values(MOUNT_ITEM).every(t => PAL.includes(t) && T[t].mount));
 // picking the mount and angle with the weapon: it goes down on them, the mirror twin mirrored
 fresh(); G.stage = 6; G.outfit = false; G.mir = 1;
 G.design = new Map([[CORE,'core'], [K(-1,0),'hull'], [K(1,0),'hull']]); G.dirs = new Map(); G.broken = new Set(); G.mnt = {}; G.ang = {};

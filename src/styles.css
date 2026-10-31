@@ -91,6 +91,9 @@ kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line);padding:
 #buildTip{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:5;max-width:min(460px,calc(100vw - 32px));padding:6px 10px;background:var(--ink);border:2px solid var(--tc,var(--line));font-family:var(--mono);font-size:13px;line-height:1.4;color:var(--paper);pointer-events:none}
 #buildTip[hidden]{display:none}
 #buildTip .tt{color:var(--tc,var(--line));font-weight:600}
+#selStats .up{color:#7fe07a}
+#selStats .down{color:var(--foe)}
+#selStats .was{color:var(--muted)}
 #selMount:empty{display:none}
 #selMount{display:flex;flex-direction:column;gap:4px;margin-top:6px}
 .mrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px}

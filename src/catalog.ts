@@ -25,7 +25,7 @@ export const BLOCKS = {
   ion:    {name:'VH-9 Ion Lance', make:'Varga-Holt', key:'i', unlock:3, rar:2, cost:85, hp:18, mass:1.5, rot:true, gun:{range:380, cd:1.4, en:9, spd:420, dmg:6, spread:.03, r:2.6, arc:.8, fx:'ion', ion:true}, desc:'Turret. Ion bolts do 5× damage to shield bubbles and jam the enemy weapons within 2 cells of the hit for 1.5 s. Weak against hull. Covers 46° either side of its facing.'},
   goo:    {name:'Mire Goo Sprayer', make:'Ruiz Ordnance', key:'s', unlock:2, rar:1, cost:55, hp:18, mass:1.5, rot:true, gun:{range:250, cd:.9, en:3, spd:300, dmg:1.2, spread:.05, r:1.8, arc:1, fx:'goo', pellets:5, fan:.45, over:true, stick:'goo'}, desc:'Turret. Sprays sticky goo over your own hull that clings to enemy ships for 5 s: each blob slows their flying and turning by 5%, down to under half speed. Barely scratches the paint. Covers 57° either side of its facing.'},
   hack:   {name:'Wraith Hacking Module', make:'Varga-Holt', key:'a', off:true, unlock:4, rar:2, cost:110, hp:18, mass:1.5, rot:true, gun:{range:1000, cd:12, en:10, spd:150, dmg:4, spread:.01, r:2.4, arc:1, fx:'hack', stick:'hack', nofall:true}, desc:'Turret. Fires a slow, long-range module that drifts after its target and clamps onto the hull for 10 s, hacking it: 15% slower flying, 25% slower reloads and 30% less from its generators, stacking up to 3. Reloads very slowly. Covers 57° either side of its facing.'},
-  tesla:  {name:'Stormcoil', make:'Helix Works', key:'z', unlock:5, rar:3, cost:120, hp:22, mass:2, tesla:{cd:.9, range:110, dmg:14, jumps:3, en:6}, desc:'Arcs lightning to the nearest enemy block within 11 m, then jumps to 2 more blocks close by. Reaches in every direction, through your own hull, and zaps enemy fighters and missiles too.'},
+  tesla:  {name:'Stormcoil', make:'Helix Works', key:'z', unlock:5, rar:3, cost:120, hp:22, mass:2, tesla:{cd:.9, range:110, dmg:14, jumps:3, en:6}, desc:'Arcs lightning to the nearest enemy block within 110 m, then jumps to 2 more blocks close by. Reaches in every direction, through your own hull, and zaps enemy fighters and missiles too.'},
   torpedo:{name:'Leviathan Torpedo', make:'Teller Heavy Industries', key:'o', unlock:4, rar:3, cost:140, hp:22, mass:1.5, rot:true, gun:{range:1000, cd:5, en:22, spd:175, dmg:70, spread:.01, r:3.4, arc:.35, fx:'torp', nofall:true}, desc:'2 blocks long. Slow, unguided heavy torpedo fired along its facing (20° either side to aim): 70 damage and a wide blast. Point defense cannot stop it.'},
   mine:   {name:'Tangle Mine Layer', make:'Ashgrove Defense', key:'n', unlock:2, rar:1, cost:60, hp:18, mass:1.5, gun:{range:320, cd:2.4, en:5, spd:70, dmg:20, spread:.5, r:2.4, arc:Math.PI, fx:'mine', life:20, fuse:24, blast:34, lob:true}, desc:'Drops proximity mines that drift to a stop and wait up to 20 s, bursting when an enemy comes near. Launched over your own hull in any direction.'},
   laser:  {name:'Sunspear Laser', make:'Lumen Industries', key:'6', unlock:3, rar:2, cost:110, hp:24, mass:1.5, rot:true, laser:{dps:88.5, range:350, en:12}, desc:'2 blocks long. Continuous beam along its facing, swinging 5° to aim. Hits hardest up close and fades toward the end of its reach.'},
@@ -37,15 +37,20 @@ export const BLOCKS = {
   pd:     {name:'Picket Point Defense', make:'Ashgrove Defense', key:'q', unlock:2, rar:1, cost:40, hp:16, mass:1.5, pd:{cd:.45, range:85, en:2}, desc:'Shoots down enemy missiles, flak and gatling rounds that come close. Cannon slugs, rail rounds and capital-ship orbs are too heavy to stop.'},
   aegis:  {name:'Aegis Array', make:'Ashgrove Defense', key:'y', unlock:5, rar:3, cost:230, hp:60, mass:6, pd:{cd:.16, range:210, en:3, heavy:true}, desc:'2×3 point defense battery. Reaches two and a half times as far as point defense and fires three times as fast, and its heavy guns stop cannon slugs as well as missiles, flak and gatling rounds.'},
   gen:    {name:'Generator', key:'g', unlock:1, rar:0, cost:25, hp:14, mass:2, en:{regen:8}, desc:'Makes 8 energy per second. Weapons and shields run on energy. Safe deep inside the hull.'},
-  rmod:   {name:'Longsight Rangefinder', make:'Nakamura Kinetics', unlock:2, rar:1, cost:50, hp:14, mass:1, mod:{rng:.2, en:.3}, desc:'Support module. Every weapon touching it, corners included, reaches 20% further but uses 30% more energy per shot. Several add up.'},
-  dmod:   {name:'Overcharge Coupler', make:'Lumen Industries', key:'d', unlock:3, rar:1, cost:60, hp:14, mass:1, mod:{dmg:.2, en:.3}, desc:'Support module. Every weapon touching it, corners included, hits 20% harder but uses 30% more energy per shot. Several add up.'},
-  cmod:   {name:'Quickfeed Autoloader', make:'Kessler Arms', key:'m', unlock:3, rar:1, cost:60, hp:14, mass:1, mod:{rate:.2, en:.3}, desc:'Support module. Every weapon touching it, corners included, reloads 20% faster (a beam burns 20% hotter) but uses 30% more energy per shot. Several add up.'},
+  rmod:   {name:'Longsight Rangefinder', make:'Nakamura Kinetics', unlock:2, rar:1, cost:50, hp:14, mass:1, mod:{rng:.4, en:.3}, desc:'Support module. A weapon touching it, corners included, reaches 40% further but uses 30% more energy per shot. Weapons touching the same module share it evenly. Several add up.'},
+  dmod:   {name:'Overcharge Coupler', make:'Lumen Industries', key:'d', unlock:3, rar:1, cost:60, hp:14, mass:1, mod:{dmg:.4, en:.3}, desc:'Support module. A weapon touching it, corners included, hits 40% harder but uses 30% more energy per shot. Weapons touching the same module share it evenly. Several add up.'},
+  cmod:   {name:'Quickfeed Autoloader', make:'Kessler Arms', key:'m', unlock:3, rar:1, cost:60, hp:14, mass:1, mod:{rate:.4, en:.3}, desc:'Support module. A weapon touching it, corners included, reloads 40% faster (a beam burns 40% hotter) but uses 30% more energy per shot. Weapons touching the same module share it evenly. Several add up.'},
   // mounts: cargo items fitted onto placed weapons, never placed as blocks (see the hardpoints section)
-  mfixed:   {name:'Fixed mount', unlock:1, rar:0, cost:15, mount:'fixed', desc:'Mount. Locks a weapon on its facing (±3°): it can’t turn, but hits 15% harder, reaches 15% further and spreads less. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
-  mgimbal:  {name:'Gimbal', unlock:1, rar:0, cost:25, mount:'gimbal', desc:'Mount. A quick, narrow swivel: ±20°, turning 140°/s. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
-  mring:    {name:'Turret ring', unlock:2, rar:1, cost:45, mount:'ring', desc:'Mount. ±60°, turning 100°/s. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
-  mbarbette:{name:'Barbette', unlock:4, rar:2, cost:80, mount:'barbette', desc:'Mount. ±90°, turning 75°/s, raised so the weapon fires over your own hull. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
-  mdome:    {name:'Dome', unlock:6, rar:3, cost:130, mount:'dome', desc:'Mount. All round, turning 50°/s, and fires over your own hull. Small weapons only. Select it, then click a placed weapon to fit it; click that weapon again to angle its arc 15° (up to 45° either way). Bigger weapons turn slower on any mount, and the mount a weapon replaces goes back to cargo.'},
+  mfixed:    {name:'Bolt-down Mount', unlock:1, rar:0, cost:30, mount:'fixed'},
+  mfixed2:   {name:'Longbarrel Cradle', unlock:4, rar:2, cost:120, mount:'fixed2'},
+  mgimbal:   {name:'Gimbal', unlock:1, rar:0, cost:20, mount:'gimbal'},
+  mgimbal2:  {name:'Tracking Gimbal', unlock:3, rar:2, cost:75, mount:'gimbal2'},
+  mring:     {name:'Light Turret Ring', unlock:1, rar:0, cost:25, mount:'ring'},
+  mring2:    {name:'Heavy Turret Ring', unlock:4, rar:2, cost:100, mount:'ring2'},
+  mbarbette: {name:'Barbette', unlock:3, rar:1, cost:50, mount:'barbette'},
+  mbarbette2:{name:'Armoured Barbette', unlock:6, rar:3, cost:140, mount:'barbette2'},
+  mdome:     {name:'Bubble Dome', unlock:4, rar:1, cost:60, mount:'dome'},
+  mdome2:    {name:'Sentinel Dome', unlock:8, rar:3, cost:180, mount:'dome2'},
   battery:{name:'Battery', key:'b', unlock:1, rar:0, cost:15, hp:12, mass:1.5, en:{cap:60}, desc:'Stores 60 energy for bursts of fire. Safe deep inside the hull.'},
   fbay:   {name:'Wasp Fighter Bay', make:'Orion Dynamics', key:'h', unlock:4, rar:2, cost:95, hp:20, mass:1.5, rot:true, desc:'1×4 hangar. Launches a fighter out of its front end that dogfights nearby enemies. Every 30 s it docks to rearm and repair, then flies out again. A lost fighter takes 15 s to replace.'},
   bbay:   {name:'Albatross Bomber Bay', make:'Orion Dynamics', key:'j', unlock:7, rar:4, cost:240, hp:24, mass:2, rot:true, desc:'2×6 hangar. Launches a slow, tough bomber that passes over enemy hulls dropping heavy area bombs. Every 30 s it docks to rearm and repair, then flies out again. A lost bomber takes 25 s to replace.'},
@@ -127,7 +132,7 @@ export function pickWeapon(sector: number): EnemyGun {
   return ks[0];
 }
 export const ESH = {hp:30, regen:12, delay:3, down:6, rad:2.5*10}; // enemy shield bubble
-export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','goo','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','rmod','dmod','cmod','mfixed','mgimbal','mring','mbarbette','mdome','sell'];
+export const PAL: BlockType[] = ['hull','armor','hullc','armorc','cannon','bigcannon','gatling','hgatling','scatter','flak','plasma','ion','goo','missile','mirv','swarm','mine','torpedo','laser','glimmer','rail','tesla','fbay','bbay','engine','gyro','shield','pd','aegis','gen','battery','rmod','dmod','cmod','mfixed','mfixed2','mgimbal','mgimbal2','mring','mring2','mbarbette','mbarbette2','mdome','mdome2','sell'];
 export const COL: Record<'p'|'e'|'a', Partial<Record<Cell, string>>> = {
   p:{core:'#ffffff', hull:'#bcd0f5', armor:'#86a6e6', cannon:'#a8ecff', bigcannon:'#a8ecff', bigcannon_b:'#7fb0d0', gatling:'#a8ecff', hgatling:'#a8ecff', hgatling_b:'#7fb0d0', missile:'#ffe08a', engine:'#ffb27a', pd:'#c9adff', mirv:'#ff9ad0', mirv_b:'#c070a0', gyro:'#8ff0c8',
      laser:'#9dff8a', laser_b:'#72d86a', glimmer:'#d0f5c8', rail:'#efe6ff', rail_b:'#b9a8f0', shield:'#5fd3ff', gen:'#ffd04a', battery:'#7fe07a',
@@ -253,16 +258,32 @@ export const GCOL = ['#5fd8ff','#ffc46b','#ff7ad8','#9dff8a','#ff9a7a'];
 // it is lost once more than 49% of the blocks under it are destroyed, and its weapon with it. The weapon has its own
 // hit points, which count toward the ship's life. Mounts sit on full hull or armour only, never on corners.
 // arc: turn either side of the facing (rad); turn: turn speed (rad/s, 0 = cannot turn); over: fires over the hull;
-// a fixed mount is braced: more damage, less spread.
-export type MountKind = 'fixed' | 'gimbal' | 'ring' | 'barbette' | 'dome';
+// dmg, rng, rate, spd, spread: multipliers on the weapon's damage, range, reload speed, shot speed and spread.
+// Five looks, each with a stock version (what a weapon comes on, free, never an item: id ending in 0), a cheap Mk I
+// and a dear Mk II, both found or bought as cargo. The Mk Is trade something away; the Mk IIs are plain better.
+export type MountLook = 'fixed' | 'gimbal' | 'ring' | 'barbette' | 'dome';
+export type MountKind = `${MountLook}0` | MountLook | `${MountLook}2`;
 /** Mount footprints: 1 cell, 2 (1×2) or 4 (2×2). Bigger mounts cost more, turn slower and unlock later. */
 export type MountSize = 1 | 2 | 4;
-export const MOUNTS: Record<MountKind, {name: string; arc: number; turn: number; over: boolean; cost: number; unlock: number; sizes: MountSize[]; dmg?: number; spread?: number; rng?: number}> = {
-  fixed:   {name:'Fixed mount', arc:3*Math.PI/180, turn:0, over:false, cost:6, unlock:1, sizes:[1,2,4], dmg:1.15, spread:.8, rng:1.15},
-  gimbal:  {name:'Gimbal', arc:20*Math.PI/180, turn:140*Math.PI/180, over:false, cost:18, unlock:1, sizes:[1,2,4]},
-  ring:    {name:'Turret ring', arc:60*Math.PI/180, turn:100*Math.PI/180, over:false, cost:35, unlock:2, sizes:[1,2,4]},
-  barbette:{name:'Barbette', arc:90*Math.PI/180, turn:75*Math.PI/180, over:true, cost:65, unlock:4, sizes:[1,2,4]},
-  dome:    {name:'Dome', arc:Math.PI, turn:50*Math.PI/180, over:true, cost:110, unlock:6, sizes:[1]},
+export interface MountDef { name: string; look: MountLook; mk: 0 | 1 | 2; arc: number; turn: number; over: boolean; sizes: MountSize[];
+  dmg?: number; rng?: number; rate?: number; spd?: number; spread?: number }
+const ALL: MountSize[] = [1,2,4];
+export const MOUNTS: Record<MountKind, MountDef> = {
+  fixed0:   {name:'Fixed mount', look:'fixed', mk:0, arc:3*Math.PI/180, turn:0, over:false, sizes:ALL, dmg:1.15, rng:1.15, spread:.8},
+  fixed:    {name:'Bolt-down mount', look:'fixed', mk:1, arc:3*Math.PI/180, turn:0, over:false, sizes:ALL, rng:1.25, spd:1.2, spread:.8},
+  fixed2:   {name:'Longbarrel cradle', look:'fixed', mk:2, arc:3*Math.PI/180, turn:0, over:false, sizes:ALL, dmg:1.1, rng:1.6, spd:1.5, spread:.5},
+  gimbal0:  {name:'Gimbal', look:'gimbal', mk:0, arc:20*Math.PI/180, turn:140*Math.PI/180, over:false, sizes:ALL},
+  gimbal:   {name:'Gimbal', look:'gimbal', mk:1, arc:20*Math.PI/180, turn:140*Math.PI/180, over:false, sizes:ALL, rng:1.1},
+  gimbal2:  {name:'Tracking gimbal', look:'gimbal', mk:2, arc:25*Math.PI/180, turn:220*Math.PI/180, over:false, sizes:ALL, rng:1.2, rate:1.1},
+  ring0:    {name:'Turret ring', look:'ring', mk:0, arc:60*Math.PI/180, turn:100*Math.PI/180, over:false, sizes:ALL},
+  ring:     {name:'Light turret ring', look:'ring', mk:1, arc:80*Math.PI/180, turn:160*Math.PI/180, over:false, sizes:ALL, rng:.9, rate:1.1},
+  ring2:    {name:'Heavy turret ring', look:'ring', mk:2, arc:60*Math.PI/180, turn:120*Math.PI/180, over:false, sizes:ALL, dmg:1.1, rng:1.1},
+  barbette0:{name:'Barbette', look:'barbette', mk:0, arc:90*Math.PI/180, turn:75*Math.PI/180, over:true, sizes:ALL},
+  barbette: {name:'Barbette', look:'barbette', mk:1, arc:100*Math.PI/180, turn:70*Math.PI/180, over:true, sizes:ALL, rng:.9},
+  barbette2:{name:'Armoured barbette', look:'barbette', mk:2, arc:110*Math.PI/180, turn:90*Math.PI/180, over:true, sizes:ALL, dmg:1.05},
+  dome0:    {name:'Dome', look:'dome', mk:0, arc:Math.PI, turn:50*Math.PI/180, over:true, sizes:[1]},
+  dome:     {name:'Bubble dome', look:'dome', mk:1, arc:Math.PI, turn:60*Math.PI/180, over:true, sizes:[1], dmg:.85, rng:.9},
+  dome2:    {name:'Sentinel dome', look:'dome', mk:2, arc:Math.PI, turn:100*Math.PI/180, over:true, sizes:[1]},
 };
 export const MSIZE: Record<MountSize, {name: string; cost: number; turn: number; later: number}> = {
   1:{name:'Small', cost:1, turn:1, later:0}, 2:{name:'Medium', cost:2, turn:.75, later:1}, 4:{name:'Large', cost:4, turn:.5, later:2},
@@ -278,20 +299,30 @@ export const isArm = (t: Cell | undefined): boolean => !!t && t!=='core' && (!!W
 /** The mount closest to how a weapon aims today, for converting ships built before hardpoints. */
 export function mountFor(t: Cell): MountKind {
   const d = def(t), g = d?.gun, arc = g ? g.arc || 0 : d?.laser ? d.laser.arc || .09 : d?.rail ? .09 : Math.PI, big = (WSIZE[t] || 1) > 1;
-  if (arc >= Math.PI - .01) return big ? 'barbette' : 'dome';
-  if (g?.over) return 'barbette';
-  return arc <= .5 ? 'gimbal' : 'ring';
+  if (arc >= Math.PI - .01) return big ? 'barbette0' : 'dome0';
+  if (g?.over) return 'barbette0';
+  return arc <= .5 ? 'gimbal0' : 'ring0';
 }
 /** Whether a player's weapon swings on its mount to aim; guided launchers and lobbed mines just launch, coils just zap. */
 export const turns = (t: Cell) => { const d = def(t); return isArm(t) && (!!d?.laser?.arc || (!!d?.gun && !d.gun.homing && !d.gun.lob)); };
 /** How a player's turret aims on its mount: how far either side of its facing (rad) and how fast it swings (rad/s). */
 export function traverse(t: Cell, mk?: MountKind){
   const M = MOUNTS[mk || mountFor(t)];
-  return {arc: cpArc(M.arc), turn: M.turn*MSIZE[WSIZE[HEAD_OF[t] || t] || 1].turn, over: M.over, dmg: M.dmg || 1, spread: M.spread || 1, rng: M.rng || 1};
+  return {arc: cpArc(M.arc), turn: M.turn*MSIZE[WSIZE[HEAD_OF[t] || t] || 1].turn, over: M.over, dmg: M.dmg || 1, spread: M.spread || 1, rng: M.rng || 1, rate: M.rate || 1, spd: M.spd || 1};
 }
 // Stage 3: every weapon comes on its stock mount (mountFor); a mount from cargo replaces it, and the arc can be angled
 // off the weapon's facing in 15° steps. G.mnt and G.ang hold both per weapon head; a fight copies them onto the blocks.
-export const MOUNT_ITEM: Record<MountKind, BlockType> = {fixed:'mfixed', gimbal:'mgimbal', ring:'mring', barbette:'mbarbette', dome:'mdome'};
+/** The cargo item for each mount you can fit (stock mounts have none). */
+export const MOUNT_ITEM: Partial<Record<MountKind, BlockType>> = {fixed:'mfixed', fixed2:'mfixed2', gimbal:'mgimbal', gimbal2:'mgimbal2', ring:'mring', ring2:'mring2',
+  barbette:'mbarbette', barbette2:'mbarbette2', dome:'mdome', dome2:'mdome2'};
+/** A mount's trade-offs against the stock one of its look, in words: "+25% range, +20% shot speed, −20% spread". */
+export function mountDiff(mk: MountKind){
+  const M = MOUNTS[mk], deg = (a: number) => Math.round(a*180/Math.PI), out: string[] = [];
+  const pct = (v: number | undefined, what: string) => { if (v && Math.abs(v - 1) > .001) out.push(`${v > 1 ? '+' : '−'}${Math.round(Math.abs(v - 1)*100)}% ${what}`); };
+  pct(M.dmg, 'damage'); pct(M.rng, 'range'); pct(M.rate, 'reload speed'); pct(M.spd, 'shot speed'); pct(M.spread, 'spread');
+  return [M.arc >= Math.PI - .01 ? 'all round' : `±${deg(M.arc)}°`, M.turn ? `turns ${deg(M.turn)}°/s` : 'can’t turn', M.over ? 'fires over the hull' : '', ...out,
+    M.sizes.length < 3 ? 'small weapons only' : ''].filter(Boolean).join(' · ');
+}
 export const ANG_STEP = 15*Math.PI/180, ANG_MAX = 3;
 /** The mount on the player's weapon at k: one fitted from cargo, or its stock one. */
 export const mountAt = (k: Key, t: Cell): MountKind => G.mnt[k] || mountFor(t);
@@ -300,21 +331,24 @@ export const angAt = (k: Key) => (G.ang[k] || 0)*ANG_STEP;
 /** Whether a mount can carry weapon t: true, or why not. */
 export function mountFits(t: Cell, mk: MountKind): true | string {
   if (!turns(t)) return `${T[t as BlockType]?.name || t} aims itself and needs no mount`;
-  if (!MOUNTS[mk].sizes.includes(WSIZE[t] || 1)) return `A ${MOUNTS[mk].name.toLowerCase()} only takes small weapons`;
+  if (!MOUNTS[mk].sizes.includes(WSIZE[HEAD_OF[t] || t] || 1)) return `A ${MOUNTS[mk].name.toLowerCase()} only takes small weapons`;
   return true;
 }
 /** A mount in words: "Turret ring · ±60° · turns 100°/s". */
 export function mountText(t: Cell, mk: MountKind, ang = 0){
-  const V = traverse(t, mk), deg = (a: number) => Math.round(a*180/Math.PI);
+  const V = traverse(t, mk), deg = (a: number) => Math.round(a*180/Math.PI), pct = (v: number, w: string) => Math.abs(v - 1) > .001 ? `${v > 1 ? '+' : '−'}${Math.round(Math.abs(v - 1)*100)}% ${w}` : '';
   return [MOUNTS[mk].name, V.arc >= Math.PI - .01 ? 'all round' : `±${deg(V.arc)}°`, V.turn ? `turns ${deg(V.turn)}°/s` : 'fixed', V.over ? 'over hull' : '',
-    ang ? `angled ${ang > 0 ? '+' : ''}${deg(ang)}°` : ''].filter(Boolean).join(' · ');
+    pct(V.dmg, 'damage'), pct(V.rng, 'range'), pct(V.rate, 'reload'), pct(V.spd, 'shot speed'), ang ? `angled ${ang > 0 ? '+' : ''}${deg(ang)}°` : ''].filter(Boolean).join(' · ');
 }
 export const isWeapon = (t: Cell | undefined) => !!t && !!WGRP[t] && (t!=='core' || !!cockpit().gun);
 /** What a bay launches: a hangar bay's craft, or a fighter from the Carrier deck's core. */
 export const bayKind = (b: {t: Cell}): CraftKind | null => isCraft(b.t) ? b.t : b.t==='core' && cockpit().deck ? 'fbay' : null;
 export const grpOf = (k: Key, t: Cell) => G.grp[k] || WGRP[t] || 1;
 // What menus say about a block: weapons, point defense and hangars get a line of numbers; everything else its short description.
-const m = (u: number) => Math.round(u/BS) + ' m', n1 = (v: number) => (Math.round(v*10)/10).toString();
+// distances on screen: one block is ten metres; a kilometre and up reads in km
+export const M_PER_BLOCK = 10;
+export const dist = (blocks: number) => { const v = blocks*M_PER_BLOCK; return v >= 1000 ? (Math.round(v/100)/10) + ' km' : Math.round(v) + ' m'; };
+const m = (u: number) => dist(u/BS), n1 = (v: number) => (Math.round(v*10)/10).toString();
 export function blurb(t: BlockType){
   const d = T[t], g = d.gun;
   if (g) return [`${n1(g.dmg*(g.pellets || 1)*(g.mirv || 1)/g.cd)} dmg/s`, g.range ? m(g.range) : '', g.homing ? 'homing' : turns(t) ? `±${Math.round(traverse(t).arc*180/Math.PI)}° · turns ${Math.round(traverse(t).turn*180/Math.PI)}°/s` : (g.arc ?? Math.PI) >= Math.PI - .01 ? 'all round' : `±${Math.round((g.arc || 0)*180/Math.PI)}°`, g.over ? 'fires over hull' : ''].filter(Boolean).join(' · ');
@@ -323,6 +357,7 @@ export function blurb(t: BlockType){
   if (d.tesla) return `${d.tesla.dmg} × ${d.tesla.jumps} chain · every ${d.tesla.cd} s · ${m(d.tesla.range)}`;
   if (d.pd) return `intercepts every ${d.pd.cd} s · ${m(d.pd.range)}${d.pd.heavy ? ' · stops slugs' : ''}`;
   if (isCraft(t)){ const C = CRAFT[t]; return `${t==='fbay' ? 'fighter' : 'bomber'} · ${n1(C.gun.dmg/C.gun.cd)} dmg/s · rebuilt in ${C.rebuild} s`; }
+  if (d.mount) return `Mount, ${MOUNTS[d.mount].mk===2 ? 'Mk II' : 'Mk I'}: ${mountDiff(d.mount)}. Pick a weapon, then choose this mount on its card before placing it; or select it here and click a placed weapon.`;
   return d.desc || '';
 }
 // a part's body cells share the level of its head
